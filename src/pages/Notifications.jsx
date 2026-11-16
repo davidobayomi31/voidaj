@@ -33,6 +33,7 @@ const ago = (t) => {
 export default function Notifications() {
   const { user, profile, loading } = useApp()
   const [items, setItems] = useState(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [params, setParams] = useSearchParams()
   const section = SECTIONS.some((s) => s.id === params.get('s')) ? params.get('s') : 'all'
 
@@ -102,6 +103,7 @@ export default function Notifications() {
 
   const count = (id) => (items || []).filter((n) => id === 'all' || n.section === id).length
   const shown = (items || []).filter((n) => section === 'all' || n.section === section)
+  const active = SECTIONS.find((s) => s.id === section) ?? SECTIONS[0]
 
   return (
     <div className="page notif-page notif2">
@@ -110,10 +112,19 @@ export default function Notifications() {
         <p className="meta-dim">Messages, jobs, people and community activity — each one says where it’s from.</p>
       </header>
 
-      <div className="chip-row float-bar" role="tablist" aria-label="Sections">
-        {SECTIONS.map((s) => (
-          <button key={s.id} role="tab" aria-selected={section === s.id} className={section === s.id ? 'on' : ''}
-            onClick={() => setParams(s.id === 'all' ? {} : { s: s.id }, { replace: true })}>
+      {/* Only the active section shows (All, to start). Clicking it opens the
+          rest — Messages, Jobs, People and so on — and picking one closes it
+          again, so the page leads with the notifications, not the filters. */}
+      <div className={`chip-row float-bar notif-filter${filtersOpen ? ' open' : ''}`} role="tablist" aria-label="Sections">
+        <button role="tab" aria-selected className="on" aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((v) => !v)}>
+          {active.icon && <Icon name={active.icon} size={13} />} {active.label}
+          {items && count(active.id) > 0 && <span className="filter-count">{count(active.id)}</span>}
+          <Icon name="chevron-down" size={13} className="notif-filter-caret" />
+        </button>
+        {filtersOpen && SECTIONS.filter((s) => s.id !== section).map((s) => (
+          <button key={s.id} role="tab" aria-selected={false}
+            onClick={() => { setParams(s.id === 'all' ? {} : { s: s.id }, { replace: true }); setFiltersOpen(false) }}>
             {s.icon && <Icon name={s.icon} size={13} />} {s.label}{items && count(s.id) > 0 && <span className="filter-count">{count(s.id)}</span>}
           </button>
         ))}

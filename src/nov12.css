@@ -1,0 +1,80 @@
+/* ── Nuel's Nov 10–12 round ─────────────────────────────────────────────
+   Loaded last. Only adds the new pieces (back button, category tabs,
+   event options, invite card, age check, the floating ads panel and
+   purple sent messages); the existing layout is left as it is. */
+
+/* Back, at the top of every page but Home. */
+.page-back { max-width: var(--maxw); margin: 0 auto; padding: 12px 24px 0; }
+.page-back-btn { gap: 6px; padding-left: 8px; }
+@media (max-width: 720px) { .page-back { padding: 8px 16px 0; } }
+
+/* The small tab saying which category something falls under. */
+.cat-tag {
+  display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-dim); font-size: 11px; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; vertical-align: middle;
+}
+.cat-tag.plain { background: transparent; }
+.ev-tags { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-bottom: 2px; }
+.cm-pop-body .cat-tag { align-self: flex-start; }
+.cm-row-text em .cat-tag { height: 18px; font-size: 10.5px; margin-right: 2px; }
+.cat-chips { margin: 4px 0 2px; }
+
+/* Events: Interested, attendance privacy, report. */
+/* Interested sits on the photo's corner so the card body keeps its layout. */
+.ev-card { position: relative; }
+.ev-card > .ev-interest {
+  position: absolute; top: 10px; right: 10px; z-index: 2; display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: 999px; border: 0; cursor: pointer;
+  background: rgba(0, 0, 0, 0.5); color: #fff; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.ev-interest.on { color: #FBBF24; }
+.ev-interest.on svg { fill: currentColor; }
+.evd-actions { flex-wrap: wrap; }
+.evd-visible { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; font-size: 14px; cursor: pointer; }
+.evd-visible input { margin-top: 3px; accent-color: var(--ink); }
+.evd-visible em { display: block; font-style: normal; color: var(--text-dim); font-size: 12.5px; }
+.evd-report { align-self: flex-start; margin: 4px 0 0; color: var(--text-dim); display: inline-flex; gap: 6px; align-items: center; }
+
+/* Jobs & Services. */
+.fc-audience button em { font-style: normal; font-weight: 500; opacity: 0.7; margin-left: 2px; }
+.job-pay-note { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); color: var(--text-dim); font-size: 12.5px; line-height: 1.45; }
+.job-pay-note svg { flex-shrink: 0; margin-top: 2px; }
+
+/* Invite friends. */
+.bd-invite p b { color: var(--text); }
+.bd-invite-row { display: flex; gap: 8px; margin-top: 10px; }
+.bd-invite-row input { flex: 1; min-width: 0; height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; }
+
+/* Age, asked first. */
+.auth-age em { display: block; font-style: normal; font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.auth-age em.auth-age-no { color: #DC2626; }
+.age-gate { z-index: 300; }
+.age-gate-card { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; max-width: 380px; padding: 28px 24px; }
+.age-gate-card h2 { margin: 0; }
+.age-gate-card input { width: 100%; }
+.age-gate-card .btn.primary { width: 100%; }
+
+/* Ads: a panel floating beside the page that can be closed (Nuel, Nov 11). */
+.ads-rail-tools { display: inline-flex; align-items: center; gap: 2px; }
+.ads-close { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--text-dim); cursor: pointer; }
+.ads-close:hover { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); }
+.ads-reopen { display: none; }
+@media (min-width: 1081px) {
+  .ads-rail.ads-float, :root[data-mode="dark"] .ads-rail.ads-float {
+    top: 16px; right: 16px; bottom: 16px; height: auto; max-height: none; width: 224px;
+    border: 1px solid var(--border); border-radius: 20px;
+    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.45);
+    background: var(--surface);
+  }
+  body.has-ads-rail .app-shell { padding-right: 256px; }
+  .ads-reopen {
+    display: inline-flex; align-items: center; gap: 6px; position: fixed; right: 16px; bottom: 16px; z-index: 40;
+    height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-weight: 700; font-size: 13px; cursor: pointer;
+    box-shadow: 0 10px 30px -16px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Your own messages are purple, the way WhatsApp's are green (Nuel, Nov 10). */
+.dm-row.mine .dm-bubble, :root[data-mode="dark"] .dm-row.mine .dm-bubble { background: #7C3AED; color: #fff; }

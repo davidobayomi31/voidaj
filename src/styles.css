@@ -1073,6 +1073,9 @@ a.post-stat:hover { color: var(--text); }
 }
 .vision-teaser:hover { border-color: var(--brand) !important; transform: translateY(-1px); }
 .vision-teaser > div { flex: 1; min-width: 240px; }
+/* The tag is a label, not a banner — keep it to the width of its text
+   instead of letting it stretch across the card. */
+.vision-teaser > .vision-banner-tag { flex: 0 0 auto; align-self: flex-start; width: max-content; min-width: 0; }
 .vision-teaser strong { font-family: var(--font-display); font-size: 15.5px; }
 .vision-teaser p { font-size: 13.5px; margin-top: 3px; }
 .vision-teaser > .icon { color: var(--brand); }
@@ -2070,6 +2073,10 @@ html.pref-reduce-motion *, html.pref-reduce-motion *::before, html.pref-reduce-m
 .thread-page { max-width: var(--maxw); }
 .thread-grid { margin-top: 28px; }
 .thread-main { min-width: 0; }
+/* No community beside the post: one centred column, so the space the rail
+   would have taken isn't left blank. */
+.thread-grid-solo { grid-template-columns: minmax(0, 1fr); }
+.thread-grid-solo .thread-main { max-width: 760px; margin-inline: auto; width: 100%; }
 .thread-side { margin-top: 0; }
 .thread-more { display: flex; flex-direction: column; }
 .thread-more-item { display: flex; flex-direction: column; gap: 3px; padding: 10px 0; border-top: 1px solid var(--border-soft); color: var(--text); }

@@ -17,7 +17,8 @@ import { FEATURES } from '../features.js'
 const ROWS = [
   { id: 'post', icon: 'edit', tone: 'violet', title: 'Post', sub: 'Share photos, updates and ideas — public, your city or a community', sheet: true },
   { id: 'event', icon: 'calendar', tone: 'pink', title: 'Event', sub: 'A meetup, class or gathering — public, your city or a community', sheet: true },
-  { id: 'job', icon: 'briefcase', tone: 'orange', title: 'Job', sub: 'Get local help — plumbing, moving, tutoring and more', to: '/jobs?post=1' },
+  { id: 'job', icon: 'briefcase', tone: 'orange', title: 'Job', sub: 'Find help — paid work, volunteering, free help or a skill swap', to: '/jobs?post=1' },
+  { id: 'service', icon: 'hand-coins', tone: 'red', title: 'Service', sub: 'Offer your skills so people can hire you or swap skills', to: '/jobs?post=1&kind=service' },
   { id: 'community', icon: 'community', tone: 'teal', title: 'Community', sub: 'Bring people together around a place or a passion', to: '/communities/new' },
   { id: 'business', icon: 'store', tone: 'green', title: 'Business', sub: 'Showcase your business, services or products', to: '/business/new' },
   { id: 'voice', icon: 'megaphone', tone: 'blue', title: 'Voice', sub: 'A focused page for one side of who you are', to: '/voices/new', on: FEATURES.vis },
@@ -25,7 +26,6 @@ const ROWS = [
 const SOON = [
   { id: 'trip', icon: 'car', tone: 'indigo', title: 'Trip', sub: 'Offer or find a ride — road trips and carpools', on: FEATURES.trips },
   { id: 'organization', icon: 'layers', tone: 'yellow', title: 'Organization', sub: 'Schools, NGOs, churches, associations', on: FEATURES.organization },
-  { id: 'service', icon: 'hand-coins', tone: 'red', title: 'Service', sub: 'List what you offer so people can hire you' },
 ].filter((r) => r.on !== false)
 
 function Sheet({ title, icon, tone, onClose, children }) {
@@ -82,15 +82,19 @@ export default function AddHub() {
         })}
       </div>
 
-      <h2 className="addhub-soon-head">Coming soon</h2>
-      <div className="addhub-list soon">
-        {SOON.map((r) => (
-          <div key={r.id} className="card addhub-row soon" aria-disabled="true">
-            <IconTile name={r.icon} tone={r.tone} size={48} iconSize={22} />
-            <span className="addhub-row-text"><b>{r.title} <span className="soon-badge">Coming soon</span></b><em>{r.sub}</em></span>
+      {SOON.length > 0 && (
+        <>
+          <h2 className="addhub-soon-head">Coming soon</h2>
+          <div className="addhub-list soon">
+            {SOON.map((r) => (
+              <div key={r.id} className="card addhub-row soon" aria-disabled="true">
+                <IconTile name={r.icon} tone={r.tone} size={48} iconSize={22} />
+                <span className="addhub-row-text"><b>{r.title} <span className="soon-badge">Coming soon</span></b><em>{r.sub}</em></span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       <section className="addhub-banner">
         <div>

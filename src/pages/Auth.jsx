@@ -5,6 +5,8 @@ import { useApp } from '../state.jsx'
 import { Icon } from '../components/Icons.jsx'
 import { VoidajMark, VJ_PATH } from '../components/VoidajMark.jsx'
 import * as api from '../api.js'
+import { MIN_AGE, ageOn, latestBirthDate, savedRef, saveRef, saveBirthDate, clearSignUpCarryOver } from '../age.js'
+import { COUNTRIES, guessCountry, flagOf } from '../countries.js'
 
 // Brand marks for the two sign-in buttons (each company's own logo, as
 // their button guidelines ask).
@@ -25,14 +27,16 @@ const AppleLogo = () => (
 // "Continue with Google / Apple". Each goes to the server, which hands the
 // browser to Google or Apple and brings it back signed in. A provider whose
 // keys aren't set yet shows its button greyed out.
-function SocialSignIn() {
+function SocialSignIn({ locked, onGo }) {
   const [on, setOn] = useState(null)
   useEffect(() => { api.authProviders().then(setOn).catch(() => setOn({ google: false, apple: false })) }, [])
   return (
     <div className="auth-social">
       {[['google', 'Google', <GoogleG key="g" />], ['apple', 'Apple', <AppleLogo key="a" />]].map(([id, label, logo]) => (
         on?.[id]
-          ? <a key={id} href={`/api/auth/${id}/start`} className={`btn auth-social-btn ${id}`}>{logo} Continue with {label}</a>
+          ? (locked
+            ? <button key={id} type="button" className={`btn auth-social-btn ${id}`} disabled title="Enter your date of birth first">{logo} Continue with {label}</button>
+            : <a key={id} href={`/api/auth/${id}/start`} onClick={onGo} className={`btn auth-social-btn ${id}`}>{logo} Continue with {label}</a>)
           : <button key={id} type="button" className={`btn auth-social-btn ${id}`} disabled title={on ? `Sign in with ${label} isn’t set up yet` : undefined}>
               {logo} Continue with {label}{on && <em>Not set up yet</em>}
             </button>
@@ -47,7 +51,14 @@ export default function Auth() {
   // ?mode=login opens on sign-in (the "Log in" link on the welcome card).
   const [params] = useSearchParams()
   const [mode, setMode] = useState(params.get('mode') === 'login' ? 'login' : 'register')
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  // `website` is a trap: it's hidden from people, so only bots fill it in.
+  const [form, setForm] = useState({ name: '', email: '', password: '', birthDate: '', country: guessCountry(), website: '' })
+  // An invite link (/auth?ref=…) is remembered until the account is made.
+  useEffect(() => { if (params.get('ref')) saveRef(params.get('ref')) }, [params])
+  const age = ageOn(form.birthDate)
+  const tooYoung = age !== null && age < MIN_AGE
+  const ageOk = age !== null && age >= MIN_AGE && age <= 120
+  const locked = mode === 'register' && !ageOk
   // A failed Google / Apple sign-in comes back as ?error=…
   const [error, setError] = useState(params.get('error') || '')
   const [busy, setBusy] = useState(false)
@@ -59,8 +70,9 @@ export default function Auth() {
     setError(''); setBusy(true)
     try {
       const user = mode === 'register'
-        ? await register(form)
+        ? await register({ ...form, ref: savedRef() })
         : await login({ email: form.email, password: form.password })
+      clearSignUpCarryOver() // the date of birth and referrer have done their job
       navigate(user.onboarded ? '/home' : '/welcome')
     } catch (err) {
       setError(err.message)
@@ -98,7 +110,14 @@ export default function Auth() {
         <h1>{mode === 'register' ? <>Step into <span className="grad-text">VOIDAJ</span></> : <>Welcome back</>}</h1>
         <div className="auth-tagline"><span>Connect.</span><span>Discover.</span><span>Participate.</span></div>
 
-        <SocialSignIn />
+        {mode === 'register' && (
+          <label className="field auth-age">
+            <span><Icon name="calendar" size={14} /> First, your date of birth</span>
+            <input type="date" value={form.birthDate} onChange={set('birthDate')} max={latestBirthDate()} min="1900-01-01" aria-describedby="age-note" />
+            <em id="age-note" className={tooYoung ? 'auth-age-no' : ''}>{tooYoung ? `Sorry — you need to be at least ${MIN_AGE} to join VOIDAJ.` : `You need to be ${MIN_AGE} or older. Only you can see this.`}</em>
+          </label>
+        )}
+        <SocialSignIn locked={locked} onGo={() => { if (mode === 'register') { saveBirthDate(form.birthDate); try { localStorage.setItem('voidaj_country', form.country) } catch { /* private mode */ } } }} />
         <div className="auth-or"><span>or with email</span></div>
 
         <form onSubmit={submit} className="auth-form">
@@ -107,6 +126,17 @@ export default function Auth() {
               <span><Icon name="user" size={14} /> Name</span>
               <input value={form.name} onChange={set('name')} placeholder="Your name" autoComplete="name" />
             </label>
+          )}
+          {mode === 'register' && (
+            <label className="field">
+              <span><Icon name="globe" size={14} /> Country</span>
+              <select value={form.country} onChange={set('country')} autoComplete="country">
+                {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{flagOf(c.code)} {c.name}</option>)}
+              </select>
+            </label>
+          )}
+          {mode === 'register' && (
+            <label className="auth-trap" aria-hidden="true">Website<input tabIndex={-1} value={form.website} onChange={set('website')} autoComplete="off" /></label>
           )}
           <label className="field">
             <span><Icon name="mail" size={14} /> Email</span>
@@ -119,7 +149,7 @@ export default function Auth() {
 
           {error && <div className="auth-error"><Icon name="shield" size={14} /> {error}</div>}
 
-          <button className="btn primary large full" disabled={busy}>
+          <button className="btn primary large full" disabled={busy || locked}>
             {busy ? 'One moment…' : mode === 'register' ? 'Create account' : 'Sign in'}
             <Icon name="arrow" size={16} />
           </button>

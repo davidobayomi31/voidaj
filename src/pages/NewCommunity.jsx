@@ -1,13 +1,14 @@
 // Start a community. Whoever starts it owns it and moderates it; the
 // shared Charter is always one of its rules.
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { addCommunity } from '../communities.js'
 import { CHARTER } from '../data/seed.js'
 import { Icon } from '../components/Icons.jsx'
 import { CoverPicker } from '../components/CoverPicker.jsx'
+import { CategorySelect } from '../components/Categories.jsx'
 
 const ICONS = ['community', 'users', 'briefcase', 'camera', 'code', 'store', 'leaf', 'book', 'megaphone', 'heart', 'globe', 'star', 'wrench', 'smile']
 const ACCENTS = ['#C0342A', '#1F5FA8', '#1B7F3B', '#6B3FA0', '#B45309', '#0F6E6E', '#8A5D0B', '#A8306A']
@@ -17,7 +18,7 @@ export default function NewCommunity() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     name: '', tagline: '', description: '', scope: 'local', city: '',
-    tags: '', rules: ['', ''], icon: 'community', accent: ACCENTS[0], cover: '',
+    tags: '', rules: ['', ''], icon: 'community', accent: ACCENTS[0], cover: '', category: '',
   })
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -29,7 +30,7 @@ export default function NewCommunity() {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (form.name.trim().length < 3 || busy) return
+    if (form.name.trim().length < 3 || !form.category || busy) return
     setBusy(true)
     try {
       const { community, user: me } = await api.createCommunity({
@@ -47,7 +48,6 @@ export default function NewCommunity() {
   return (
     <div className="page new-community">
       <section className="new-community-head">
-        <Link to="/home" className="meta-dim"><Icon name="back" size={13} /> Back</Link>
         <h1>Start a community</h1>
         <p className="section-sub">Your community, your culture. Every community runs itself — and all of them share one Charter.</p>
       </section>
@@ -76,6 +76,11 @@ export default function NewCommunity() {
             <input className="job-input" value={form.city} onChange={set('city')} placeholder={user.city || 'Lagos'} maxLength={40} aria-label="City" />
           )}
         </div>
+
+        <label className="field" htmlFor="community-category">
+          <span>Category</span>
+          <CategorySelect id="community-category" value={form.category} onChange={(v) => pick('category', v)} />
+        </label>
 
         <label className="field">
           <span>Topics <em>comma-separated</em></span>
@@ -116,7 +121,7 @@ export default function NewCommunity() {
 
         <div className="composer-foot">
           <span className="meta-dim"><Icon name="sparkle" size={13} /> You’ll be its owner — you can add admins and moderators later.</span>
-          <button className="btn primary" disabled={form.name.trim().length < 3 || busy || uploading}>{busy ? 'Starting…' : 'Start community'}</button>
+          <button className="btn primary" disabled={form.name.trim().length < 3 || !form.category || busy || uploading}>{busy ? 'Starting…' : 'Start community'}</button>
         </div>
       </form>
     </div>

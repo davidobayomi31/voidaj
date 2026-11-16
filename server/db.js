@@ -7,7 +7,9 @@
 // outlives a single request. Every read below is therefore async.
 import pg from 'pg'
 import crypto from 'crypto'
+import { featuresFor } from './countries.js'
 import { SUPABASE_ROOT_CA } from './supabase-ca.js'
+import { VERIFICATION_IS_REAL } from './verification.js'
 
 // pg hands back BIGINT and NUMERIC as strings, to protect values too large
 // for a JS number. Here they are only millisecond timestamps, counts and a
@@ -620,6 +622,124 @@ CREATE TABLE IF NOT EXISTS business_promotions (
   ends_at BIGINT
 );
 CREATE INDEX IF NOT EXISTS business_promotions_live ON business_promotions (ends_at);
+
+-- Nuel, Nov 11–12. One category list shared by events and communities
+-- (server/categories.js). Events can be in person, online or hybrid, have
+-- a capacity (extra people go on a waitlist), and people can say Going or
+-- Interested. Who you are on an attendee list is private unless you choose
+-- to show it ("Default: Private attendance").
+ALTER TABLE events ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS format TEXT DEFAULT 'in-person';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS capacity INTEGER;
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE event_rsvps ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'going';
+ALTER TABLE event_rsvps ADD COLUMN IF NOT EXISTS visible INTEGER DEFAULT 0;
+CREATE TABLE IF NOT EXISTS event_reports (
+  event_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  reason TEXT DEFAULT '',
+  created_at BIGINT,
+  PRIMARY KEY (event_id, user_id)
+);
+
+-- Jobs & Services (Nuel's notes, Nov 9 and 12): a listing is a Job ("I
+-- need someone") or a Service ("I can do this for you"), and is Paid work,
+-- Volunteering, Free help or a Skill exchange; work is Local, Remote or
+-- Hybrid. Payments stay between the two people at launch.
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS kind TEXT DEFAULT 'job';
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS opportunity TEXT DEFAULT 'paid';
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS arrangement TEXT;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS exchange TEXT DEFAULT '';
+
+-- Referrals raise your citizen level (Nuel, Nov 12: "the more people they
+-- refer the bar increases to a new status"). Age is asked before anything
+-- else; the minimum is 16 for now (Nuel, Nov 10).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date TEXT;
+CREATE INDEX IF NOT EXISTS users_referred_by ON users (referred_by);
+
+-- Nov 12 plan (PLAN-NOTES-AND-GLOBAL.md). Security: attempt limits, email
+-- confirmation codes, blocking. Accounts that existed before email codes
+-- (and Google/Apple ones, whose provider confirmed the email) count as
+-- confirmed; a new account has a code waiting until it's typed in.
+CREATE TABLE IF NOT EXISTS rate_hits (key TEXT NOT NULL, at BIGINT NOT NULL);
+CREATE INDEX IF NOT EXISTS rate_hits_key_at ON rate_hits (key, at);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_confirmed_at BIGINT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_code TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_code_expires BIGINT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_code_tries INTEGER DEFAULT 0;
+UPDATE users SET email_confirmed_at = COALESCE(created_at, 0) WHERE email_confirmed_at IS NULL AND email_code IS NULL;
+CREATE TABLE IF NOT EXISTS user_blocks (
+  blocker_id TEXT NOT NULL,
+  blocked_id TEXT NOT NULL,
+  created_at BIGINT,
+  PRIMARY KEY (blocker_id, blocked_id)
+);
+
+-- Outside Nigeria: a country on accounts and on what they create, a time
+-- zone on events and a currency on paid jobs and services.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT DEFAULT 'NG';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS country TEXT DEFAULT 'NG';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT 'Africa/Lagos';
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS country TEXT DEFAULT 'NG';
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS country TEXT DEFAULT 'NG';
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'NGN';
+
+-- Events note: co-hosts and moderators, invite-only events (rsvp status
+-- 'requested' until a host approves, 'invited' when a host asks someone),
+-- announcements, and an Event Circle group chat.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS invite_only INTEGER DEFAULT 0;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS updated_at BIGINT;
+CREATE TABLE IF NOT EXISTS event_hosts (
+  event_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role TEXT DEFAULT 'cohost',
+  added_at BIGINT,
+  PRIMARY KEY (event_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS event_announcements (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL,
+  author_id TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS event_announcements_event ON event_announcements (event_id, created_at);
+ALTER TABLE chats ADD COLUMN IF NOT EXISTS event_id TEXT;
+
+-- Jobs & Services note: the poster shortlists and hires, an agreement is
+-- written down, the job moves Open → Worker selected → In progress →
+-- Completed, both sides review each other, and either can raise a dispute.
+-- Services can be paused.
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS worker_id TEXT;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS status_at BIGINT;
+CREATE TABLE IF NOT EXISTS job_agreements (
+  job_id TEXT PRIMARY KEY,
+  poster_id TEXT NOT NULL,
+  worker_id TEXT NOT NULL,
+  price TEXT DEFAULT '',
+  terms TEXT DEFAULT '',
+  created_at BIGINT,
+  accepted_at BIGINT
+);
+CREATE TABLE IF NOT EXISTS job_reviews (
+  job_id TEXT NOT NULL,
+  from_id TEXT NOT NULL,
+  to_id TEXT NOT NULL,
+  rating INTEGER NOT NULL,
+  body TEXT DEFAULT '',
+  created_at BIGINT,
+  PRIMARY KEY (job_id, from_id)
+);
+CREATE INDEX IF NOT EXISTS job_reviews_to ON job_reviews (to_id);
+CREATE TABLE IF NOT EXISTS job_disputes (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  reason TEXT DEFAULT '',
+  status TEXT DEFAULT 'open',
+  created_at BIGINT
+);
 `
 
 // ── Roles ────────────────────────────────────────────────────────────
@@ -745,13 +865,56 @@ export const LEVELS = [
 ]
 export const levelTitle = (n) => `${LEVELS[Math.min(Math.max(n || 0, 0), LEVELS.length - 1)].name} of VOIDAJ`
 
-// What each kind of taking part is worth.
-const POINTS = { posts: 5, takes: 2, sparksGiven: 1, sparksGot: 1, looms: 3, communities: 3, communitiesBuilt: 25, eventsHosted: 12, jobsDone: 10, jobsPosted: 4, followers: 1, verified: 20 }
+// City Icon used to be the end of the road: the bar filled and stayed full
+// for good. Past it the ladder keeps going in numbered tiers, so there is
+// always a next step to climb.
+const PRESTIGE_STEP = 600
+const ROMAN = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'],
+  [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]
+function roman(n) {
+  let out = ''
+  for (const [v, s] of ROMAN) while (n >= v) { out += s; n -= v }
+  return out
+}
+
+// A tier at or beyond the last named level: City Icon, City Icon II, …
+function prestige(tier) {
+  const top = LEVELS[LEVELS.length - 1]
+  return {
+    ...top,
+    level: top.level + tier,
+    tier: tier + 1,
+    at: top.at + tier * PRESTIGE_STEP,
+    name: tier === 0 ? top.name : `${top.name} ${roman(tier + 1)}`,
+    blurb: tier === 0 ? top.blurb : `A face of VOIDAJ, ${roman(tier + 1)} times over`,
+  }
+}
+
+// Where a points total sits on the ladder, and what comes next. `next` is
+// never null now, so the progress bar always has something to fill toward.
+export function ladderFor(points) {
+  const top = LEVELS[LEVELS.length - 1]
+  if (points < top.at) {
+    const level = [...LEVELS].reverse().find((l) => points >= l.at)
+    const next = LEVELS[level.level + 1]
+    return { level: { ...level, tier: 1 }, next: next.level === top.level ? prestige(0) : { ...next, tier: 1 } }
+  }
+  const tier = Math.floor((points - top.at) / PRESTIGE_STEP)
+  return { level: prestige(tier), next: prestige(tier + 1) }
+}
+
+// What each kind of taking part is worth. `verified` is deliberately absent
+// while the badge is self-assigned — it was worth 20 points, which anyone
+// could help themselves to (see server/verification.js).
+const POINTS = { referrals: 15, posts: 5, takes: 2, sparksGiven: 1, sparksGot: 1, looms: 3, communities: 3, communitiesBuilt: 25, eventsHosted: 12, jobsDone: 10, jobsPosted: 4, followers: 1,
+  ...(VERIFICATION_IS_REAL ? { verified: 20 } : {}) }
 
 // Badges anyone can earn, and how.
 export const BADGES = [
   { id: 'early-explorer', name: 'Early Explorer', style: 'green', how: 'Joined VOIDAJ in its first year', test: (s) => s.joinedYear <= 2026 },
-  { id: 'verified', name: 'Verified', style: 'blue', how: 'Had your ID checked', test: (s) => s.verified },
+  // Only a badge once it means something; a self-assigned one claiming
+  // "Had your ID checked" would be a false statement on a profile.
+  ...(VERIFICATION_IS_REAL ? [{ id: 'verified', name: 'Verified', style: 'blue', how: 'Had your ID checked', test: (s) => s.verified }] : []),
   { id: 'first-post', name: 'First Words', style: 'teal', how: 'Shared your first post', test: (s) => s.posts >= 1 },
   { id: 'top-contributor', name: 'Top Contributor', style: 'silver', how: 'Shared 10 or more posts', test: (s) => s.posts >= 10 },
   { id: 'thinker', name: 'Hot Take', style: 'orange', how: 'Shared 10 or more takes', test: (s) => s.takes >= 10 },
@@ -762,12 +925,14 @@ export const BADGES = [
   { id: 'weaver', name: 'Weaver', style: 'violet', how: 'Loomed 5 posts across VOIDAJ', test: (s) => s.looms >= 5 },
   { id: 'trusted-hand', name: 'Trusted Hand', style: 'orange', how: 'Got hired for a quick job', test: (s) => s.jobsDone >= 1 },
   { id: 'well-known', name: 'Well Known', style: 'gold', how: 'Reached 25 followers', test: (s) => s.followers >= 25 },
+  { id: 'recruiter', name: 'Recruiter', style: 'teal', how: 'Brought a friend to VOIDAJ', test: (s) => s.referrals >= 1 },
+  { id: 'ambassador', name: 'Ambassador', style: 'gold', how: 'Brought 10 people to VOIDAJ', test: (s) => s.referrals >= 10 },
 ]
 
 export async function journey(row) {
   const id = row.id
   const n = (sql, ...a) => q.get(sql, ...a).then((r) => r?.n ?? 0)
-  const [posts, takes, sparksGiven, sparksGot, looms, communities, communitiesBuilt, eventsHosted, jobsDone, jobsPosted, followers, custom] = await Promise.all([
+  const [posts, takes, sparksGiven, sparksGot, looms, communities, communitiesBuilt, eventsHosted, jobsDone, jobsPosted, followers, referrals, custom] = await Promise.all([
     n('SELECT COUNT(*)::int AS n FROM posts WHERE author_id = ? AND hidden = 0 AND loom_of IS NULL', id),
     n('SELECT COUNT(*)::int AS n FROM comments WHERE author_id = ? AND hidden = 0', id),
     n('SELECT COUNT(*)::int AS n FROM post_sparks WHERE user_id = ?', id),
@@ -779,13 +944,13 @@ export async function journey(row) {
     n("SELECT COUNT(*)::int AS n FROM job_interests WHERE user_id = ? AND status = 'hired'", id),
     n('SELECT COUNT(*)::int AS n FROM jobs WHERE poster_id = ?', id),
     n('SELECT COUNT(*)::int AS n FROM follows WHERE followee_id = ?', id),
+    n('SELECT COUNT(*)::int AS n FROM users WHERE referred_by = ? AND deleted_at IS NULL', id),
     q.all('SELECT * FROM custom_badges WHERE owner_id = ? ORDER BY created_at DESC', id),
   ])
-  const stats = { posts, takes, sparksGiven, sparksGot, looms, communities, communitiesBuilt, eventsHosted, jobsDone, jobsPosted, followers,
+  const stats = { posts, takes, sparksGiven, sparksGot, looms, communities, communitiesBuilt, eventsHosted, jobsDone, jobsPosted, followers, referrals,
     verified: !!row.id_verified, joinedYear: new Date(row.created_at || Date.now()).getFullYear() }
   const points = Object.entries(POINTS).reduce((sum, [k, w]) => sum + (k === 'verified' ? (stats.verified ? w : 0) : (stats[k] || 0) * w), 0)
-  const level = [...LEVELS].reverse().find((l) => points >= l.at)
-  const next = LEVELS[level.level + 1] || null
+  const { level, next } = ladderFor(points)
   if ((row.citizen_level ?? 0) !== level.level) {
     await q.run('UPDATE users SET citizen_level = ? WHERE id = ?', level.level, id)
   }
@@ -793,8 +958,8 @@ export async function journey(row) {
   const earned = BADGES.filter((b) => b.test(stats)).map(({ test, ...b }) => ({ ...b, earned: true, hidden: hidden.has(b.id) }))
   return {
     points, level: { ...level, title: levelTitle(level.level) }, next,
-    toNext: next ? next.at - points : 0,
-    progress: next ? Math.round(((points - level.at) / (next.at - level.at)) * 100) : 100,
+    toNext: Math.max(0, next.at - points),
+    progress: Math.min(100, Math.round(((points - level.at) / (next.at - level.at)) * 100)),
     levels: LEVELS, stats,
     badges: earned,
     custom: custom.map((c) => ({ id: c.id, name: c.name, style: c.style, hidden: !!c.hidden, custom: true, how: 'Made by you' })),
@@ -816,6 +981,8 @@ export function publicUser(row) {
     socials: json(row.socials),
     photo: row.photo || '', cover: row.cover || '',
     idVerified: !!row.id_verified,
+    // Country follows the same "hidden" location setting as city.
+    country: row.privacy === 'hidden' ? null : (row.country || 'NG'),
   }
 }
 
@@ -823,6 +990,9 @@ export function publicUser(row) {
 // over these, so a new preference needs no migration.
 export const DEFAULT_SETTINGS = {
   messages: 'everyone', // who can message you: 'everyone' | 'connections' | 'nobody'
+  // When true you are left out of the Find people directory on Quick Jobs and
+  // your work skills stay yours alone. Job history has always been private.
+  workPrivate: false,
   notify: { messages: true, jobs: true, community: true, events: true, push: true },
   reduceMotion: false,
   largeText: false,
@@ -861,6 +1031,11 @@ export async function selfUser(row) {
     isAdmin: !!row.is_admin,
     hasPassword: !!row.password_hash,
     linked: { google: !!row.google_sub, apple: !!row.apple_sub },
+    // Asked before anything else; sample accounts are never asked.
+    needsAge: !row.birth_date && !row.is_seed,
+    country: row.country || 'NG',
+    features: featuresFor(row.country || 'NG'),
+    emailConfirmed: !!row.email_confirmed_at || !!row.is_seed,
   }
 }
 
@@ -968,6 +1143,7 @@ export async function serializeCommunity(row, viewerId) {
     id: row.id, name: row.name, tagline: row.tagline, description: row.description,
     scope: row.scope, city: row.city, accent: row.accent, icon: row.icon, cover: row.cover || '',
     tags: json(row.tags), rules: json(row.rules), modRules: json(row.mod_rules), memberCount: row.member_count,
+    category: row.category || null, country: row.country || 'NG',
     createdBy: row.created_by ?? null,
     trending: !!row.trending,
     joined: !!membership, role: membership?.role ?? null,
@@ -998,6 +1174,9 @@ export async function serializeJob(row, viewerId) {
     area: row.area, city: row.city, budget: row.budget, verifiedOnly: !!row.verified_only,
     verified: !!row.verified || !!posterRow?.id_verified,
     timing: row.timing || 'Flexible', remote: !!row.remote, openToOffers: row.open_to_offers !== 0,
+    kind: row.kind === 'service' ? 'service' : 'job', opportunity: row.opportunity || 'paid',
+    arrangement: row.arrangement || (row.remote ? 'remote' : 'local'), exchange: row.exchange || '',
+    country: row.country || 'NG', currency: row.currency || 'NGN', workerId: row.worker_id || null, statusAt: row.status_at || row.created_at,
     status: row.status, poster, interested: countRow.n, offerCount: offerRow.n,
     iInterested: !!mineRow, myOffer: mineRow?.offer || '', myOfferNote: mineRow?.offer_note || '',
     offers: offers ? offers.map((o) => ({ user: publicUser(o), offer: o.offer || '', note: o.offer_note || '', ago: timeAgo(o.offered_at) })) : undefined,
@@ -1015,7 +1194,7 @@ export async function serializeChat(row, viewerId) {
     q.get('SELECT body, media, created_at FROM chat_messages WHERE chat_id = ? ORDER BY created_at DESC LIMIT 1', row.id),
   ])
   return {
-    id: row.id, name: row.name, description: row.description, communityId: row.community_id,
+    id: row.id, name: row.name, description: row.description, communityId: row.community_id, eventId: row.event_id || null,
     accent: row.accent, memberCount: countRow.n, joined: !!memberRow, createdAt: row.created_at,
     lastMessage: last ? (last.body || mediaLabel(last.media)) : null, lastAt: last?.created_at ?? row.created_at,
   }
@@ -1053,6 +1232,9 @@ export function serializeEvent(row) {
     title: row.title, date: row.date, time: row.time, venue: row.venue,
     description: row.description, attending: row.attending, cover: row.cover || '',
     audience: row.audience || 'community', city: row.city || '',
+    category: row.category || null, format: row.format || 'in-person', capacity: row.capacity ?? null,
+    country: row.country || 'NG', timezone: row.timezone || 'Africa/Lagos', inviteOnly: !!row.invite_only,
+    updatedAt: row.updated_at || null,
   }
 }
 

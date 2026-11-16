@@ -1,0 +1,251 @@
+/* ── The Nov 12 plan (PLAN-NOTES-AND-GLOBAL.md) ─────────────────────────
+   Loaded after nov12.css. Only the new pieces: email confirmation,
+   country and phone fields, blocking, reviews, the place filter, event
+   organisers' tools, and the job flow. The layout is left as it is. */
+
+/* Confirm your email: a slim bar at the top of the page. */
+.email-confirm.card {
+  width: calc(100% - 48px); max-width: calc(var(--maxw) - 48px); margin: 12px auto 0;
+  display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; text-align: left;
+}
+.page-back + .email-confirm { margin-top: 8px; }
+.email-confirm-text { display: flex; flex-direction: column; flex: 1 1 200px; min-width: 0; font-size: 13.5px; }
+.email-confirm-text em { font-style: normal; color: var(--text-dim); font-size: 12.5px; overflow-wrap: anywhere; }
+.email-confirm input {
+  width: 110px; height: 34px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-size: 15px; letter-spacing: 0.18em; text-align: center;
+}
+.email-confirm > p { flex-basis: 100%; margin: 0; }
+@media (max-width: 720px) { .email-confirm.card { width: calc(100% - 32px); } }
+
+/* Sign-up: country, and the hidden bot trap. */
+.auth-form select {
+  width: 100%; height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; font-size: 14px;
+}
+.auth-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* Phone: the country code beside the number. */
+.phone-field { display: flex; gap: 8px; }
+.phone-field select {
+  flex: 0 0 auto; width: 104px; height: 40px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; font-size: 13.5px;
+}
+.phone-field input { flex: 1; min-width: 0; }
+
+/* Blocked people (Settings → Privacy), and the ••• on profiles. */
+.settings-blocked { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.settings-blocked li { display: flex; align-items: center; gap: 10px; }
+.settings-blocked li > span { flex: 1; min-width: 0; }
+.settings-blocked em { font-style: normal; color: var(--text-dim); font-size: 12.5px; margin-left: 4px; }
+.more-wrap { position: relative; display: inline-flex; }
+.more-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 190px; padding: 6px; border-radius: 12px; }
+.more-menu button {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer;
+}
+.more-menu button:hover { background: var(--surface); }
+.more-menu button.danger { color: #EF4444; }
+/* Links and the Save button sit in the menu beside the plain buttons, so
+   strip their button chrome and match the row shape above. */
+.more-menu a, .more-menu .fav-btn.btn {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer;
+  min-height: 0; justify-content: flex-start; box-shadow: none;
+}
+.more-menu a:hover, .more-menu .fav-btn.btn:hover { background: var(--surface); }
+.more-menu .icon { flex: none; color: var(--text-dim); }
+.more-menu .fav-btn.on .icon { color: var(--brand-strong); }
+/* A hairline between the actions and the block row below them. */
+.more-actions { display: block; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 1px solid var(--border-soft); }
+.more-actions.last { padding-bottom: 0; margin-bottom: 0; border-bottom: 0; }
+
+/* Stars and reviews. */
+.stars { display: inline-flex; gap: 1px; vertical-align: middle; color: var(--text-dim); }
+.stars svg.on, .stars button.on { color: #FBBF24; }
+.stars svg.on { fill: currentColor; }
+.stars.pick button { border: 0; background: transparent; padding: 2px; cursor: pointer; color: var(--text-dim); }
+.stars.pick button.on svg { fill: currentColor; }
+.reviews-card { padding: 16px; }
+.reviews-summary { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.reviews-summary b { font-size: 28px; line-height: 1; }
+.reviews-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.reviews-list li { display: flex; gap: 10px; }
+.reviews-list p { margin: 4px 0; font-size: 14px; }
+.reviews-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+.reviews-list em { font-style: normal; font-size: 12px; }
+
+/* My city · My country · Everywhere. */
+.reach-chips { margin: 8px 0 0; }
+
+/* Events: time in your zone, invite-only, announcements, drafts. */
+.evd-yours { font-style: normal; color: var(--text-dim); }
+.evd-invited { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-weight: 600; }
+.evd-news h2 { display: flex; align-items: center; gap: 8px; }
+.evd-news ul, .evd-news-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.evd-news li { display: flex; gap: 10px; }
+.evd-news p, .evd-news-list p { margin: 0 0 2px; white-space: pre-wrap; }
+.evd-news em, .evd-news-list em { font-style: normal; font-size: 12px; }
+.evd-news-list li { padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+.evd-news-list .link-btn { margin-left: 8px; font-size: 12px; }
+.ev-draft-note { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; }
+.ev-invite-only { margin-top: 2px; }
+
+/* Manage an event. */
+.evm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; margin: 14px 0; }
+.evm-stats span {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 14px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); font-size: 12px;
+}
+.evm-stats b { font-size: 22px; color: var(--text); }
+.evm-top { margin-bottom: 14px; }
+.evm-page .event-form { margin-bottom: 14px; }
+.evm-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.evm-page .evd-people li { flex-wrap: wrap; }
+.evm-announce { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin: 8px 0 12px; }
+.evm-announce textarea { width: 100%; }
+.evm-sub { margin: 16px 0 8px; font-size: 14px; }
+.evm-handle { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.evm-handle .settings-prefixed { flex: 1 1 180px; }
+.evm-handle .job-select { flex: 0 0 auto; width: auto; }
+
+/* Jobs: currency beside the price. */
+.job-money { display: flex; gap: 6px; min-width: 0; }
+/* With a price, the row is category · area on one line and the price on
+   the next, so the currency fits beside it. */
+.job-form-row:has(.job-money) { grid-template-columns: 1fr 1fr; }
+.job-form-row:has(.job-money) .job-money { grid-column: 1 / -1; }
+.job-money select { width: 96px; }
+.job-money select {
+  flex: 0 0 auto; height: 40px; padding: 0 6px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; font-size: 13px;
+}
+.job-money .job-input { flex: 1; min-width: 0; }
+
+/* Jobs: from hiring to reviews. */
+.job-flow { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.job-stages { display: flex; list-style: none; margin: 0; padding: 0; gap: 4px; counter-reset: stage; }
+.job-stages li {
+  flex: 1; position: relative; padding-top: 10px; font-size: 11.5px; font-weight: 600; color: var(--text-dim); text-align: center;
+}
+.job-stages li::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; border-radius: 4px; background: var(--border); }
+.job-stages li.done::before { background: #22C55E; }
+.job-stages li.now { color: var(--text); }
+.job-stages li.now::before { background: linear-gradient(90deg, #3B82F6, #8B5CF6); }
+.job-stage-off { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 600; color: var(--text-dim); }
+.job-stage-off.disputed, .job-stage-off.cancelled { color: #EF4444; }
+.job-applicants .job-offer-item { flex-wrap: wrap; }
+.job-applicants .job-offer-item.declined, .job-applicants .job-offer-item.withdrawn { opacity: 0.55; }
+.job-offer-item > .job-applicant-actions { flex: 0 1 auto; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
+.job-applicant-actions .btn { width: auto; }
+.job-applicants { display: flex; flex-direction: column; gap: 8px; }
+.job-hire-form { flex-basis: 100%; display: flex; flex-direction: column; gap: 8px; padding: 12px; margin-top: 6px; border-radius: 12px; border: 1px solid var(--border); }
+.job-hire-form p { margin: 0; font-size: 12.5px; }
+.job-hire-form textarea { width: 100%; }
+.job-agreement, .job-review { padding: 12px; border-radius: 14px; border: 1px solid var(--border); }
+.job-agreement .job-facts { margin: 6px 0 0; }
+.job-flow-actions { justify-content: space-between; }
+.job-flow-minor { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; }
+.job-flow-minor .link-btn, .job-flow-actions .link-btn { display: inline-flex; align-items: center; gap: 5px; color: var(--text-dim); }
+.job-review p { margin: 6px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.job-review-form { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 6px; }
+.job-review-form input {
+  width: 100%; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; font-size: 13.5px;
+}
+
+/* A community's Chat tab. */
+.cm-chat { display: flex; flex-direction: column; gap: 12px; }
+.cm-chat-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cm-chat-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; text-align: left; border: 0; cursor: pointer; font: inherit; color: inherit; }
+.cm-chat-row > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cm-chat-row em { font-style: normal; color: var(--text-dim); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-chat-new { display: flex; gap: 8px; }
+.cm-chat-new .job-input { flex: 1; min-width: 0; }
+
+/* Admin: job disputes. */
+.admin-dispute { display: flex; flex-direction: column; gap: 6px; padding: 14px; }
+.admin-dispute p { margin: 0; }
+.admin-dispute em { font-style: normal; }
+
+/* ── Citizen level badge on the profile picture ──
+   Sits opposite the verified tick so the two never overlap. */
+.avatar-level {
+  position: absolute; left: -2px; bottom: -2px;
+  display: grid; place-items: center;
+  width: var(--lv, 24px); height: var(--lv, 24px);
+  border-radius: 50%;
+  background: var(--ink, var(--text)); color: var(--on-brand, var(--bg));
+  border: 2.5px solid var(--surface);
+  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.5);
+  font-family: var(--font-display); font-weight: 800;
+  font-size: calc(var(--lv, 24px) * 0.46); line-height: 1;
+}
+.avatar-level b { font-weight: 800; }
+
+/* ── Notifications: collapsed section filter ── */
+.notif-filter-caret { transition: transform 0.18s; opacity: 0.7; }
+.notif-filter.open .notif-filter-caret { transform: rotate(180deg); }
+
+/* ── Quick Jobs: one toolbar, filters folded away ── */
+.jobs-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 12px;
+}
+.jobs-toolbar .cat-chips { flex: 1 1 auto; margin: 0; }
+.jobs-toolbar-end { display: flex; align-items: center; gap: 8px; flex: none; }
+.jobs-filter-btn { gap: 6px; }
+.jobs-filter-caret { transition: transform 0.18s; opacity: 0.7; }
+.jobs-filter-btn.on .jobs-filter-caret { transform: rotate(180deg); }
+.jobs-active-filter {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: var(--radius-pill);
+  background: var(--brand-soft); border: 1px solid var(--border);
+  color: var(--text); font-size: 12.5px; cursor: pointer;
+}
+.jobs-active-filter:hover { border-color: var(--border-strong); }
+.jobs-active-filter .icon:last-child { opacity: 0.6; }
+
+.jobs-filter-panel { margin-top: 10px; padding: 16px 18px; display: grid; gap: 14px; }
+.jfp-group { display: grid; gap: 7px; }
+.jfp-label {
+  font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-dim);
+}
+.jfp-group .chip-row { margin: 0; flex-wrap: wrap; }
+.jfp-clear { justify-self: start; }
+
+/* ── Public Privacy and Terms pages ──
+   .page is 1180px wide and .meta-dim is an inline-flex caption row, so
+   neither suits running prose. These pages get a narrow column instead. */
+.legal-page { max-width: 820px; }
+.legal-head { padding-bottom: 0; }
+.legal-updated {
+  margin: 2px 0 26px; font-family: var(--font-mono);
+  font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim);
+}
+.legal-body { font-size: 15px; line-height: 1.65; color: var(--text); }
+.legal-body > p:first-child { font-size: 16.5px; line-height: 1.6; color: var(--text-dim); margin-bottom: 30px; }
+.legal-section { margin-bottom: 30px; }
+.legal-section h2 {
+  font-family: var(--font-display); font-size: 19px; font-weight: 700;
+  line-height: 1.3; margin: 0 0 10px; letter-spacing: -0.01em;
+}
+.legal-body p { margin: 0 0 12px; }
+.legal-body ul, .legal-body ol { margin: 0 0 12px; padding-left: 22px; }
+.legal-body li { margin-bottom: 7px; }
+.legal-body li::marker { color: var(--text-dim); }
+.legal-body strong { font-weight: 700; }
+.legal-body a { color: var(--brand-strong); text-decoration: underline; text-underline-offset: 2px; }
+.legal-body a:hover { opacity: 0.8; }
+.legal-charter { counter-reset: none; }
+.legal-charter li { padding-left: 2px; }
+@media (max-width: 560px) {
+  .legal-body { font-size: 14.5px; }
+  .legal-section h2 { font-size: 17.5px; }
+}
+
+/* The footer had no links until Privacy and Terms needed somewhere to live. */
+.footer-links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+.footer-links a { font-size: 12.5px; color: var(--text-dim); }
+.footer-links a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }

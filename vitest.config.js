@@ -47,6 +47,10 @@ export default defineConfig({
             JWT_SECRET: 'test-secret-that-is-long-enough-to-sign-tokens',
             // Keep tests offline and deterministic: no real LLM, no cloud storage.
             ANTHROPIC_API_KEY: '',
+            // Hundreds of sign-ups come from one address; test/security.test.js
+            // switches the limits back on for itself.
+            RATE_LIMITS: 'off',
+            RESEND_API_KEY: '',
             SUPABASE_URL: '',
             SUPABASE_SERVICE_ROLE_KEY: '',
           },

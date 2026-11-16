@@ -16,6 +16,7 @@ import { USERS, EVENTS } from '../data/seed.js'
 import * as api from '../api.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { MediaButtons, MediaTray, MediaView } from '../components/Media.jsx'
+import { showVerifiedTick } from '../verification.js'
 
 // ── Helpers ────────────────────────────────────────────────────────────
 const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR
@@ -238,7 +239,8 @@ export default function Chats() {
   const [conversations, setConversations] = useState([])
   const [chats, setChats] = useState([])
   const [activeDm, setActiveDm] = useState(params.get('dm') || null)
-  const [activeGroup, setActiveGroup] = useState(null)
+  // ?chat=<id> opens that group straight away (an event's Event Circle).
+  const [activeGroup, setActiveGroup] = useState(params.get('chat') || null)
   const [dmUser, setDmUser] = useState(null)
   const [messages, setMessages] = useState([])
   const [search, setSearch] = useState('')
@@ -302,7 +304,7 @@ export default function Chats() {
   useEffect(() => {
     if (!pending || pending.title) return
     const name = (t) => setPending((p) => (p ? { ...p, title: t } : p))
-    if (pending.kind === 'job') api.listJobs().then((js) => name(js.find((j) => j.id === pending.id)?.title || 'a job')).catch(() => {})
+    if (pending.kind === 'job') api.jobFlow(pending.id).then((d) => name(d.job.title || 'a job')).catch(() => name('a job'))
     if (pending.kind === 'post') api.getPost(pending.id).then((d) => name((d.post.title || d.post.body || 'a post').slice(0, 60))).catch(() => {})
     if (pending.kind === 'community') api.getCommunity(pending.id).then((c) => name(c.name)).catch(() => {})
     if (pending.kind === 'profile') name('their profile')
@@ -456,7 +458,7 @@ export default function Chats() {
                 <Link to={`/profile/${dmUser.id}`} className="dm-pane-who">
                   <Face user={dmUser} size={44} />
                   <span>
-                    <strong>{dmUser.name}{dmUser.idVerified && <Icon name="badge-check" size={14} />}</strong>
+                    <strong>{dmUser.name}{showVerifiedTick() && dmUser.idVerified && <Icon name="badge-check" size={14} />}</strong>
                     <span className="dm-muted">{dmUser.title || 'Voidaj member'}</span>
                   </span>
                 </Link>

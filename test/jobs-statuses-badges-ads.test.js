@@ -3,6 +3,7 @@
 // ownership rule: you can only change your own things.
 import { describe, expect, it } from 'vitest'
 import { app, request, signUp, createCommunity } from './helpers.js'
+import { VERIFICATION_IS_REAL } from '../server/verification.js'
 
 const postJob = async (agent, extra = {}) =>
   (await agent.post('/api/jobs').send({ title: 'Carry boxes', category: 'Moving', ...extra })).body.job
@@ -24,11 +25,21 @@ describe('job interest and applications', () => {
     expect((await poster.agent.post(`/api/jobs/${job.id}/interest`)).status).toBe(400)
   })
 
-  it('needs ID verification for verified-only jobs', async () => {
+  // The ID badge is self-assigned until a real provider is wired up, so the
+  // verified-only gate is deliberately inert — a check anyone can satisfy by
+  // asking for it is worse than none. Both halves follow VERIFICATION_IS_REAL,
+  // so this test asserts whichever behaviour that flag currently selects.
+  it('gates verified-only jobs only once ID verification is real', async () => {
     const poster = await signUp()
     const worker = await signUp()
     const job = await postJob(poster.agent, { verifiedOnly: true })
-    expect((await worker.agent.post(`/api/jobs/${job.id}/interest`)).status).toBe(403)
+    const res = await worker.agent.post(`/api/jobs/${job.id}/interest`)
+    if (VERIFICATION_IS_REAL) {
+      expect(res.status).toBe(403)
+    } else {
+      expect(job.verifiedOnly).toBe(false)
+      expect(res.status).toBe(200)
+    }
   })
 
   it('lets an applicant track their status, and only known statuses', async () => {

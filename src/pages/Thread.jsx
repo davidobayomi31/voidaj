@@ -103,7 +103,9 @@ export default function Thread() {
 
   return (
     <div className="page thread-page" style={{ '--accent': community?.accent ?? 'var(--gold)' }}>
-      <div className="space-grid thread-grid">
+      {/* Posts outside a community have no ThreadSide, so the grid drops to a
+          single centred column instead of reserving an empty 320px rail. */}
+      <div className={`space-grid thread-grid${community ? '' : ' thread-grid-solo'}`}>
       <div className="thread-main">
       <article className="card thread-post">
         <div className="post-card-row">

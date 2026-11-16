@@ -11,6 +11,8 @@ import './mono.css'
 import './citymap.css'
 import './reddit.css'
 import './design.css'
+import './nov12.css'
+import './plan-nov12.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

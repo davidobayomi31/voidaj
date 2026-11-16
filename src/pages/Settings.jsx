@@ -12,6 +12,8 @@ import { Icon, IconTile } from '../components/Icons.jsx'
 import { Avatar } from '../components/bits.jsx'
 import { Eagle } from '../components/Eagle.jsx'
 import { FEATURES } from '../features.js'
+import { COUNTRIES, flagOf, countryName } from '../countries.js'
+import { VERIFICATION_IS_REAL } from '../verification.js'
 
 const SECTIONS = [
   { id: 'account', icon: 'user', tone: 'blue', label: 'Account', sub: 'Name, username, email, phone, password' },
@@ -69,33 +71,47 @@ export default function Settings() {
 // ── Verification, Payments, Appearance, Terms ───────────────────────
 function Verification() {
   const { user, refreshMe } = useApp()
-  const [idNumber, setIdNumber] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const verify = async (e) => {
     e.preventDefault()
-    if (idNumber.trim().length < 6 || busy) return
+    if (busy) return
     setBusy(true); setError('')
-    try { await api.verifyId(idNumber.trim()); await refreshMe() } catch (err) { setError(err.message) }
+    try { await api.verifyId(); await refreshMe() } catch (err) { setError(err.message) }
     setBusy(false)
   }
   return (
     <>
-      <Block title="Identity" sub="The Verified tick on your profile and VOIDAJ ID, and access to verified-only jobs.">
-        {user.idVerified ? (
-          <p className="settings-ok"><Icon name="badge-check" size={16} /> You’re verified.</p>
+      <Block title="Identity"
+        sub={VERIFICATION_IS_REAL
+          ? 'The Verified tick on your profile and VOIDAJ ID, and access to verified-only jobs.'
+          : 'Identity checks aren’t switched on yet, so this badge proves nothing and unlocks nothing.'}>
+        {user.features?.idVerification === false && !user.idVerified ? (
+          <p className="meta-dim">ID verification isn’t available in {countryName(user.country) || 'your country'} yet. It checks a Nigerian NIN for now.</p>
+        ) : user.idVerified ? (
+          <p className="settings-ok"><Icon name="badge-check" size={16} /> {VERIFICATION_IS_REAL ? 'You’re verified.' : 'The prototype badge is on for your account.'}</p>
         ) : (
           <form className="settings-inline" onSubmit={verify}>
-            <Field label="Government ID number" hint="NIN or passport number. Demo only — nothing is checked or stored yet.">
-              <input value={idNumber} onChange={(e) => setIdNumber(e.target.value)} placeholder="e.g. NIN" />
-            </Field>
+            {!VERIFICATION_IS_REAL && (
+              <p className="meta-dim">
+                Nothing is checked and nothing is collected — no ID number is asked for, and the badge gives
+                you no priority on jobs. Never send your NIN or passport number to anyone who asks for it here.
+              </p>
+            )}
             {error && <p className="auth-error">{error}</p>}
-            <button className="btn primary small" disabled={idNumber.trim().length < 6 || busy}>{busy ? 'Verifying…' : 'Verify me'}</button>
+            <button className="btn primary small" disabled={busy}>
+              {busy ? 'Working…' : VERIFICATION_IS_REAL ? 'Verify me' : 'Add the badge'}
+            </button>
           </form>
         )}
       </Block>
-      <Block title="Email and phone">
-        <p className="meta-dim">Confirming your email and phone is coming soon.</p>
+      <Block title="Email" sub={user.email || ''}>
+        {user.emailConfirmed !== false
+          ? <p className="settings-ok"><Icon name="badge-check" size={16} /> Your email is confirmed.</p>
+          : <p className="meta-dim">Not confirmed yet. Type the 6-digit code from your inbox into the bar at the top of the page.</p>}
+      </Block>
+      <Block title="Phone">
+        <Soon>Confirming your phone with a text message.</Soon>
       </Block>
     </>
   )
@@ -223,14 +239,17 @@ function useInstantSettings() {
 // ── Account ──────────────────────────────────────────────────────────
 function Account() {
   const { user, saveProfile, setUser } = useApp()
-  const [info, setInfo] = useState({ name: user.name, handle: (user.handle || '').replace(/^@/, ''), phone: user.phone || '' })
+  const [info, setInfo] = useState({ name: user.name, handle: (user.handle || '').replace(/^@/, ''), phone: user.phone || '', phoneCountry: user.country || 'NG' })
   const infoSave = useSaver()
   const [email, setEmail] = useState({ email: user.email || '', password: '' })
   const emailSave = useSaver()
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
   const pwSave = useSaver()
 
-  const saveInfo = (e) => { e.preventDefault(); infoSave.run(() => saveProfile(info)) }
+  const saveInfo = (e) => {
+    e.preventDefault()
+    infoSave.run(async () => { const u = await saveProfile(info); setInfo((f) => ({ ...f, phone: u.phone || '' })) })
+  }
   const saveEmail = (e) => {
     e.preventDefault()
     emailSave.run(async () => { setUser(await api.changeEmail(email.email, email.password)); setEmail((f) => ({ ...f, password: '' })) }, 'Email updated')
@@ -255,8 +274,13 @@ function Account() {
               <span className="settings-prefixed"><span>@</span><input value={info.handle} onChange={(e) => setInfo({ ...info, handle: e.target.value })} required /></span>
             </Field>
           </div>
-          <Field label="Phone" hint="Optional. Only you can see this.">
-            <input type="tel" value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })} placeholder="+234 801 234 5678" />
+          <Field label="Phone" hint="Optional. Only you can see this. Saved in the international format.">
+            <span className="phone-field">
+              <select value={info.phoneCountry} onChange={(e) => setInfo({ ...info, phoneCountry: e.target.value })} aria-label="Country code">
+                {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{flagOf(c.code)} +{c.dial}</option>)}
+              </select>
+              <input type="tel" value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })} placeholder={info.phoneCountry === 'NG' ? '0801 234 5678' : 'Phone number'} autoComplete="tel" />
+            </span>
           </Field>
           <div className="settings-actions">
             <button className="btn primary small" disabled={infoSave.busy}>Save</button>
@@ -305,7 +329,7 @@ function Account() {
       <Block title="Account" sub="The basics of your membership.">
         <ul className="settings-facts">
           <li><span>Member since</span><strong>{user.createdAt ? new Date(Number(user.createdAt)).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</strong></li>
-          <li><span>ID verification</span><strong>{user.idVerified ? <span className="verified-tag"><Icon name="badge-check" size={13} /> Verified</span> : <Link to="/jobs">Get verified</Link>}</strong></li>
+          <li><span>ID verification</span><strong>{!VERIFICATION_IS_REAL ? <span className="meta-dim">Not switched on yet</span> : user.idVerified ? <span className="verified-tag"><Icon name="badge-check" size={13} /> Verified</span> : <Link to="/jobs">Get verified</Link>}</strong></li>
           <li><span>Communities</span><strong>{user.communities.length}</strong></li>
         </ul>
         <p className="meta-dim settings-foot">To leave Voidaj, go to <Link to="/settings/data">Data</Link>.</p>
@@ -339,10 +363,32 @@ function Privacy() {
         {note}
       </Block>
 
+      <Blocked />
+
       <Block title="Profile visibility">
         <Soon>Your profile is visible to everyone right now. Members-only and connections-only profiles are coming.</Soon>
       </Block>
     </>
+  )
+}
+
+// People you've blocked: they can't message you and you don't see their
+// posts. Block someone from the ••• on their profile.
+function Blocked() {
+  const [people, setPeople] = useState(null)
+  useEffect(() => { api.myBlocks().then(setPeople).catch(() => setPeople([])) }, [])
+  const unblock = async (id) => { await api.toggleBlock(id); setPeople((p) => p.filter((x) => x.id !== id)) }
+  return (
+    <Block title="Blocked people" sub="They can’t message you, and you don’t see their posts. Block someone from their profile.">
+      {people === null ? <p className="meta-dim">Loading…</p> : !people.length ? <p className="meta-dim">You haven’t blocked anyone.</p> : (
+        <ul className="settings-blocked">
+          {people.map((p) => (
+            <li key={p.id}><Avatar user={p} size={30} /><span>{p.name} <em>{p.handle}</em></span>
+              <button className="btn ghost small" onClick={() => unblock(p.id)}>Unblock</button></li>
+          ))}
+        </ul>
+      )}
+    </Block>
   )
 }
 
@@ -466,7 +512,7 @@ function ThemeBlock() {
 function Preferences() {
   const { user, saveProfile } = useApp()
   const { settings, set, note } = useInstantSettings()
-  const [place, setPlace] = useState({ city: user.city || 'Lagos', area: user.area || '' })
+  const [place, setPlace] = useState({ country: user.country || 'NG', city: user.city || 'Lagos', area: user.area || '' })
   const placeSave = useSaver()
   const [interests, setInterests] = useState(user.interests)
   const interestSave = useSaver()
@@ -485,6 +531,11 @@ function Preferences() {
 
       <Block title="Location" sub="Your home base — it shapes My City, nearby jobs and local events.">
         <form className="settings-form" onSubmit={(e) => { e.preventDefault(); placeSave.run(() => saveProfile(place)) }}>
+          <Field label="Country" hint="Sets your currency, the time zone of events you make, and what’s available to you.">
+            <select className="job-select" value={place.country} onChange={(e) => setPlace({ ...place, country: e.target.value })}>
+              {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{flagOf(c.code)} {c.name}</option>)}
+            </select>
+          </Field>
           <div className="settings-row">
             <Field label="City"><input value={place.city} onChange={(e) => setPlace({ ...place, city: e.target.value })} required /></Field>
             <Field label="Area" hint="Shown only if your location visibility allows it."><input value={place.area} onChange={(e) => setPlace({ ...place, area: e.target.value })} placeholder="e.g. Yaba" /></Field>

@@ -7,6 +7,10 @@ import { useApp } from '../state.jsx'
 import { useCommunities } from '../communities.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { Cover } from './Home.jsx'
+import { categoryOf } from '../categories.js'
+import { CategoryChips, CategoryTag } from '../components/Categories.jsx'
+import { ReachChips, useReach } from '../components/Reach.jsx'
+import { inReach } from '../countries.js'
 
 const TABS = [
   { id: 'foryou', label: 'For You' },
@@ -40,6 +44,7 @@ function PopularCard({ c }) {
         <Cover src={c.cover} />
       </div>
       <div className="cm-pop-body">
+        <CategoryTag id={categoryOf(c)} />
         <b>{c.name}</b>
         <span>{members(c.memberCount)} members</span>
         <JoinButton c={c} />
@@ -54,7 +59,7 @@ function SuggestRow({ c, why }) {
       <span className="cm-row-photo">{c.cover ? <img src={c.cover} alt="" loading="lazy" /> : <Icon name={c.icon ?? 'community'} size={20} />}</span>
       <span className="cm-row-text">
         <b>{c.name}</b>
-        <em>{members(c.memberCount)} members · {c.scope === 'global' ? 'Global' : c.city || 'Local'}</em>
+        <em><CategoryTag id={categoryOf(c)} /> {members(c.memberCount)} members · {c.scope === 'global' ? 'Global' : c.city || 'Local'}</em>
         {why && <i>{why}</i>}
       </span>
       <JoinButton c={c} />
@@ -63,7 +68,8 @@ function SuggestRow({ c, why }) {
 }
 
 export default function Communities() {
-  const { profile } = useApp()
+  const { profile, user } = useApp()
+  const [reach, setReach] = useReach()
   const { all } = useCommunities()
   const [params, setParams] = useSearchParams()
   const tab = TABS.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'foryou'
@@ -72,10 +78,14 @@ export default function Communities() {
   const q = params.get('q') || ''
   const setQ = (v) => setParams((p) => { v ? p.set('q', v) : p.delete('q'); return p }, { replace: true })
   const term = q.trim().toLowerCase()
+  const category = params.get('category') || ''
+  const setCategory = (v) => setParams((p) => { v ? p.set('category', v) : p.delete('category'); return p }, { replace: true })
 
   const interests = (profile.interests || []).map((i) => i.toLowerCase())
   const matchFor = (c) => (c.tags || []).find((t) => interests.some((i) => t.includes(i) || i.includes(t)))
-  const filtered = all.filter((c) => !term || `${c.name} ${c.tagline} ${(c.tags || []).join(' ')}`.toLowerCase().includes(term))
+  const catCounts = all.reduce((m, c) => { const k = categoryOf(c); m[k] = (m[k] || 0) + 1; return m }, {})
+  const filtered = all.filter((c) => (!term || `${c.name} ${c.tagline} ${(c.tags || []).join(' ')}`.toLowerCase().includes(term))
+    && (!category || categoryOf(c) === category) && inReach(c, reach, user))
   const mine = filtered.filter((c) => profile.communities.includes(c.id))
   const notMine = filtered.filter((c) => !profile.communities.includes(c.id))
   const popular = useMemo(() => [...filtered].sort((a, b) => (b.memberCount ?? 0) - (a.memberCount ?? 0)).slice(0, 8), [filtered])
@@ -94,9 +104,12 @@ export default function Communities() {
         {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>)}
       </div>
 
+      <ReachChips value={reach} onChange={setReach} me={user} />
+      <CategoryChips value={category} onChange={setCategory} counts={catCounts} />
+
       <label className="search-pill page-search"><Icon name="search" size={17} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search communities" aria-label="Search communities" /></label>
 
-      {tab === 'foryou' && !term && (
+      {tab === 'foryou' && !term && !category && (
         <section className="cm-hero">
           <div className="cm-hero-text">
             <strong>Communities</strong>

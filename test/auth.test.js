@@ -4,7 +4,7 @@ import { app, request, signUp } from './helpers.js'
 describe('auth', () => {
   it('registers a user and sets an httpOnly session cookie', async () => {
     const res = await request(app).post('/api/auth/register')
-      .send({ name: 'Ada Lovelace', email: 'Ada.Cookie@Example.com', password: 'analytical-engine' })
+      .send({ name: 'Ada Lovelace', email: 'Ada.Cookie@Example.com', password: 'analytical-engine', birthDate: '1990-12-10' })
     expect(res.status).toBe(200)
     expect(res.body.user).toMatchObject({ name: 'Ada Lovelace', email: 'ada.cookie@example.com' })
     expect(res.body.user).not.toHaveProperty('password_hash')
@@ -23,7 +23,7 @@ describe('auth', () => {
   it('rejects a duplicate email regardless of letter case', async () => {
     const { email } = await signUp()
     const res = await request(app).post('/api/auth/register')
-      .send({ name: 'Copy', email: email.toUpperCase(), password: 'another-password' })
+      .send({ name: 'Copy', email: email.toUpperCase(), password: 'another-password', birthDate: '1990-12-10' })
     expect(res.status).toBe(409)
   })
 
@@ -34,6 +34,34 @@ describe('auth', () => {
   ])('rejects bad sign-up input (%#: %s)', async (body) => {
     const res = await request(app).post('/api/auth/register').send(body)
     expect(res.status).toBe(400)
+  })
+
+  // Nuel, Nov 10: "Ask about age before anything", "Our limit is 16 for now".
+  it('asks for a date of birth and turns away anyone under 16', async () => {
+    const base = { name: 'Young', password: 'longenough' }
+    const none = await request(app).post('/api/auth/register').send({ ...base, email: `none-${Date.now()}@ex.co` })
+    expect(none.status).toBe(400)
+    const year = new Date().getFullYear()
+    const young = await request(app).post('/api/auth/register').send({ ...base, email: `young-${Date.now()}@ex.co`, birthDate: `${year - 15}-01-01` })
+    expect(young.status).toBe(400)
+    expect(young.body.error).toMatch(/16/)
+    const ok = await request(app).post('/api/auth/register').send({ ...base, email: `ok-${Date.now()}@ex.co`, birthDate: `${year - 17}-01-01` })
+    expect(ok.status).toBe(200)
+    expect(ok.body.user.needsAge).toBe(false)
+  })
+
+  // Nuel, Nov 12: referring people raises your citizen level.
+  it('credits the inviter when someone joins from their link', async () => {
+    const { agent: inviter, user } = await signUp('Inviter')
+    const before = (await inviter.get(`/api/users/${user.id}/journey`)).body
+    const res = await request(app).post('/api/auth/register')
+      .send({ name: 'Friend', email: `friend-${Date.now()}@ex.co`, password: 'longenough', birthDate: '1999-05-05', ref: user.id })
+    expect(res.status).toBe(200)
+    const mine = (await inviter.get('/api/me/referrals')).body
+    expect(mine.count).toBe(1)
+    const after = (await inviter.get(`/api/users/${user.id}/journey`)).body
+    expect(after.points - before.points).toBe(15)
+    expect(after.badges.map((b) => b.id)).toContain('recruiter')
   })
 
   it('logs in with the right password and returns the same error for wrong password or unknown email', async () => {

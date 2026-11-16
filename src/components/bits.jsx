@@ -19,9 +19,12 @@ const LiveBadge = () => <span className="live-badge"><span className="live-dot" 
 
 // A member who's been around in the last few minutes gets a blinking green
 // dot on their avatar. `active` comes from the API (see publicUser).
-export function Avatar({ user, size = 40 }) {
+// `level` adds the citizen-level badge in the corner. Levels are 0-based on
+// the server (New Citizen is 0), so it shows one higher to read as "Lv 1".
+export function Avatar({ user, size = 40, level = false }) {
   const color = user.color || '#888'
   const initials = user.name.split(' ').map((w) => w[0]).slice(0, 2).join('')
+  const lv = Number.isFinite(user.citizenLevel) ? user.citizenLevel + 1 : null
   return (
     <div
       className="avatar"
@@ -34,6 +37,11 @@ export function Avatar({ user, size = 40 }) {
     >
       {user.photo ? <img className="avatar-photo" src={user.photo} alt="" loading="lazy" /> : initials}
       {user.active && <span className="active-dot" style={{ '--dot': `${Math.max(8, Math.round(size * 0.24))}px` }} aria-hidden="true" />}
+      {level && lv && (
+        <span className="avatar-level" style={{ '--lv': `${Math.max(20, Math.round(size * 0.3))}px` }} title={`Level ${lv}`}>
+          <b>{lv}</b>
+        </span>
+      )}
     </div>
   )
 }

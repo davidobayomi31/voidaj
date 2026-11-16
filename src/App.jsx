@@ -7,6 +7,8 @@ import { Eagle } from './components/Eagle.jsx'
 import { Avatar } from './components/bits.jsx'
 import Assistant from './components/Assistant.jsx'
 import { AdsRail } from './components/AdsRail.jsx'
+import AgeGate from './components/AgeGate.jsx'
+import EmailConfirm from './components/EmailConfirm.jsx'
 import Home from './pages/Home.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Community from './pages/Community.jsx'
@@ -24,6 +26,7 @@ import Explore from './pages/Explore.jsx'
 import Communities from './pages/Communities.jsx'
 import Events from './pages/Events.jsx'
 import EventDetail from './pages/EventDetail.jsx'
+import EventManage from './pages/EventManage.jsx'
 import Tag from './pages/Tag.jsx'
 import Badges from './pages/Badges.jsx'
 import Business from './pages/Business.jsx'
@@ -37,6 +40,8 @@ import Favorites from './pages/Favorites.jsx'
 import MyCity from './pages/MyCity.jsx'
 import Admin from './pages/Admin.jsx'
 import IdCard from './pages/IdCard.jsx'
+import Privacy from './pages/Privacy.jsx'
+import Terms from './pages/Terms.jsx'
 import * as api from './api.js'
 import { FEATURES } from './features.js'
 
@@ -56,16 +61,46 @@ const PRIMARY = [
   { to: '/chats', icon: 'message-circle', tone: 'green', label: 'Chat', unread: true },
 ]
 
-// The phone's bottom bar, as in the mockups: Home · Chat · (+) · Community
-// · Profile, with Add Hub as the raised centre button. Explore, My City,
-// Events and Quick Jobs are one tap away from Home.
+// The phone's bottom bar (Nuel, Nov 11): Home · My City · (+) · Chat ·
+// Profile, with Add Hub as the raised centre button. Explore, Events,
+// Quick Jobs and Communities are one tap away from Home.
 const MOBILE = [
   { to: '/home', icon: 'home', short: 'Home' },
+  { to: '/city', icon: 'map-pin', short: 'My City' },
+  { to: '/add', icon: 'plus', short: 'Hub', center: true },
   { to: '/chats', icon: 'message-circle', short: 'Chat', unread: true },
-  { to: '/add', icon: 'plus', short: 'Add Hub', center: true },
-  { to: '/communities', icon: 'community', short: 'Community' },
   { to: '/profile/me', icon: 'user', short: 'Profile' },
 ]
+
+// A way back from every page (Nuel, Nov 11, on the Events back button: "I
+// like this but not every one got it or how do people go back?"). It goes
+// to the page you came from, or to the place a page belongs to when you
+// arrived on it directly. Home is where you start, so it has none, and
+// Settings sections keep their own "‹ Settings".
+const PARENTS = [
+  [/^\/event\/[^/]+\/manage/, (p) => p.replace(/\/manage$/, ''), 'Event'],
+  [/^\/event\//, '/events', 'Events'],
+  [/^\/community\//, '/communities', 'Communities'],
+  [/^\/communities\/new/, '/communities', 'Communities'],
+  [/^\/business\/[^/]+\/(edit|promote)/, null, 'Business'],
+  [/^\/business\//, '/businesses', 'Businesses'],
+]
+function BackBar() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const path = location.pathname
+  if (IMMERSIVE.includes(path) || path === '/home' || path === '/' || /^\/settings\/.+/.test(path)) return null
+  const [, parent, label] = PARENTS.find(([re]) => re.test(path)) || [null, '/home', 'Back']
+  const canGoBack = (window.history.state?.idx ?? 0) > 0
+  const back = () => (canGoBack ? navigate(-1) : navigate((typeof parent === 'function' ? parent(path) : parent) || '/home'))
+  return (
+    <div className="page-back">
+      <button type="button" className="btn ghost small page-back-btn" onClick={back} aria-label={label === 'Back' ? 'Go back' : `Back to ${label}`}>
+        <Icon name="back" size={16} /> {label}
+      </button>
+    </div>
+  )
+}
 
 // Unread direct messages — the number on Chat.
 function useUnreadMessages() {
@@ -303,6 +338,10 @@ function Footer() {
       <div className="footer-text">
         <div className="footer-brand"><em>Connect. Discover. Participate.</em></div>
         <div className="footer-line">People · Communities · Opportunities — the intelligent community network.</div>
+        <div className="footer-links">
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
+        </div>
       </div>
     </footer>
   )
@@ -316,6 +355,8 @@ export default function App() {
           <SideNav />
           <Header />
           <main className="main">
+            <BackBar />
+            <EmailConfirm />
             <Routes>
               {/* My City merged into Home; the old address lands there. */}
               <Route path="/" element={<Navigate to="/home" replace />} />
@@ -327,6 +368,7 @@ export default function App() {
               <Route path="/communities" element={<Communities />} />
               <Route path="/events" element={<Events />} />
               <Route path="/event/:id" element={<EventDetail />} />
+              <Route path="/event/:id/manage" element={<EventManage />} />
               <Route path="/tag/:tag" element={<Tag />} />
               <Route path="/badges" element={<Badges />} />
               <Route path="/businesses" element={<Businesses />} />
@@ -355,6 +397,10 @@ export default function App() {
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/chats" element={<Chats />} />
               <Route path="/vision" element={<ProfileVision />} />
+              {/* Public, and they must stay public: Google and Apple fetch
+                  these before they will allow sign-in with them. */}
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               {/* Unknown or retired paths (e.g. the old /discover) land on Home. */}
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
@@ -363,6 +409,7 @@ export default function App() {
           <AdsRail />
           {FEATURES.companion && <Assistant />}
           <MobileNav />
+          <AgeGate />
         </div>
       </BrowserRouter>
     </AppProvider>

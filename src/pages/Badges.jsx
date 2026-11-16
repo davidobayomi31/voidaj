@@ -12,7 +12,7 @@ import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 
 export const BADGE_STYLES = ['violet', 'blue', 'teal', 'gold', 'red', 'green', 'orange', 'silver']
-const ICON = { 'early-explorer': 'compass', verified: 'badge-check', 'first-post': 'edit', 'top-contributor': 'star', thinker: 'chat', supporter: 'heart', connector: 'community', 'community-builder': 'users', 'event-host': 'calendar', weaver: 'shuffle', 'trusted-hand': 'wrench', 'well-known': 'award' }
+const ICON = { 'early-explorer': 'compass', verified: 'badge-check', 'first-post': 'edit', 'top-contributor': 'star', thinker: 'chat', supporter: 'heart', connector: 'community', 'community-builder': 'users', 'event-host': 'calendar', weaver: 'shuffle', 'trusted-hand': 'wrench', 'well-known': 'award', recruiter: 'user-plus', ambassador: 'megaphone' }
 
 // The badge itself: a glossy shield in its colour.
 export function BadgeArt({ badge, size = 64, locked = false }) {
@@ -45,6 +45,32 @@ export function LevelCard({ j, compact = false }) {
         </ol>
       )}
     </div>
+  )
+}
+
+// Invite friends (Nuel, Nov 12: "create something whereby people can refer
+// other people to join and that increases their status… the more people
+// they refer the bar increases to a new status"). Each friend who joins
+// from your link is worth points towards your next citizen level.
+export const REFERRAL_POINTS = 15
+export function InviteCard({ user, count }) {
+  const [copied, setCopied] = useState(false)
+  const link = `${location.origin}/auth?ref=${encodeURIComponent(user.id)}`
+  const share = async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: 'Join me on VOIDAJ', text: 'Connect. Discover. Participate. Join me on VOIDAJ:', url: link })
+      else { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+    } catch { /* closed */ }
+  }
+  return (
+    <section className="card bd-section bd-invite">
+      <div className="row-head"><h2>Invite friends, rise faster</h2><span className="meta-dim">{count} joined</span></div>
+      <p className="meta-dim">Every friend who joins from your link adds <b>{REFERRAL_POINTS} points</b> to your bar, moving you from New Citizen to Resident, Neighbour and beyond. Bring one for the Recruiter badge and ten for Ambassador.</p>
+      <div className="bd-invite-row">
+        <input readOnly value={link} aria-label="Your invite link" onFocus={(e) => e.target.select()} />
+        <button className="btn primary small" onClick={share}><Icon name={copied ? 'check' : 'share'} size={14} /> {copied ? 'Copied' : 'Share link'}</button>
+      </div>
+    </section>
   )
 }
 
@@ -121,6 +147,7 @@ export default function Badges() {
       {j && tab === 'mine' && (
         <>
           <LevelCard j={j} />
+          <InviteCard user={user} count={j.stats?.referrals ?? 0} />
           <section className="card bd-section">
             <div className="row-head"><h2>Your badges ({mine.length})</h2><button className="link-btn" onClick={() => setTab('discover')}>See all</button></div>
             {mine.length === 0 ? <p className="meta-dim">No badges yet. Post, spark, join communities and host events to earn them.</p> : (

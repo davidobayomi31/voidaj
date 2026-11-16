@@ -38,8 +38,8 @@ export default function Admin() {
   const [samples, setSamples] = useState(false)
   const [sort, setSort] = useState({ by: 'joinedAt', desc: true })
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'accounts' ? 'accounts' : 'members'
-  const setTab = (t) => setParams((p) => { t === 'accounts' ? p.set('tab', 'accounts') : p.delete('tab'); return p }, { replace: true })
+  const tab = ['accounts', 'disputes'].includes(params.get('tab')) ? params.get('tab') : 'members'
+  const setTab = (t) => setParams((p) => { t !== 'members' ? p.set('tab', t) : p.delete('tab'); return p }, { replace: true })
 
   useEffect(() => {
     if (!user?.isAdmin) return
@@ -106,9 +106,12 @@ export default function Admin() {
         <button role="tab" aria-selected={tab === 'accounts'} className={tab === 'accounts' ? 'on' : ''} onClick={() => setTab('accounts')}>
           <Icon name="lock" size={15} /> Company accounts
         </button>
+        <button role="tab" aria-selected={tab === 'disputes'} className={tab === 'disputes' ? 'on' : ''} onClick={() => setTab('disputes')}>
+          <Icon name="flag" size={15} /> Job disputes
+        </button>
       </div>
 
-      {tab === 'accounts' ? <AdminAccounts /> : <>
+      {tab === 'disputes' ? <AdminDisputes /> : tab === 'accounts' ? <AdminAccounts /> : <>
 
       <div className="admin-stats">
         {stats.map((s) => (
@@ -168,6 +171,34 @@ export default function Admin() {
         </div>
       )}
       </>}
+    </div>
+  )
+}
+
+// Problems reported on Quick Jobs (server/jobs-flow.js). Resolving one
+// closes the job as completed or cancelled.
+function AdminDisputes() {
+  const [list, setList] = useState(null)
+  const load = () => api.adminDisputes().then(setList).catch(() => setList([]))
+  useEffect(() => { load() }, [])
+  if (!list) return <p className="meta-dim">Loading…</p>
+  if (!list.length) return <p className="meta-dim empty-note">No job disputes.</p>
+  const resolve = async (id, outcome) => { await api.resolveDispute(id, outcome); load() }
+  return (
+    <div className="stack">
+      {list.map((d) => (
+        <div key={d.id} className="card admin-dispute">
+          <b><Link to={`/jobs?job=${d.jobId}`}>{d.jobTitle}</Link></b>
+          <p>“{d.reason}”</p>
+          <em className="meta-dim">Raised by {d.by?.name} · {new Date(d.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · {d.status}</em>
+          {d.status === 'open' && (
+            <span className="composer-foot">
+              <button className="btn ghost small" onClick={() => resolve(d.id, 'cancelled')}>Close as cancelled</button>
+              <button className="btn primary small" onClick={() => resolve(d.id, 'completed')}>Close as completed</button>
+            </span>
+          )}
+        </div>
+      ))}
     </div>
   )
 }

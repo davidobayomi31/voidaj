@@ -4,11 +4,14 @@
 // posted themselves. Only the member sees this; it never appears to others.
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { showVerifiedTick } from '../verification.js'
 import * as api from '../api.js'
 import { Icon } from './Icons.jsx'
+import { withCurrency } from '../countries.js'
 
 const STATUSES = [
   { id: 'applied', label: 'Waiting to hear back' },
+  { id: 'shortlisted', label: 'Shortlisted' },
   { id: 'talking', label: 'In talks' },
   { id: 'hired', label: 'Hired' },
   { id: 'declined', label: 'Not selected' },
@@ -17,13 +20,15 @@ const STATUSES = [
 const FILTERS = [
   { id: 'all', label: 'All', match: () => true },
   { id: 'waiting', label: 'Waiting', match: (a) => a.status === 'applied' },
-  { id: 'talking', label: 'In talks', match: (a) => a.status === 'talking' },
+  { id: 'talking', label: 'In talks', match: (a) => a.status === 'talking' || a.status === 'shortlisted' },
   { id: 'hired', label: 'Hired', match: (a) => a.status === 'hired' },
   { id: 'closed', label: 'Closed', match: (a) => a.status === 'declined' || a.status === 'withdrawn' },
 ]
 // Long enough that a polite nudge is reasonable, short enough to still matter.
 const FOLLOW_UP_DAYS = 5
 const daysSince = (t) => Math.max(0, Math.floor((Date.now() - t) / 86_400_000))
+// Where a job is now (server/jobs-flow.js).
+const STAGE = { paused: 'Paused', selected: 'Worker selected', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled', disputed: 'Disputed' }
 const dayLabel = (n) => (n === 0 ? 'today' : n === 1 ? '1 day ago' : `${n} days ago`)
 
 export function JobHistory({ profile }) {
@@ -76,12 +81,12 @@ export function JobHistory({ profile }) {
         <div className="jh-stat"><span className="jh-num">{stats.responseRate == null ? '—' : `${stats.responseRate}%`}</span><span className="jh-label">Heard back</span></div>
       </div>
 
-      {(stats.stale > 0 || !profile.idVerified || !profile.jobSkills?.length) && (
+      {(stats.stale > 0 || (showVerifiedTick() && !profile.idVerified) || !profile.jobSkills?.length) && (
         <ul className="jh-nudges">
           {stats.stale > 0 && (
             <li><Icon name="clock" size={14} /> {stats.stale} {stats.stale === 1 ? 'application has' : 'applications have'} been waiting {FOLLOW_UP_DAYS}+ days. A short, polite message to the poster is fair game.</li>
           )}
-          {!profile.idVerified && (
+          {showVerifiedTick() && !profile.idVerified && (
             <li><Icon name="badge-check" size={14} /> Verified pros get priority and can apply to verified-only jobs. <Link to="/jobs">Verify your ID</Link></li>
           )}
           {!profile.jobSkills?.length && (
@@ -116,12 +121,12 @@ export function JobHistory({ profile }) {
                   <div className="jh-main">
                     <div className="jh-title">
                       <strong>{a.job.title}</strong>
-                      {closed && <span className="jh-flag">Job closed</span>}
+                      {closed && <span className="jh-flag">{a.status === 'hired' ? STAGE[a.job.status] || 'Closed' : 'Job closed'}</span>}
                       {stale && <span className="jh-flag warn">Follow up</span>}
                     </div>
                     <div className="meta-dim jh-meta">
                       <span>{a.job.category}</span>
-                      {a.job.budget && <span>{a.job.budget}</span>}
+                      {a.job.budget && <span>{withCurrency(a.job.budget, a.job.currency)}</span>}
                       {a.job.area && <span><Icon name="map-pin" size={11} /> {a.job.area}</span>}
                       <span>Posted by {a.job.poster.name}</span>
                     </div>
@@ -138,6 +143,7 @@ export function JobHistory({ profile }) {
                         {STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                       </select>
                     </label>
+                    <Link to={`/jobs?job=${a.job.id}`} className="btn ghost small">Open</Link>
                     <Link to={`/chats?dm=${a.job.poster.id}`} className="btn ghost small">
                       <Icon name="message-circle" size={13} /> Message
                     </Link>
@@ -156,7 +162,7 @@ export function JobHistory({ profile }) {
             {data.posted.map((j) => (
               <article key={j.id} className="jh-row">
                 <div className="jh-main">
-                  <div className="jh-title"><strong>{j.title}</strong>{j.status !== 'open' && <span className="jh-flag">Closed</span>}</div>
+                  <div className="jh-title"><Link to={`/jobs?job=${j.id}`}><strong>{j.title}</strong></Link>{j.status !== 'open' && <span className="jh-flag">{STAGE[j.status] || 'Closed'}</span>}</div>
                   <div className="meta-dim jh-meta">
                     <span>{j.category}</span>
                     <span>Posted {j.ago}</span>

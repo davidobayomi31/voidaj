@@ -9,6 +9,7 @@ import { useApp } from '../state.jsx'
 import { Avatar } from '../components/bits.jsx'
 import { Icon } from '../components/Icons.jsx'
 import { VoidajMark } from '../components/VoidajMark.jsx'
+import { showVerifiedTick } from '../verification.js'
 
 const profileUrl = (u) => `${window.location.origin}${u.handle ? `/u/${u.handle.replace(/^@/, '')}` : `/profile/${u.id}`}`
 
@@ -60,7 +61,7 @@ export default function IdCard() {
         </div>
         <div className="id-card-bottom">
           <div className="id-card-status">
-            {profile.idVerified
+            {showVerifiedTick() && profile.idVerified
               ? <span className="id-verified"><Icon name="badge-check" size={14} /> Verified member</span>
               : <span className="id-unverified">Not verified yet</span>}
             <span className="id-card-city"><Icon name="map-pin" size={12} /> {profile.city || 'Lagos'}</span>
@@ -76,7 +77,7 @@ export default function IdCard() {
         <Link to="/profile/me" className="btn ghost"><Icon name="user" size={15} /> View my profile</Link>
       </div>
 
-      {!profile.idVerified && (
+      {showVerifiedTick() && !profile.idVerified && (
         <p className="meta-dim id-note">
           Want the <strong>Verified</strong> tick on your card? <Link to="/jobs">Verify your ID in Quick Jobs</Link>.
         </p>

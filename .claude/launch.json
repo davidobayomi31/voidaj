@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "interact-space",
+      "name": "voidaj",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
@@ -36,6 +36,27 @@
       ],
       "port": 5174,
       "autoPort": false
+    },
+    {
+      "name": "nsbe",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd \"$HOME/Desktop/NSBE WEBSITE\" && npx astro dev"
+      ],
+      "port": 4321
+    },
+    {
+      "name": "ledgerguard",
+      "runtimeExecutable": "java",
+      "runtimeArgs": [
+        "-jar",
+        "/Users/davidobayomi/Desktop/ledgerguard/target/ledgerguard-0.0.1-SNAPSHOT.jar",
+        "--spring.datasource.url=jdbc:postgresql://127.0.0.1:5432/ledgerguard",
+        "--spring.datasource.username=davidobayomi",
+        "--ledgerguard.jwt.secret=local-dev-secret-local-dev-secret-123"
+      ],
+      "port": 8080
     }
   ]
 }

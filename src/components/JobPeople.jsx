@@ -11,6 +11,7 @@ import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from './Icons.jsx'
 import { Avatar, FavoriteButton } from './bits.jsx'
+import { showVerifiedTick, verifiedLongLabel } from '../verification.js'
 
 // What someone in each category is called, and the colour of their cards:
 // muted, earthy tones that sit beside the logo's ink and paper.
@@ -50,7 +51,7 @@ function ProCard({ pro, category }) {
           <div>
             <Link to={`/profile/${pro.id}`} className="pro-name">
               {pro.name}
-              {pro.idVerified && <Icon name="badge-check" size={15} className="pro-tick" />}
+              {showVerifiedTick() && pro.idVerified && <Icon name="badge-check" size={15} className="pro-tick" />}
             </Link>
             {pro.title && <div className="pro-title">{pro.title}</div>}
             <div className="pro-meta">
@@ -63,7 +64,7 @@ function ProCard({ pro, category }) {
           {pro.jobsDone > 0
             ? <span><b>{pro.jobsDone}</b> {pro.jobsDone === 1 ? 'job' : 'jobs'} done on VOIDAJ</span>
             : <span className="pro-new">New on Quick Jobs</span>}
-          {pro.idVerified && <span className="pro-verified"><Icon name="badge-check" size={12} /> ID verified</span>}
+          {showVerifiedTick() && pro.idVerified && <span className="pro-verified"><Icon name="badge-check" size={12} /> {verifiedLongLabel()}</span>}
         </div>
         {others.length > 0 && (
           <div className="pro-also">
@@ -129,7 +130,9 @@ export function JobPeople() {
     for (const p of pros ?? []) for (const s of p.jobSkills) (by[s] ??= []).push(p)
     // Within an occupation: most hires first, then specialists (people who do
     // fewer kinds of work) ahead of people who ticked everything, then verified.
-    const rank = (a, b) => (b.jobsDone - a.jobsDone) || (a.jobSkills.length - b.jobSkills.length) || (Number(b.idVerified) - Number(a.idVerified))
+    // A self-assigned badge shouldn't quietly reorder the directory.
+    const rank = (a, b) => (b.jobsDone - a.jobsDone) || (a.jobSkills.length - b.jobSkills.length)
+      || (showVerifiedTick() ? Number(b.idVerified) - Number(a.idVerified) : 0)
     return JOB_CATEGORIES.map((c) => [c.id, (by[c.id] ?? []).sort(rank)]).filter(([, list]) => list.length)
       .sort((a, b) => b[1].length - a[1].length)
   }, [pros])

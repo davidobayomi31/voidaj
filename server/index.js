@@ -14,6 +14,11 @@ import q, {
   ROLE_RANK, STAFF_SQL, isStaff, readSettings, DEFAULT_SETTINGS, transaction,
   pool,
 } from './db.js'
+import { cleanCategory } from './categories.js'
+import { cleanCountry, cleanCurrency, currencyOf, normalisePhone, isTimeZone, findCountry, DEFAULT_COUNTRY, featureOn } from './countries.js'
+import * as guard from './guard.js'
+import { eventRoutes, eventRole, joinEventCircle } from './events-extra.js'
+import { jobFlowRoutes } from './jobs-flow.js'
 import { seedIfEmpty, seedExtras, keepDemoStatuses } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
 import { companionReply } from './companion.js'
@@ -21,6 +26,7 @@ import * as social from './social.js'
 import { businessRoutes, businessContext, countEnquiry } from './business.js'
 import { storageReady, uploadImage, readImage, cleanCover } from './storage.js'
 import { requestLogger, errorHandler, healthHandler } from './monitoring.js'
+import { VERIFICATION_IS_REAL } from './verification.js'
 
 const app = express()
 // Request id on every response, and a JSON log line for every 5xx
@@ -124,24 +130,83 @@ app.post('/api/auth/register', async (req, res) => {
   if (!name?.trim()) return err(res, 400, 'Please enter your name.')
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return err(res, 400, 'Enter a valid email address.')
   if (!password || password.length < 6) return err(res, 400, 'Password must be at least 6 characters.')
+  const ageError = checkAge(req.body?.birthDate)
+  if (ageError) return err(res, 400, ageError)
+  if (!(await guard.registerGuard(req, res))) return
   if (await getUserByEmail(email)) return err(res, 409, 'An account with that email already exists.')
+  const country = cleanCountry(req.body?.country) || DEFAULT_COUNTRY
 
   const id = uid('u')
   const color = NEW_USER_COLORS[Math.floor(Math.random() * NEW_USER_COLORS.length)]
   const handle = '@' + name.trim().toLowerCase().split(/\s+/)[0].replace(/[^a-z0-9]/g, '')
   await q.run(`INSERT INTO users (id, email, password_hash, name, handle, title, color, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, id, email.toLowerCase(), hashPassword(password), name.trim(), handle, 'New citizen of VOIDAJ', color, now())
+  await q.run('UPDATE users SET birth_date = ?, referred_by = ?, country = ? WHERE id = ?', String(req.body.birthDate), await referrerId(req.body?.ref, id), country, id)
+  // A code to confirm the email address (server/guard.js).
+  await guard.sendEmailCode(await getUserById(id))
   issueSession(res, id)
   await recordLogin(req, id)
   res.json({ user: await selfUser(await getUserById(id)) })
 })
 
+// Age comes before anything else, and the minimum is 16 for now (Nuel,
+// Nov 10: "Ask about age before anything", "Our limit is 16 for now").
+const MIN_AGE = 16
+function ageOn(birthDate, today = new Date()) {
+  const [y, m, d] = String(birthDate).split('-').map(Number)
+  let age = today.getFullYear() - y
+  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age -= 1
+  return age
+}
+function checkAge(birthDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(birthDate || '')) || Number.isNaN(Date.parse(birthDate))) return 'Enter your date of birth.'
+  const age = ageOn(birthDate)
+  if (age > 120 || age < 0) return 'Enter your real date of birth.'
+  if (age < MIN_AGE) return `You need to be at least ${MIN_AGE} to join VOIDAJ.`
+  return null
+}
+
+// Who invited someone: their invite link carries the inviter's handle or id
+// (/auth?ref=…). Nobody can refer themselves.
+async function referrerId(ref, selfId) {
+  const r = String(ref || '').trim().replace(/^@/, '').slice(0, 60)
+  if (!r) return null
+  const row = await q.get('SELECT id FROM users WHERE (id = ? OR handle = ?) AND deleted_at IS NULL', r, '@' + r)
+  return row && row.id !== selfId ? row.id : null
+}
+
+// Accounts made with Google or Apple (and older ones) are asked for their
+// date of birth before they can carry on. An invite link they arrived on
+// counts if the account is new.
+app.put('/api/me/age', requireAuth, async (req, res) => {
+  const ageError = checkAge(req.body?.birthDate)
+  if (ageError) return err(res, 400, ageError)
+  await q.run('UPDATE users SET birth_date = ? WHERE id = ?', String(req.body.birthDate), req.userId)
+  // Picked on the sign-up page before going to Google or Apple.
+  if (cleanCountry(req.body?.country)) await q.run('UPDATE users SET country = ? WHERE id = ?', cleanCountry(req.body.country), req.userId)
+  const fresh = Date.now() - (req.userRow.created_at || 0) < 24 * 60 * 60 * 1000
+  if (fresh && !req.userRow.referred_by) {
+    const by = await referrerId(req.body?.ref, req.userId)
+    if (by) await q.run('UPDATE users SET referred_by = ? WHERE id = ?', by, req.userId)
+  }
+  res.json({ user: await selfUser(await getUserById(req.userId)) })
+})
+
+// The people you've brought to VOIDAJ, for the invite card on My Badges.
+app.get('/api/me/referrals', requireAuth, async (req, res) => {
+  const rows = await q.all('SELECT * FROM users WHERE referred_by = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50', req.userId)
+  res.json({ count: rows.length, people: rows.map(publicUser) })
+})
+
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body || {}
+  if (await guard.loginBlocked(req, email || '')) return err(res, 429, 'Too many tries. Please wait a few minutes and try again.')
   const row = await getUserByEmail(email || '')
   if (!row || row.is_seed || row.deleted_at || !checkPassword(password || '', row.password_hash)) {
+    await guard.loginFailed(req, email || '')
     return err(res, 401, 'Wrong email or password.')
   }
+  await guard.loginSucceeded(email)
   issueSession(res, row.id, row.token_version)
   await recordLogin(req, row.id)
   res.json({ user: await selfUser(row) })
@@ -172,6 +237,11 @@ async function socialSignIn(req, provider, profile) {
     await q.run(`INSERT INTO users (id, email, password_hash, name, handle, title, color, photo, ${col}, created_at)
       VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`, id, profile.email, name, handle, 'New citizen of VOIDAJ', color, profile.photo || '', profile.sub, now())
     row = await getUserById(id)
+  }
+  // Google and Apple only hand over an email they've confirmed themselves.
+  if (profile.email && !row.email_confirmed_at && row.email === profile.email) {
+    await q.run('UPDATE users SET email_confirmed_at = ?, email_code = NULL WHERE id = ?', now(), row.id)
+    row = await getUserById(row.id)
   }
   return row
 }
@@ -210,13 +280,36 @@ for (const provider of ['google', 'apple']) {
 
 app.get('/api/auth/me', async (req, res) => res.json({ user: req.userId ? await selfUser(req.userRow) : null }))
 
+// Confirm your email with the 6-digit code (server/guard.js).
+app.post('/api/auth/confirm-email', requireAuth, async (req, res) => {
+  const result = await guard.checkEmailCode(req.userRow, req.body?.code)
+  if (result.error) return err(res, 400, result.error)
+  res.json({ user: await selfUser(await getUserById(req.userId)) })
+})
+app.post('/api/auth/email-code', requireAuth, async (req, res) => {
+  if (req.userRow.email_confirmed_at) return res.json({ ok: true, confirmed: true })
+  const key = `emailcode:${req.userId}`
+  if (await guard.over(key, guard.LIMITS.emailCode)) return err(res, 429, 'We’ve sent a few codes already. Please wait a while before asking for another.')
+  if (guard.limitsOn()) await guard.record(key)
+  const { sent } = await guard.sendEmailCode(req.userRow)
+  res.json({ ok: true, sent })
+})
+
 const PRIVACY_LEVELS = ['exact', 'city-only', 'hidden']
 const MESSAGE_LEVELS = ['everyone', 'connections', 'nobody']
 
+// Sign-in history, so "where am I logged in" and "log out others" mean
+// something. It holds an IP and a user agent, so it is not kept for ever:
+// rows older than LOGIN_HISTORY_DAYS are swept now and then, the way
+// rate_hits prunes itself (server/guard.js).
+export const LOGIN_HISTORY_DAYS = 90
 async function recordLogin(req, userId) {
   const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
   await q.run('INSERT INTO login_events (id, user_id, at, user_agent, ip) VALUES (?, ?, ?, ?, ?)',
     uid('login'), userId, now(), String(req.headers['user-agent'] || '').slice(0, 300), ip.slice(0, 64)).catch(() => {})
+  if (Math.random() < 0.05) {
+    await q.run('DELETE FROM login_events WHERE at < ?', now() - LOGIN_HISTORY_DAYS * 24 * 60 * 60 * 1000).catch(() => {})
+  }
 }
 
 // Only known preference keys, with the right types, are ever stored.
@@ -224,7 +317,7 @@ function cleanSettings(input, current) {
   if (!input || typeof input !== 'object') return null
   const next = { ...current, notify: { ...current.notify } }
   if (MESSAGE_LEVELS.includes(input.messages)) next.messages = input.messages
-  for (const k of ['reduceMotion', 'largeText']) if (typeof input[k] === 'boolean') next[k] = input[k]
+  for (const k of ['reduceMotion', 'largeText', 'workPrivate']) if (typeof input[k] === 'boolean') next[k] = input[k]
   if (['system', 'light', 'dark'].includes(input.theme)) next.theme = input.theme
   if (typeof input.language === 'string' && /^[a-z]{2}$/.test(input.language)) next.language = input.language
   for (const k of Object.keys(DEFAULT_SETTINGS.notify)) {
@@ -281,10 +374,17 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
     if (taken) return err(res, 409, `@${h} is already taken.`)
     handle = '@' + h
   }
+  let country = cur.country || DEFAULT_COUNTRY
+  if (b.country != null) {
+    country = cleanCountry(b.country)
+    if (!country) return err(res, 400, 'Pick a country from the list.')
+  }
+  // Saved in the international format (+234…, +44…), from the number and
+  // the dialling code of the country picked beside it.
   let phone = cur.phone || ''
   if (b.phone != null) {
-    phone = String(b.phone).trim()
-    if (phone && !/^\+?[0-9 ()-]{7,20}$/.test(phone)) return err(res, 400, 'Enter a valid phone number.')
+    phone = normalisePhone(b.phone, cleanCountry(b.phoneCountry) || country)
+    if (phone === null) return err(res, 400, 'Enter a valid phone number.')
   }
   const settings = cleanSettings(b.settings, readSettings(cur))
   const city = b.city != null ? (String(b.city).trim().slice(0, 60) || cur.city) : cur.city
@@ -296,8 +396,8 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
   } catch (e) { return err(res, 400, e.message) }
   await q.run('UPDATE users SET photo = ?, cover = ? WHERE id = ?', photo, cover, cur.id)
 
-  await q.run(`UPDATE users SET handle=?, phone=?, settings=?, city=?, socials=? WHERE id=?`,
-    handle, phone, JSON.stringify(settings ?? readSettings(cur)), city,
+  await q.run(`UPDATE users SET handle=?, phone=?, settings=?, city=?, country=?, socials=? WHERE id=?`,
+    handle, phone, JSON.stringify(settings ?? readSettings(cur)), city, country,
     socials ? JSON.stringify(socials) : (cur.socials || '[]'), cur.id)
   await q.run(`UPDATE users SET portfolio=?, name=?, title=?, area=?, bio=?, privacy=?, interests=?, goals=?, skills=?, job_skills=?, onboarded=? WHERE id=?`,
       portfolio ? JSON.stringify(portfolio) : (cur.portfolio || '[]'),
@@ -323,7 +423,13 @@ app.post('/api/auth/email', requireAuth, async (req, res) => {
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return err(res, 400, 'Enter a valid email address.')
   const other = await getUserByEmail(email)
   if (other && other.id !== req.userId) return err(res, 409, 'Another account already uses that email.')
+  const changed = email.toLowerCase() !== req.userRow.email
   await q.run('UPDATE users SET email = ? WHERE id = ?', email.toLowerCase(), req.userId)
+  // A new address has to be confirmed like the first one.
+  if (changed) {
+    await q.run('UPDATE users SET email_confirmed_at = NULL WHERE id = ?', req.userId)
+    await guard.sendEmailCode(await getUserById(req.userId))
+  }
   res.json({ user: await selfUser(await getUserById(req.userId)) })
 })
 
@@ -404,8 +510,14 @@ app.delete('/api/auth/me', requireAuth, async (req, res) => {
       'DELETE FROM login_events WHERE user_id = ?',
     ]) await t.run(sql, ...Array((sql.match(/\?/g) || []).length).fill(id))
     await t.run("UPDATE jobs SET status = 'closed' WHERE poster_id = ?", id)
+    // Nothing personal survives on the row. birth_date, city, country, the
+    // photos and who invited them used to be left behind; keeping someone's
+    // date of birth after they have deleted their account isn't defensible.
     await t.run(`UPDATE users SET email = NULL, password_hash = NULL, google_sub = NULL, apple_sub = NULL, name = 'Former member', handle = NULL,
-      title = '', bio = '', area = NULL, phone = '', interests = '[]', goals = '[]', skills = '[]',
+      title = '', bio = '', area = NULL, city = NULL, country = NULL, phone = '', birth_date = NULL,
+      photo = '', cover = '', referred_by = NULL, last_seen_at = NULL, verified_at = NULL,
+      email_confirmed_at = NULL, email_code = NULL, email_code_expires = NULL, email_code_tries = 0,
+      interests = '[]', goals = '[]', skills = '[]',
       job_skills = '[]', portfolio = '[]', socials = '[]', settings = '{}', id_verified = 0,
       token_version = COALESCE(token_version, 0) + 1, deleted_at = ? WHERE id = ?`, now(), id)
   })
@@ -502,9 +614,14 @@ app.delete('/api/admin/accounts/:id', requireAuth, requireAdmin, async (req, res
 })
 
 // Simulated ID verification — instant demo "badge", no real KYC provider.
-app.post('/api/auth/verify-id', requireAuth, async (req, res) => {
-  const { idNumber } = req.body || {}
-  if (!idNumber || String(idNumber).trim().length < 6) return err(res, 400, 'Enter a valid ID number.')
+// The prototype badge. It used to ask for a government ID number, check
+// that it was at least six characters, and throw it away — which collected
+// real NINs and passport numbers for nothing. It asks for nothing now, and
+// the flag it sets no longer gates anything (server/verification.js). The
+// route stays so a real provider has somewhere to land.
+app.post('/api/auth/verify-id', requireAuth, guard.requireConfirmed, async (req, res) => {
+  if (!featureOn('idVerification', req.userRow.country)) return err(res, 403, 'ID verification isn’t available in your country yet.')
+  if (!(await guard.writeGuard(req, res))) return
   await q.run('UPDATE users SET id_verified = 1, verified_at = ? WHERE id = ?', now(), req.userId)
   res.json({ user: await selfUser(await getUserById(req.userId)) })
 })
@@ -527,7 +644,7 @@ const COMMUNITY_ACCENTS = ['#C0342A', '#1F5FA8', '#1B7F3B', '#6B3FA0', '#B45309'
 const cleanList = (v, max, len) => (Array.isArray(v) ? v : [])
   .map((x) => String(x).trim().slice(0, len)).filter(Boolean).slice(0, max)
 
-app.post('/api/communities', requireAuth, async (req, res) => {
+app.post('/api/communities', requireAuth, guard.requireConfirmed, async (req, res) => {
   const b = req.body || {}
   const name = String(b.name || '').trim().slice(0, 60)
   if (name.length < 3) return err(res, 400, 'Give the community a name (at least 3 letters).')
@@ -547,6 +664,7 @@ app.post('/api/communities', requireAuth, async (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)`,
     id, name, String(b.tagline || '').trim().slice(0, 120), String(b.description || '').trim().slice(0, 1000),
     scope, city, accent, icon, JSON.stringify(tags), JSON.stringify(rules), req.userId, now(), cover)
+  await q.run('UPDATE communities SET category = ?, country = ? WHERE id = ?', cleanCategory(b.category), req.userRow.country || DEFAULT_COUNTRY, id)
   await q.run("INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, 'owner', ?)", req.userId, id, now())
   await logAction(id, req.userId, 'community.created', { summary: name })
   const row = await q.get('SELECT * FROM communities WHERE id = ?', id)
@@ -605,6 +723,17 @@ app.get('/api/events', async (req, res) => {
 
 // Events can be for everyone ('public'), the creator's city ('city'), or
 // one community they belong to ('community'), the same as posts.
+const EVENT_FORMATS = ['in-person', 'online', 'hybrid']
+
+// Event Circle (Events note): a group chat for the people going, made with
+// the event. The creator is in it from the start; going adds you.
+async function createEventCircle(eventId, title, creatorId) {
+  const id = uid('gc')
+  await q.run('INSERT INTO chats (id, name, description, community_id, creator_id, created_at, event_id) VALUES (?, ?, ?, NULL, ?, ?, ?)',
+    id, `${title.slice(0, 60)} · Event Circle`, 'For everyone going to this event.', creatorId, now(), eventId)
+  await q.run('INSERT INTO chat_members (chat_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', id, creatorId, now())
+  return id
+}
 async function createEvent(req, res, audience, communityId) {
   let city = ''
   if (audience === 'community') {
@@ -624,17 +753,28 @@ async function createEvent(req, res, audience, communityId) {
   let cover
   try { cover = cleanCover(b.cover) } catch (e) { return err(res, 400, e.message) }
   if (cover === null) return err(res, 400, 'That cover photo can’t be used. Upload it again.')
+  const format = EVENT_FORMATS.includes(b.format) ? b.format : 'in-person'
+  const capacity = Number.isInteger(Number(b.capacity)) && Number(b.capacity) > 0 ? Math.min(Number(b.capacity), 100000) : null
+  if (!(await guard.writeGuard(req, res))) return
   const id = uid('ev')
   await q.run(`INSERT INTO events (id, community_id, creator_id, title, date, time, venue, description, attending, created_at, cover, audience, city)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)`, id, audience === 'community' ? communityId : null, req.userId, title, date,
     String(b.time || '').trim().slice(0, 20), String(b.venue || '').trim().slice(0, 100), String(b.description || '').trim().slice(0, 600), now(), cover,
     audience, city)
+  const creator = await getUserById(req.userId)
+  const country = creator?.country || DEFAULT_COUNTRY
+  // The time zone the event's time is in: the creator's device sends it;
+  // otherwise their country's main one.
+  const timezone = isTimeZone(b.timezone) ? b.timezone : (findCountry(country)?.tz || 'Africa/Lagos')
+  await q.run('UPDATE events SET category = ?, format = ?, capacity = ?, country = ?, timezone = ?, invite_only = ? WHERE id = ?',
+    cleanCategory(b.category), format, capacity, country, timezone, b.inviteOnly ? 1 : 0, id)
+  await createEventCircle(id, title, req.userId)
   res.json({ event: serializeEvent(await q.get('SELECT * FROM events WHERE id = ?', id)) })
 }
 
-app.post('/api/communities/:id/events', requireAuth, (req, res) => createEvent(req, res, 'community', req.params.id))
+app.post('/api/communities/:id/events', requireAuth, guard.requireConfirmed, (req, res) => createEvent(req, res, 'community', req.params.id))
 
-app.post('/api/events', requireAuth, (req, res) => {
+app.post('/api/events', requireAuth, guard.requireConfirmed, (req, res) => {
   const audience = ['public', 'city', 'community'].includes(req.body?.audience) ? req.body.audience : 'public'
   return createEvent(req, res, audience, req.body?.communityId)
 })
@@ -695,6 +835,26 @@ app.post('/api/users/:id/follow', requireAuth, async (req, res) => {
 })
 
 // A person's followers, who they follow, or their connections.
+// Block someone (tap again to unblock). They can't message you, and you
+// stop seeing their posts. Blocking also drops any connection or follow
+// between you.
+app.post('/api/users/:id/block', requireAuth, async (req, res) => {
+  const other = await getUserById(req.params.id)
+  if (!other || other.deleted_at) return err(res, 404, 'Person not found.')
+  if (other.id === req.userId) return err(res, 400, 'You can’t block yourself.')
+  const { changes } = await q.run('DELETE FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?', req.userId, other.id)
+  if (!changes) {
+    await q.run('INSERT INTO user_blocks (blocker_id, blocked_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', req.userId, other.id, now())
+    await q.run('DELETE FROM connections WHERE (user_id = ? AND other_id = ?) OR (user_id = ? AND other_id = ?)', req.userId, other.id, other.id, req.userId)
+    await q.run('DELETE FROM follows WHERE (follower_id = ? AND followee_id = ?) OR (follower_id = ? AND followee_id = ?)', req.userId, other.id, other.id, req.userId)
+  }
+  res.json({ blocked: !changes })
+})
+app.get('/api/me/blocks', requireAuth, async (req, res) => {
+  const rows = await q.all('SELECT u.* FROM user_blocks b JOIN users u ON u.id = b.blocked_id WHERE b.blocker_id = ? ORDER BY b.created_at DESC', req.userId)
+  res.json({ people: rows.map(publicUser) })
+})
+
 app.get('/api/users/:id/people', async (req, res) => {
   const list = req.query.list
   const sql = {
@@ -737,8 +897,10 @@ app.get('/api/users/:id', async (req, res) => {
     ...events.slice(0, 4).map((e) => ({ kind: 'event', text: `Created the event “${e.title}”`, at: e.created_at, to: `/event/${e.id}` })),
     ...jobs.slice(0, 4).map((j) => ({ kind: 'job', text: `Posted a quick job: ${j.title}`, at: j.created_at, to: `/jobs?job=${j.id}` })),
   ].filter((a) => a.at).sort((a, b) => b.at - a.at).slice(0, 10)
+  const blockedByMe = req.userId ? !!(await q.get('SELECT 1 FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?', req.userId, id)) : false
   res.json({ user: {
     ...publicUser(row),
+    blockedByMe,
     communities: comms.map((m) => m.community_id),
     jobSkills: parseJson(row.job_skills),
     joinedAt: row.created_at,
@@ -759,7 +921,8 @@ app.get('/api/posts', async (req, res) => {
   if (pinned === '1') sql += ' AND pinned = 1'
   sql += ' ORDER BY pinned DESC, created_at DESC'
   if (limit) { sql += ' LIMIT ?'; args.push(Number(limit)) }
-  const rows = await q.all(sql, ...args)
+  const blocked = new Set(await guard.blockedIds(req.userId))
+  const rows = (await q.all(sql, ...args)).filter((p) => !blocked.has(p.author_id))
   res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
 })
 
@@ -769,6 +932,8 @@ app.get('/api/posts', async (req, res) => {
 const AUDIENCES = ['community', 'city', 'public']
 app.post('/api/posts', requireAuth, async (req, res) => {
   const { communityId, title, body } = req.body || {}
+  if (!(await guard.writeGuard(req, res))) return
+  if (await guard.isDuplicate('posts', 'author_id', req.userId, body)) return err(res, 429, 'You just posted that. Say something new.')
   const audience = AUDIENCES.includes(req.body?.audience) ? req.body.audience : 'community'
   let media
   try { media = cleanMedia(req.body?.media) } catch (e) { return err(res, 400, e.message) }
@@ -823,6 +988,9 @@ app.get('/api/feed', async (req, res) => {
       WHERE ${visible} AND COALESCE(u.is_seed, 0) = 1 ORDER BY p.created_at DESC`, ...args)
     rows = [...real, ...demo]
   }
+  // People you've blocked don't show up in your feed.
+  const blocked = new Set(await guard.blockedIds(req.userId))
+  rows = rows.filter((p) => !blocked.has(p.author_id))
   res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
 })
 
@@ -847,43 +1015,105 @@ app.get('/api/notifications', requireAuth, async (req, res) => {
 // Which events you're going to, and how many members are going to each.
 app.get('/api/rsvps', async (req, res) => {
   const [counts, mine] = await Promise.all([
-    q.all('SELECT event_id, COUNT(*)::int AS n FROM event_rsvps GROUP BY event_id'),
-    req.userId ? q.all('SELECT event_id FROM event_rsvps WHERE user_id = ?', req.userId) : [],
+    q.all('SELECT event_id, status, COUNT(*)::int AS n FROM event_rsvps GROUP BY event_id, status'),
+    req.userId ? q.all('SELECT event_id, status, visible FROM event_rsvps WHERE user_id = ?', req.userId) : [],
   ])
-  res.json({ counts: Object.fromEntries(counts.map((r) => [r.event_id, r.n])), mine: mine.map((r) => r.event_id) })
+  const tally = (st) => Object.fromEntries(counts.filter((r) => (r.status || 'going') === st).map((r) => [r.event_id, r.n]))
+  res.json({
+    counts: tally('going'), interested: tally('interested'), waitlist: tally('waitlist'),
+    // `mine` is the events you're going to (or waiting for a place at).
+    mine: mine.filter((r) => ['going', 'waitlist', 'requested'].includes(r.status || 'going')).map((r) => r.event_id),
+    status: Object.fromEntries(mine.map((r) => [r.event_id, r.status || 'going'])),
+    visible: Object.fromEntries(mine.map((r) => [r.event_id, !!r.visible])),
+  })
 })
 
 // One event's people, for its details page (Nuel, Oct 29: "when I tap on
 // this I would like it to show details about it and the organizers").
 // Organisers are whoever created it (or the demo host), then the staff of
-// the community it belongs to. Going is everyone who tapped Join.
+// the community it belongs to. Attendance is private by default (Nuel's
+// Events notes, Nov 9): the list only shows people who chose to be seen,
+// and says how many others are going.
 app.get('/api/events/:id/people', async (req, res) => {
   const id = String(req.params.id).slice(0, 80)
   const row = await q.get('SELECT * FROM events WHERE id = ?', id)
   const communityId = row?.community_id || String(req.query.community || '').slice(0, 80) || null
   const hostId = row?.creator_id || String(req.query.host || '').slice(0, 80) || null
-  const [host, staff, going] = await Promise.all([
+  const [host, staff, going, totals] = await Promise.all([
     hostId ? getUserById(hostId) : null,
     communityId ? q.all(`SELECT u.*, m.role FROM memberships m JOIN users u ON u.id = m.user_id
       WHERE m.community_id = ? AND m.role IN ${STAFF_SQL} AND u.deleted_at IS NULL
       ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END LIMIT 6`, communityId) : [],
-    q.all(`SELECT u.* FROM event_rsvps r JOIN users u ON u.id = r.user_id WHERE r.event_id = ? AND u.deleted_at IS NULL
-      ORDER BY r.created_at DESC LIMIT 40`, id),
+    q.all(`SELECT u.* FROM event_rsvps r JOIN users u ON u.id = r.user_id
+      WHERE r.event_id = ? AND r.status = 'going' AND (r.visible = 1 OR r.user_id = ?) AND u.deleted_at IS NULL
+      ORDER BY r.created_at DESC LIMIT 40`, id, req.userId || ''),
+    q.get(`SELECT COUNT(*) FILTER (WHERE status = 'going')::int AS going, COUNT(*) FILTER (WHERE status = 'interested')::int AS interested,
+      COUNT(*) FILTER (WHERE status = 'waitlist')::int AS waitlist FROM event_rsvps WHERE event_id = ?`, id),
   ])
   const organizers = []
   if (host) organizers.push({ user: publicUser(host), role: 'Host' })
+  // Co-hosts and moderators the host added (server/events-extra.js).
+  const helpers = row ? await q.all(`SELECT u.*, h.role AS host_role FROM event_hosts h JOIN users u ON u.id = h.user_id
+    WHERE h.event_id = ? AND u.deleted_at IS NULL ORDER BY h.added_at`, row.id) : []
+  for (const h of helpers) organizers.push({ user: publicUser(h), role: h.host_role === 'moderator' ? 'Event moderator' : 'Co-host' })
   for (const s of staff) {
     if (organizers.some((o) => o.user.id === s.id)) continue
     organizers.push({ user: publicUser(s), role: s.role === 'owner' ? 'Community owner' : s.role === 'admin' ? 'Community admin' : 'Moderator' })
   }
-  res.json({ event: row ? serializeEvent(row) : null, organizers: organizers.filter((o) => o.user), going: going.map(publicUser).filter(Boolean) })
+  const shown = going.map(publicUser).filter(Boolean)
+  res.json({
+    event: row ? serializeEvent(row) : null, organizers: organizers.filter((o) => o.user), going: shown,
+    totals, hiddenGoing: Math.max(0, totals.going - shown.length),
+  })
 })
 
+// Going, Interested, or neither. `status` is 'going' or 'interested'; the
+// same status again takes it back. An event at capacity puts new Going
+// answers on the waitlist, and the first person waiting moves up when a
+// place opens. `visible` is whether you appear on the attendee list.
 app.post('/api/events/:id/rsvp', requireAuth, async (req, res) => {
   const id = String(req.params.id).slice(0, 80)
-  const { changes } = await q.run('DELETE FROM event_rsvps WHERE event_id = ? AND user_id = ?', id, req.userId)
-  if (!changes) await q.run('INSERT INTO event_rsvps (event_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', id, req.userId, now())
-  res.json({ going: !changes })
+  const want = req.body?.status === 'interested' ? 'interested' : 'going'
+  const event = await q.get('SELECT id, capacity, invite_only, creator_id FROM events WHERE id = ?', id)
+  const current = await q.get('SELECT status, visible FROM event_rsvps WHERE event_id = ? AND user_id = ?', id, req.userId)
+  const visible = typeof req.body?.visible === 'boolean' ? (req.body.visible ? 1 : 0) : (current?.visible ?? 0)
+  // Going again (or asking again, on an invite-only event) takes it back.
+  const sameAsNow = current && (current.status === want || (want === 'going' && ['waitlist', 'requested'].includes(current.status)))
+  if (req.body?.visibleOnly && current) {
+    await q.run('UPDATE event_rsvps SET visible = ? WHERE event_id = ? AND user_id = ?', visible, id, req.userId)
+    return res.json({ status: current.status, visible: !!visible })
+  }
+  await q.run('DELETE FROM event_rsvps WHERE event_id = ? AND user_id = ?', id, req.userId)
+  let status = null
+  if (!sameAsNow) {
+    status = want
+    // Invite-only: Going is a request until a host approves it, unless a
+    // host invited you or you're one of the hosts.
+    if (want === 'going' && event?.invite_only && current?.status !== 'invited' && !(await eventRole(event, req.userId))) status = 'requested'
+    if (status === 'going' && event?.capacity) {
+      const { n } = await q.get("SELECT COUNT(*)::int AS n FROM event_rsvps WHERE event_id = ? AND status = 'going'", id)
+      if (n >= event.capacity) status = 'waitlist'
+    }
+    await q.run('INSERT INTO event_rsvps (event_id, user_id, created_at, status, visible) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING', id, req.userId, now(), status, visible)
+    if (status === 'going') await joinEventCircle(id, req.userId)
+  }
+  // Someone gave up a place: the first person waiting gets it.
+  if (current?.status === 'going' && event?.capacity) {
+    const next = await q.get("SELECT user_id FROM event_rsvps WHERE event_id = ? AND status = 'waitlist' ORDER BY created_at LIMIT 1", id)
+    if (next) {
+      await q.run("UPDATE event_rsvps SET status = 'going' WHERE event_id = ? AND user_id = ?", id, next.user_id)
+      await joinEventCircle(id, next.user_id)
+    }
+  }
+  res.json({ going: status === 'going', status, visible: !!visible })
+})
+
+// Report an event to the VOIDAJ team (one report per person per event).
+app.post('/api/events/:id/report', requireAuth, async (req, res) => {
+  const id = String(req.params.id).slice(0, 80)
+  await q.run(`INSERT INTO event_reports (event_id, user_id, reason, created_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT (event_id, user_id) DO UPDATE SET reason = EXCLUDED.reason`, id, req.userId, String(req.body?.reason || '').trim().slice(0, 300), now())
+  res.json({ ok: true })
 })
 
 // ── Status: photos and lines of text that last 24 hours ─────────────
@@ -956,6 +1186,8 @@ app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
   if (!post || post.hidden) return err(res, 404, 'Post not found.')
   const { body, parentId } = req.body || {}
   if (!body?.trim()) return err(res, 400, 'Write something first.')
+  if (!(await guard.writeGuard(req, res))) return
+  if (await guard.isDuplicate('comments', 'author_id', req.userId, body)) return err(res, 429, 'You just said that. Say something new.')
   if (parentId) {
     const parent = await q.get('SELECT id FROM comments WHERE id = ? AND post_id = ?', parentId, post.id)
     if (!parent) return err(res, 400, 'That reply target no longer exists.')
@@ -1290,27 +1522,43 @@ app.get('/api/jobs', async (req, res) => {
   res.json({ jobs: await Promise.all(rows.map((j) => serializeJob(j, req.userId))) })
 })
 
-app.post('/api/jobs', requireAuth, async (req, res) => {
-  const { title, category, description, area, budget, verifiedOnly, timing, remote, openToOffers } = req.body || {}
-  if (!title?.trim()) return err(res, 400, 'Give the job a title.')
+app.post('/api/jobs', requireAuth, guard.requireConfirmed, async (req, res) => {
+  const { title, category, description, area, budget, verifiedOnly, timing, openToOffers } = req.body || {}
+  const kind = req.body?.kind === 'service' ? 'service' : 'job'
+  const opportunity = JOB_OPPORTUNITIES.includes(req.body?.opportunity) ? req.body.opportunity : 'paid'
+  const arrangement = JOB_ARRANGEMENTS.includes(req.body?.arrangement) ? req.body.arrangement : (req.body?.remote ? 'remote' : 'local')
+  const remote = arrangement !== 'local'
+  if (!title?.trim()) return err(res, 400, kind === 'service' ? 'Give the service a title.' : 'Give the job a title.')
+  if (opportunity === 'exchange' && !String(req.body?.exchange || '').trim()) return err(res, 400, 'Say what you’d like in return.')
   if (!category?.trim()) return err(res, 400, 'Pick a category.')
+  if (!(await guard.writeGuard(req, res))) return
+  const country = req.userRow.country || DEFAULT_COUNTRY
+  const currency = cleanCurrency(req.body?.currency) || currencyOf(country)
   const id = uid('j')
   const when = JOB_TIMINGS.includes(timing) ? timing : 'Flexible'
   await q.run(`INSERT INTO jobs (id, poster_id, title, category, description, area, city, budget, verified_only, timing, remote, open_to_offers, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, title.trim(), category, (description || '').trim(), (area || '').trim(),
-    req.userRow.city || 'Lagos', (budget || '').trim(), verifiedOnly ? 1 : 0, when, remote ? 1 : 0, openToOffers === false ? 0 : 1, now())
+    // "Verified only" would be a promise we can't keep while the badge is
+    // self-assigned, so no new job carries it until verification is real.
+    req.userRow.city || 'Lagos', opportunity === 'paid' ? (budget || '').trim() : '', VERIFICATION_IS_REAL && verifiedOnly ? 1 : 0, when, remote ? 1 : 0,
+    opportunity === 'paid' && openToOffers !== false ? 1 : 0, now())
+  await q.run('UPDATE jobs SET kind = ?, opportunity = ?, arrangement = ?, exchange = ?, country = ?, currency = ?, status_at = ? WHERE id = ?',
+    kind, opportunity, arrangement, opportunity === 'exchange' ? String(req.body.exchange).trim().slice(0, 200) : '', country, currency, now(), id)
   res.json({ job: await serializeJob(await q.get('SELECT * FROM jobs WHERE id = ?', id), req.userId) })
 })
 
 const JOB_TIMINGS = ['Today', 'This week', 'This weekend', 'Flexible']
+const JOB_OPPORTUNITIES = ['paid', 'volunteer', 'free', 'exchange']
+const JOB_ARRANGEMENTS = ['local', 'remote', 'hybrid']
 
 // Make an offer: your own price and a note. Sending it again changes it.
 app.post('/api/jobs/:id/offer', requireAuth, async (req, res) => {
   const job = await q.get('SELECT * FROM jobs WHERE id = ?', req.params.id)
   if (!job) return err(res, 404, 'Job not found.')
   if (job.poster_id === req.userId) return err(res, 400, 'This is your own job.')
-  if (job.verified_only && !req.userRow.id_verified) return err(res, 403, 'This job requires ID verification.')
+  if (VERIFICATION_IS_REAL && job.verified_only && !req.userRow.id_verified) return err(res, 403, 'This job requires ID verification.')
   if (job.open_to_offers === 0) return err(res, 400, 'This job has a fixed price.')
+  if (job.status !== 'open') return err(res, 400, 'This job isn’t taking offers any more.')
   const offer = String(req.body?.offer || '').trim().slice(0, 40)
   if (!offer) return err(res, 400, 'Enter your price.')
   const note = String(req.body?.note || '').trim().slice(0, 300)
@@ -1323,9 +1571,10 @@ app.post('/api/jobs/:id/interest', requireAuth, async (req, res) => {
   const job = await q.get('SELECT * FROM jobs WHERE id = ?', req.params.id)
   if (!job) return err(res, 404, 'Job not found.')
   if (job.poster_id === req.userId) return err(res, 400, 'This is your own job.')
-  if (job.verified_only && !req.userRow.id_verified) return err(res, 403, 'This job requires ID verification.')
+  if (VERIFICATION_IS_REAL && job.verified_only && !req.userRow.id_verified) return err(res, 403, 'This job requires ID verification.')
   // Tapping again takes your interest back.
   const { changes } = await q.run('DELETE FROM job_interests WHERE job_id = ? AND user_id = ?', job.id, req.userId)
+  if (!changes && job.status !== 'open') return err(res, 400, 'This job isn’t taking applications any more.')
   if (!changes) await q.run('INSERT INTO job_interests (job_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', job.id, req.userId, now())
   res.json({ job: await serializeJob(job, req.userId) })
 })
@@ -1343,7 +1592,12 @@ app.get('/api/pros', async (req, res) => {
     q.all("SELECT user_id, COUNT(*)::int AS n FROM job_interests WHERE status = 'hired' GROUP BY user_id"),
   ])
   const done = Object.fromEntries(hired.map((h) => [h.user_id, h.n]))
-  res.json({ pros: rows.filter((r) => r.id !== req.userId).map((r) => ({ ...publicUser(r), jobSkills: parseJson(r.job_skills), jobsDone: done[r.id] || 0 })) })
+  // Anyone who has turned work visibility off is left out of the directory.
+  res.json({
+    pros: rows
+      .filter((r) => r.id !== req.userId && !readSettings(r).workPrivate)
+      .map((r) => ({ ...publicUser(r), jobSkills: parseJson(r.job_skills), jobsDone: done[r.id] || 0 })),
+  })
 })
 
 app.get('/api/me/jobs', requireAuth, async (req, res) => {
@@ -1579,7 +1833,15 @@ app.post('/api/messages/:userId', requireAuth, async (req, res) => {
   let media
   try { media = cleanMedia(req.body?.media) } catch (e) { return err(res, 400, e.message) }
   if (!body && !media.length) return err(res, 400, 'Write something first.')
+  if (await guard.eitherBlocked(req.userId, other.id)) return err(res, 403, `You can’t message ${other.name}.`)
+  if (!(await guard.writeGuard(req, res))) return
   const context = await messageContext(req.body?.context, other)
+  // An account that hasn't confirmed its email can answer people, but not
+  // start new conversations.
+  if (guard.confirmRequired() && !req.userRow.email_confirmed_at && !req.userRow.is_seed) {
+    const theyWrote = await q.get('SELECT 1 FROM dm_messages WHERE from_id = ? AND to_id = ? LIMIT 1', other.id, req.userId)
+    if (!theyWrote && context?.kind !== 'business') return err(res, 403, 'Confirm your email first. We sent a code to your inbox.')
+  }
   // Respect who the recipient lets message them. A conversation they've
   // already had with you stays open either way, and so does an enquiry to
   // a business they run (that's what a business page is for).
@@ -1605,7 +1867,9 @@ app.post('/api/messages/:userId', requireAuth, async (req, res) => {
 // distinct from Communities: no posts/votes/threads, just a member list
 // and a message stream. May be scoped to a community or standalone. ────
 app.get('/api/chats', requireAuth, async (req, res) => {
-  const rows = await q.all('SELECT * FROM chats ORDER BY created_at DESC')
+  // Event Circles are only listed for the people in them.
+  const rows = await q.all(`SELECT * FROM chats WHERE event_id IS NULL
+    OR id IN (SELECT chat_id FROM chat_members WHERE user_id = ?) ORDER BY created_at DESC`, req.userId)
   res.json({ chats: await Promise.all(rows.map((c) => serializeChat(c, req.userId))) })
 })
 
@@ -1621,6 +1885,7 @@ app.post('/api/chats', requireAuth, async (req, res) => {
 app.post('/api/chats/:id/join', requireAuth, async (req, res) => {
   const chat = await q.get('SELECT * FROM chats WHERE id = ?', req.params.id)
   if (!chat) return err(res, 404, 'Group chat not found.')
+  if (chat.event_id) return err(res, 403, 'The Event Circle is for people going to the event.')
   // Joining twice (a double tap, or the creator tapping Join) is a no-op, not an error.
   await q.run('INSERT INTO chat_members (chat_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', chat.id, req.userId, now())
   res.json({ chat: await serializeChat(chat, req.userId) })
@@ -1640,6 +1905,7 @@ app.post('/api/chats/:id/messages', requireAuth, async (req, res) => {
   let media
   try { media = cleanMedia(req.body?.media) } catch (e) { return err(res, 400, e.message) }
   if (!body && !media.length) return err(res, 400, 'Write something first.')
+  if (!(await guard.writeGuard(req, res))) return
   const id = uid('gm')
   await q.run('INSERT INTO chat_messages (id, chat_id, sender_id, body, media, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, req.params.id, req.userId, body, JSON.stringify(media), now())
   res.json({ message: await serializeChatMessage(await q.get('SELECT * FROM chat_messages WHERE id = ?', id)) })
@@ -1728,9 +1994,17 @@ app.post('/api/live/:id/stop', requireAuth, async (req, res) => {
 
 // ── Business on VOIDAJ (server/business.js) ──────────────────────────
 businessRoutes(app)
+eventRoutes(app)
+jobFlowRoutes(app)
 
 // ── Companion ────────────────────────────────────────────────────────
-app.post('/api/companion', async (req, res) => {
+// Signed-in only. When ANTHROPIC_API_KEY is set this sends the asker's
+// first name, interests, goals and communities — plus the titles and first
+// 120 characters of the 20 newest posts, by anyone — to Anthropic
+// (server/companion.js). That is other members' writing, so it is not
+// something a passer-by should be able to trigger. Without the key nothing
+// leaves the server and the local keyword engine answers instead.
+app.post('/api/companion', requireAuth, async (req, res) => {
   const message = (req.body?.message || '').toString()
   if (!message.trim()) return err(res, 400, 'Ask me something.')
   const reply = await companionReply(message, req.userRow)

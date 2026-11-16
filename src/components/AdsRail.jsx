@@ -13,11 +13,27 @@ import { Icon } from './Icons.jsx'
 
 const ACCENTS = ['#C0342A', '#1F5FA8', '#1B7F3B', '#6B3FA0', '#B45309', '#0F6E6E']
 
+// Advertisers pick their own accent, and a light one (a yellow, say) left
+// the white monogram unreadable. Pick ink or white from the accent's
+// luminance so the initials stay legible whatever colour they choose.
+function inkOn(hex) {
+  const m = /^#?([a-f\d]{6})$/i.exec(String(hex || '').trim())
+  if (!m) return '#ffffff'
+  const n = parseInt(m[1], 16)
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const s = v / 255
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  })
+  const L = 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+  // Contrast against white vs against near-black; take whichever reads better.
+  return (1.05 / (L + 0.05)) >= ((L + 0.05) / 0.0931) ? '#ffffff' : '#0A0A0A'
+}
+
 // Advertisers give us a name, not a logo file, so the rail draws a
 // monogram from the name in their own accent colour.
 export function AdMark({ ad }) {
   const initials = ad.businessName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
-  return <span className="ad-mark" style={{ background: ad.accent }} aria-hidden="true">{initials}</span>
+  return <span className="ad-mark" style={{ background: ad.accent, color: inkOn(ad.accent) }} aria-hidden="true">{initials}</span>
 }
 
 // Shown when the API is unreachable (e.g. a static-only deploy with no
@@ -143,6 +159,12 @@ export function AdsRail() {
   const [ads, setAds] = useState([])
   const [active, setActive] = useState(0)
   const [showForm, setShowForm] = useState(false)
+  // The panel floats beside the page and can be closed (Nuel, Nov 11: "Can
+  // this float also I want it to be that it can be removed if we wanted to
+  // without causing any difference"). Closing it gives the page its full
+  // width; a small Ads button brings it back. Remembered on this device.
+  const [closed, setClosed] = useState(() => { try { return localStorage.getItem('voidaj_ads_closed') === '1' } catch { return false } })
+  const setAdsClosed = (v) => { setClosed(v); try { localStorage.setItem('voidaj_ads_closed', v ? '1' : '0') } catch { /* private mode */ } }
 
   // Follows the city being looked at (My City map) and the Local/Universal switch.
   useEffect(() => {
@@ -159,22 +181,33 @@ export function AdsRail() {
   const navigate = useNavigate()
   // No ads over private conversations or the admin table.
   // Not beside chats, admin, or the full-screen sign-in and welcome pages.
-  const hidden = ['/chats', '/admin', '/auth', '/welcome'].some((p) => pathname.startsWith(p))
+  // No adverts beside a legal page.
+  const hidden = ['/chats', '/admin', '/auth', '/welcome', '/privacy', '/terms'].some((p) => pathname.startsWith(p))
 
   // The bar is part of the layout, so the page needs to know to make room.
   useEffect(() => {
-    if (hidden) return
+    if (hidden || closed) return
     document.body.classList.add('has-ads-rail')
     return () => document.body.classList.remove('has-ads-rail')
-  }, [hidden])
+  }, [hidden, closed])
 
   if (hidden) return null
+  if (closed) {
+    return (
+      <button className="ads-reopen" onClick={() => setAdsClosed(false)} aria-label="Show ads">
+        <Icon name="tag" size={13} /> Ads
+      </button>
+    )
+  }
 
   return (
-    <aside className="ads-rail" aria-label="Ads">
+    <aside className="ads-rail ads-float" aria-label="Ads">
       <div className="ads-rail-head">
         <div className="ads-rail-label"><Icon name="tag" size={12} /> Ads</div>
-        <ScopeMenu />
+        <span className="ads-rail-tools">
+          <ScopeMenu />
+          <button className="ads-close" onClick={() => setAdsClosed(true)} aria-label="Close ads" title="Close ads"><Icon name="x" size={16} /></button>
+        </span>
       </div>
       <div className="ads-rail-where">
         <Icon name={adScope === 'universal' ? 'globe' : 'map-pin'} size={12} /> {adScope === 'universal' ? 'Universal' : place}
@@ -198,12 +231,12 @@ export function AdsRail() {
           </Link>
         ))}
       </div>
-      <div className="ads-rail-foot">
+      {user?.features?.paidAds !== false && <div className="ads-rail-foot">
         <span className="meta-dim">Your business here</span>
         <button className="btn brand-outline small ads-rail-cta" onClick={() => (user ? setShowForm(true) : navigate('/auth'))}>
           <Icon name="plus" size={13} /> Post advert
         </button>
-      </div>
+      </div>}
       {showForm && <AdvertiseForm onClose={() => setShowForm(false)} onCreated={(ad) => setAds((a) => [ad, ...a])} />}
     </aside>
   )
@@ -242,9 +275,9 @@ export function HomeAds({ max = 4 }) {
           </Link>
         ))}
       </div>
-      <button type="button" className="btn brand-outline small" onClick={() => (user ? setShowForm(true) : navigate('/auth'))}>
+      {user?.features?.paidAds !== false && <button type="button" className="btn brand-outline small" onClick={() => (user ? setShowForm(true) : navigate('/auth'))}>
         <Icon name="plus" size={13} /> Post advert
-      </button>
+      </button>}
       {showForm && <AdvertiseForm onClose={() => setShowForm(false)} onCreated={(ad) => setAds((a) => [ad, ...a])} />}
     </div>
   )
