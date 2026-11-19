@@ -771,13 +771,20 @@ CREATE TABLE IF NOT EXISTS id_checks (
 CREATE INDEX IF NOT EXISTS id_checks_user ON id_checks (user_id, created_at);
 -- Services (server/services.js): proof-of-work photos and availability.
 -- Usernames must be unique, whatever the capitals. Until now they were made
--- from the first name alone, so duplicates exist. The newest account of
--- each pair gets a short suffix, then the rule is enforced.
+-- from the first name alone, so duplicates exist. In each group the account
+-- that is really in use keeps the name (admin, finished onboarding, most
+-- communities and posts, seen most recently, then the oldest); the others get
+-- a short suffix. Then the rule is enforced.
 UPDATE users u SET handle = LEFT(u.handle, 15) || '_' || RIGHT(u.id, 4)
-  WHERE u.handle IS NOT NULL AND EXISTS (
-    SELECT 1 FROM users o WHERE o.id <> u.id AND LOWER(o.handle) = LOWER(u.handle)
-      AND (COALESCE(o.created_at, 0) < COALESCE(u.created_at, 0)
-        OR (COALESCE(o.created_at, 0) = COALESCE(u.created_at, 0) AND o.id < u.id)));
+  FROM (
+    SELECT x.id, ROW_NUMBER() OVER (
+      PARTITION BY LOWER(x.handle)
+      ORDER BY COALESCE(x.is_admin, 0) DESC, COALESCE(x.onboarded, 0) DESC,
+        (SELECT COUNT(*) FROM memberships m WHERE m.user_id = x.id) + (SELECT COUNT(*) FROM posts p WHERE p.author_id = x.id) DESC,
+        COALESCE(x.last_seen_at, 0) DESC, COALESCE(x.created_at, 0), x.id) AS rn
+    FROM users x WHERE x.handle IS NOT NULL
+  ) r
+  WHERE u.id = r.id AND r.rn > 1;
 CREATE UNIQUE INDEX IF NOT EXISTS users_handle_unique ON users (LOWER(handle)) WHERE handle IS NOT NULL;
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS availability TEXT DEFAULT '';
 -- A business belongs to a country, not just a city, so its page doesn't say
