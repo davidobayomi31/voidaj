@@ -14,6 +14,7 @@ import { Eagle } from '../components/Eagle.jsx'
 import { FEATURES } from '../features.js'
 import { COUNTRIES, flagOf, countryName } from '../countries.js'
 import { VERIFICATION_IS_REAL } from '../verification.js'
+import { IdVerify } from '../components/IdVerify.jsx'
 
 const SECTIONS = [
   { id: 'account', icon: 'user', tone: 'blue', label: 'Account', sub: 'Name, username, email, phone, password' },
@@ -70,40 +71,12 @@ export default function Settings() {
 
 // ── Verification, Payments, Appearance, Terms ───────────────────────
 function Verification() {
-  const { user, refreshMe } = useApp()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const verify = async (e) => {
-    e.preventDefault()
-    if (busy) return
-    setBusy(true); setError('')
-    try { await api.verifyId(); await refreshMe() } catch (err) { setError(err.message) }
-    setBusy(false)
-  }
+  const { user } = useApp()
   return (
     <>
       <Block title="Identity"
-        sub={VERIFICATION_IS_REAL
-          ? 'The Verified tick on your profile and VOIDAJ ID, and access to verified-only jobs.'
-          : 'Identity checks aren’t switched on yet, so this badge proves nothing and unlocks nothing.'}>
-        {user.features?.idVerification === false && !user.idVerified ? (
-          <p className="meta-dim">ID verification isn’t available in {countryName(user.country) || 'your country'} yet. It checks a Nigerian NIN for now.</p>
-        ) : user.idVerified ? (
-          <p className="settings-ok"><Icon name="badge-check" size={16} /> {VERIFICATION_IS_REAL ? 'You’re verified.' : 'The prototype badge is on for your account.'}</p>
-        ) : (
-          <form className="settings-inline" onSubmit={verify}>
-            {!VERIFICATION_IS_REAL && (
-              <p className="meta-dim">
-                Nothing is checked and nothing is collected — no ID number is asked for, and the badge gives
-                you no priority on jobs. Never send your NIN or passport number to anyone who asks for it here.
-              </p>
-            )}
-            {error && <p className="auth-error">{error}</p>}
-            <button className="btn primary small" disabled={busy}>
-              {busy ? 'Working…' : VERIFICATION_IS_REAL ? 'Verify me' : 'Add the badge'}
-            </button>
-          </form>
-        )}
+        sub="The Verified tick on your profile and VOIDAJ ID, and access to verified-only jobs.">
+        <IdVerify />
       </Block>
       <Block title="Email" sub={user.email || ''}>
         {user.emailConfirmed !== false

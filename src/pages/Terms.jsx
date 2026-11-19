@@ -84,15 +84,16 @@ export default function Terms() {
         </p>
       </Section>
 
-      {!VERIFICATION_IS_REAL && (
-        <Section title="The “ID verified” badge is a prototype">
+      {VERIFICATION_IS_REAL && (
+        <Section title="What the “Verified” badge means">
           <p>
-            VOIDAJ shows a verification flow, but <strong>it is not a real identity
-            check</strong>. It does not look anything up, and nobody at VOIDAJ has
-            confirmed who that person is. It gives no priority on jobs and means nothing
-            about whether someone can be trusted. Treat everyone here as unverified and
-            take the care you would with any stranger. Never send anyone your NIN,
-            passport number or bank details through VOIDAJ.
+            Someone on the VOIDAJ team has looked at a photo of that person's official ID
+            and a selfie, and they matched. It confirms a real person with that name is
+            behind the account. <strong>It is not a background check</strong> and it says
+            nothing about their skills, honesty or the quality of their work. Still take
+            care with anyone you meet through VOIDAJ, and never send money or bank details
+            to someone just because they are verified. Sending a fake or someone else's ID
+            gets your account closed.
           </p>
         </Section>
       )}

@@ -6,7 +6,6 @@ import { findCommunity } from '../communities.js'
 import { tagLabel } from '../ai.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
-import { Vote } from './Vote.jsx'
 import { ReportButton } from './ReportButton.jsx'
 import { RatingSummary } from './Rating.jsx'
 import { MediaView } from './Media.jsx'
@@ -199,7 +198,6 @@ export function PostCard({ post, community, because }) {
   return (
     <div className="card post-card card-link">
       <div className="post-card-row">
-        <Vote targetType="post" targetId={post.id} score={post.score} myVote={post.myVote} layout="vertical" />
         <div className="post-card-body">
           {post.pinned && <span className="pin-badge">Pinned</span>}
           <div className="post-head">

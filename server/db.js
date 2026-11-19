@@ -421,6 +421,19 @@ UPDATE users SET title = 'New citizen of VOIDAJ' WHERE title = 'New citizen of I
 -- 'universal' ones show everywhere (the rail's Local / Universal switch).
 ALTER TABLE ads ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'Lagos';
 ALTER TABLE ads ADD COLUMN IF NOT EXISTS reach TEXT DEFAULT 'local';
+-- Ad requests are reviewed by a person before they go live (server/ads.js).
+-- Rows from before this existed stay live.
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'live';
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS contact_email TEXT DEFAULT '';
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS phone TEXT DEFAULT '';
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS link TEXT DEFAULT '';
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS logo TEXT DEFAULT '';
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS cover TEXT DEFAULT '';
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS review_note TEXT DEFAULT '';
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS reviewed_at BIGINT;
+-- The unpaid "Pay and go live" button used to switch any ad on. Anything
+-- that was switched on that way and never reviewed is left as it was; new
+-- requests start as 'pending' with active = 0.
 
 -- Posts don't have to live in a community any more (Nuel, Oct 26):
 -- 'public' posts are for everyone, 'city' posts for people in the
@@ -740,6 +753,40 @@ CREATE TABLE IF NOT EXISTS job_disputes (
   status TEXT DEFAULT 'open',
   created_at BIGINT
 );
+-- ID checks reviewed by a person (server/id-checks.js). The photos and
+-- the typed name are wiped the moment a check is decided.
+CREATE TABLE IF NOT EXISTS id_checks (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  doc_type TEXT NOT NULL,
+  legal_name TEXT,
+  document TEXT,
+  selfie TEXT,
+  status TEXT DEFAULT 'pending',
+  reason TEXT DEFAULT '',
+  reviewer_id TEXT,
+  reviewed_at BIGINT,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS id_checks_user ON id_checks (user_id, created_at);
+-- Services (server/services.js): proof-of-work photos and availability.
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS availability TEXT DEFAULT '';
+-- What kind of profile someone chose in onboarding (Nuel, Oct 14 + Nov 18).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_type TEXT DEFAULT 'individual';
+CREATE TABLE IF NOT EXISTS service_photos (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  src TEXT NOT NULL,
+  position INTEGER DEFAULT 0,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS service_photos_job ON service_photos (job_id, position);
+-- Until now the badge was self-assigned. Now that it means a person
+-- checked an ID, nobody keeps it without an approved check (the demo
+-- accounts aside).
+UPDATE users SET id_verified = 0, verified_at = NULL
+  WHERE COALESCE(id_verified, 0) = 1 AND COALESCE(is_seed, 0) = 0
+  AND id NOT IN (SELECT user_id FROM id_checks WHERE status = 'approved');
 `
 
 // ── Roles ────────────────────────────────────────────────────────────
@@ -1027,7 +1074,7 @@ export async function selfUser(row) {
     // Private to the member themselves — never in publicUser.
     email: row.email, phone: row.phone || '',
     settings: readSettings(row),
-    createdAt: row.created_at,
+    createdAt: row.created_at, profileType: row.profile_type || 'individual',
     isAdmin: !!row.is_admin,
     hasPassword: !!row.password_hash,
     linked: { google: !!row.google_sub, apple: !!row.apple_sub },
@@ -1243,6 +1290,7 @@ export function serializeAd(row) {
     id: row.id, businessName: row.business_name, tagline: row.tagline,
     ctaLabel: row.cta_label, accent: row.accent, emoji: row.emoji,
     city: row.city || 'Lagos', reach: row.reach || 'local',
+    logo: row.logo || '', cover: row.cover || '', link: row.link || '', status: row.status || 'live',
     active: !!row.active, ownerId: row.owner_id, createdAt: row.created_at,
   }
 }

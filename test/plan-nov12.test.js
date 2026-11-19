@@ -101,7 +101,7 @@ describe('outside Nigeria', () => {
       .send({ name: 'Kofi', email: `kofi-${unique()}@example.com`, password: 'password1', birthDate: '1999-05-05', country: 'GH' })
     expect(res.body.user.country).toBe('GH')
     expect(res.body.user.features.idVerification).toBe(false)
-    expect((await agent.post('/api/auth/verify-id').send({ idNumber: '12345678' })).status).toBe(403)
+    expect((await agent.post('/api/verification').send({ docType: 'passport' })).status).toBe(403)
     const saved = await agent.patch('/api/auth/me').send({ country: 'GB', phone: '07700 900123' })
     expect(saved.body.user.country).toBe('GB')
     expect(saved.body.user.phone).toBe('+447700900123')

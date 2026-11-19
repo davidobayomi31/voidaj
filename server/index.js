@@ -19,6 +19,9 @@ import { cleanCountry, cleanCurrency, currencyOf, normalisePhone, isTimeZone, fi
 import * as guard from './guard.js'
 import { eventRoutes, eventRole, joinEventCircle } from './events-extra.js'
 import { jobFlowRoutes } from './jobs-flow.js'
+import { idCheckRoutes, deleteChecksFor } from './id-checks.js'
+import { serviceRoutes } from './services.js'
+import { adRoutes } from './ads.js'
 import { seedIfEmpty, seedExtras, keepDemoStatuses } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
 import { companionReply } from './companion.js'
@@ -65,6 +68,21 @@ app.use(async (_req, _res, next) => {
   try { await ready(); next() } catch (e) { next(e) }
 })
 app.use(attachUser)
+
+// Admins named in ADMIN_EMAILS (comma-separated) get /admin without
+// anyone editing the database. Only once the address is proven theirs:
+// a confirmed email code, or a Google/Apple sign-in with that address.
+// Otherwise someone could sign up with the CEO's address first.
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+app.use(async (req, _res, next) => {
+  const row = req.userRow
+  if (row && !row.is_admin && row.email && ADMIN_EMAILS.includes(String(row.email).toLowerCase())
+    && (row.email_confirmed_at || row.google_sub || row.apple_sub)) {
+    row.is_admin = 1
+    await q.run('UPDATE users SET is_admin = 1 WHERE id = ?', row.id).catch(() => {})
+  }
+  next()
+})
 
 // Presence. Any signed-in request counts as being around; the write is
 // skipped if we already noted them in the last minute.
@@ -412,8 +430,10 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
       arr(b.jobSkills, cur.job_skills),
       b.onboarded != null ? (b.onboarded ? 1 : 0) : cur.onboarded,
       cur.id,)
+  if (PROFILE_TYPES.includes(b.profileType)) await q.run('UPDATE users SET profile_type = ? WHERE id = ?', b.profileType, cur.id)
   res.json({ user: await selfUser(await getUserById(cur.id)) })
 })
+const PROFILE_TYPES = ['individual', 'creator', 'business', 'organisation']
 
 // ── Settings: account, security, data (VOIDAJ-Blueprint.md §10) ─────
 // Changing how you sign in always asks for the current password.
@@ -510,6 +530,8 @@ app.delete('/api/auth/me', requireAuth, async (req, res) => {
       'DELETE FROM login_events WHERE user_id = ?',
     ]) await t.run(sql, ...Array((sql.match(/\?/g) || []).length).fill(id))
     await t.run("UPDATE jobs SET status = 'closed' WHERE poster_id = ?", id)
+    await t.run('DELETE FROM service_photos WHERE job_id IN (SELECT id FROM jobs WHERE poster_id = ?)', id)
+    await deleteChecksFor(t, id)
     // Nothing personal survives on the row. birth_date, city, country, the
     // photos and who invited them used to be left behind; keeping someone's
     // date of birth after they have deleted their account isn't defensible.
@@ -613,18 +635,11 @@ app.delete('/api/admin/accounts/:id', requireAuth, requireAdmin, async (req, res
   res.json({ ok: true })
 })
 
-// Simulated ID verification — instant demo "badge", no real KYC provider.
-// The prototype badge. It used to ask for a government ID number, check
-// that it was at least six characters, and throw it away — which collected
-// real NINs and passport numbers for nothing. It asks for nothing now, and
-// the flag it sets no longer gates anything (server/verification.js). The
-// route stays so a real provider has somewhere to land.
-app.post('/api/auth/verify-id', requireAuth, guard.requireConfirmed, async (req, res) => {
-  if (!featureOn('idVerification', req.userRow.country)) return err(res, 403, 'ID verification isn’t available in your country yet.')
-  if (!(await guard.writeGuard(req, res))) return
-  await q.run('UPDATE users SET id_verified = 1, verified_at = ? WHERE id = ?', now(), req.userId)
-  res.json({ user: await selfUser(await getUserById(req.userId)) })
-})
+// The old one-tap badge. ID checks are reviewed by a person now
+// (server/id-checks.js: POST /api/verification), so this route no longer
+// hands anything out.
+app.post('/api/auth/verify-id', requireAuth, (_req, res) =>
+  err(res, 410, 'Send a photo of your ID from Settings → Verification instead.'))
 
 // ── Communities ──────────────────────────────────────────────────────
 app.get('/api/communities', async (req, res) => {
@@ -994,20 +1009,35 @@ app.get('/api/feed', async (req, res) => {
   res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
 })
 
-// ── Notifications: new followers and replies to your posts ──────────
-// (Messages, jobs and reports come from their own endpoints.)
+// ── Notifications: what people did with you and your posts ──────────
+// Follows, connections, sparks (likes), looms and takes (replies) on your
+// posts, from the last 30 days. Messages stay in Chat (Nuel, Nov 18:
+// "Messages shouldn't be there"); jobs and reports have their own endpoints.
 app.get('/api/notifications', requireAuth, async (req, res) => {
   const since = now() - 30 * 24 * 60 * 60 * 1000
-  const [followers, comments] = await Promise.all([
+  const me = req.userId
+  const [followers, comments, connections, sparks, looms] = await Promise.all([
     q.all(`SELECT u.*, f.created_at AS at FROM follows f JOIN users u ON u.id = f.follower_id
-      WHERE f.followee_id = ? AND f.created_at > ? AND u.deleted_at IS NULL ORDER BY f.created_at DESC LIMIT 20`, req.userId, since),
+      WHERE f.followee_id = ? AND f.created_at > ? AND u.deleted_at IS NULL ORDER BY f.created_at DESC LIMIT 20`, me, since),
     q.all(`SELECT u.*, c.body AS comment, c.created_at AS at, p.id AS post_id, p.title AS post_title, p.body AS post_body, p.community_id
       FROM comments c JOIN posts p ON p.id = c.post_id JOIN users u ON u.id = c.author_id
-      WHERE p.author_id = ? AND c.author_id <> ? AND c.hidden = 0 AND c.created_at > ? ORDER BY c.created_at DESC LIMIT 20`, req.userId, req.userId, since),
+      WHERE p.author_id = ? AND c.author_id <> ? AND c.hidden = 0 AND c.created_at > ? ORDER BY c.created_at DESC LIMIT 20`, me, me, since),
+    q.all(`SELECT u.*, c.created_at AS at FROM connections c JOIN users u ON u.id = c.user_id
+      WHERE c.other_id = ? AND c.created_at > ? AND u.deleted_at IS NULL ORDER BY c.created_at DESC LIMIT 20`, me, since),
+    q.all(`SELECT u.*, s.kind, s.created_at AS at, p.id AS post_id, p.title AS post_title, p.body AS post_body
+      FROM post_sparks s JOIN posts p ON p.id = s.post_id JOIN users u ON u.id = s.user_id
+      WHERE p.author_id = ? AND s.user_id <> ? AND s.created_at > ? AND u.deleted_at IS NULL ORDER BY s.created_at DESC LIMIT 30`, me, me, since),
+    q.all(`SELECT u.*, l.created_at AS at, p.id AS post_id, p.title AS post_title, p.body AS post_body
+      FROM posts l JOIN posts p ON p.id = l.loom_of JOIN users u ON u.id = l.author_id
+      WHERE p.author_id = ? AND l.author_id <> ? AND l.created_at > ? AND u.deleted_at IS NULL ORDER BY l.created_at DESC LIMIT 20`, me, me, since),
   ])
+  const title = (r) => (r.post_title || r.post_body || '').slice(0, 60)
   res.json({
     followers: followers.map((r) => ({ user: publicUser(r), at: r.at })),
-    comments: comments.map((r) => ({ user: publicUser(r), at: r.at, text: r.comment.slice(0, 120), postId: r.post_id, postTitle: (r.post_title || r.post_body || '').slice(0, 60), communityId: r.community_id })),
+    connections: connections.map((r) => ({ user: publicUser(r), at: r.at })),
+    comments: comments.map((r) => ({ user: publicUser(r), at: r.at, text: r.comment.slice(0, 120), postId: r.post_id, postTitle: title(r), communityId: r.community_id })),
+    sparks: sparks.map((r) => ({ user: publicUser(r), at: r.at, kind: r.kind, postId: r.post_id, postTitle: title(r) })),
+    looms: looms.map((r) => ({ user: publicUser(r), at: r.at, postId: r.post_id, postTitle: title(r) })),
   })
 })
 
@@ -1933,29 +1963,6 @@ app.get('/api/ads/:id', async (req, res, next) => {
   res.json({ ad: { ...serializeAd(row), owner } })
 })
 
-app.get('/api/ads/mine', requireAuth, async (req, res) => {
-  const rows = await q.all('SELECT * FROM ads WHERE owner_id = ? ORDER BY created_at DESC', req.userId)
-  res.json({ ads: rows.map(serializeAd) })
-})
-
-app.post('/api/ads', requireAuth, async (req, res) => {
-  const { businessName, tagline, ctaLabel, accent, emoji, city, reach } = req.body || {}
-  if (!businessName?.trim()) return err(res, 400, 'Enter your business name.')
-  const id = uid('ad')
-  await q.run(`INSERT INTO ads (id, owner_id, business_name, tagline, cta_label, accent, emoji, city, reach, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, businessName.trim(), (tagline || '').trim(), (ctaLabel || 'Learn more').trim(), accent || '#D8A63A', emoji || '✨',
-    (city || 'Lagos').trim(), reach === 'universal' ? 'universal' : 'local', now())
-  res.json({ ad: serializeAd(await q.get('SELECT * FROM ads WHERE id = ?', id)) })
-})
-
-app.post('/api/ads/:id/pay', requireAuth, async (req, res) => {
-  const ad = await q.get('SELECT * FROM ads WHERE id = ?', req.params.id)
-  if (!ad) return err(res, 404, 'Community partner listing not found.')
-  if (ad.owner_id !== req.userId) return err(res, 403, 'Not your listing.')
-  await q.run('UPDATE ads SET active = 1 WHERE id = ?', ad.id)
-  res.json({ ad: serializeAd(await q.get('SELECT * FROM ads WHERE id = ?', ad.id)) })
-})
-
 // ── Live streaming ───────────────────────────────────────────────────
 // A real "who's live" signal backed by the DB. The video itself is a
 // local camera self-preview in this demo — broadcasting to other viewers
@@ -1996,6 +2003,9 @@ app.post('/api/live/:id/stop', requireAuth, async (req, res) => {
 businessRoutes(app)
 eventRoutes(app)
 jobFlowRoutes(app)
+idCheckRoutes(app)
+serviceRoutes(app)
+adRoutes(app)
 
 // ── Companion ────────────────────────────────────────────────────────
 // Signed-in only. When ANTHROPIC_API_KEY is set this sends the asker's

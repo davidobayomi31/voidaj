@@ -11,6 +11,13 @@ import { Icon } from '../components/Icons.jsx'
 import { VoidajMark } from '../components/VoidajMark.jsx'
 import { showVerifiedTick } from '../verification.js'
 
+// A stable 12-digit number from the account id, printed like a card number.
+const memberNo = (id) => {
+  let h = 2166136261
+  for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0
+  const n = String(h).padStart(10, '0') + String(h % 97).padStart(2, '0')
+  return n.match(/.{4}/g).join(' ')
+}
 const profileUrl = (u) => `${window.location.origin}${u.handle ? `/u/${u.handle.replace(/^@/, '')}` : `/profile/${u.id}`}`
 
 export default function IdCard() {
@@ -46,30 +53,37 @@ export default function IdCard() {
         </div>
       </section>
 
-      <article className="id-card" aria-label="Your VOIDAJ ID card">
+      {/* Shaped and finished like a real card (Nuel, Nov 13: "more card
+          looking"): card proportions, a chip, a member number, a sheen. */}
+      <div className="id-card-stage">
+      <article className="id-card id-card-physical" aria-label="Your VOIDAJ ID card">
+        <span className="id-sheen" aria-hidden="true" />
         <header className="id-card-top">
           <VoidajMark size={18} light />
-          <span className="id-card-kind">ID</span>
+          <span className="id-card-kind">MEMBER ID</span>
         </header>
-        <div className="id-card-person">
-          <span className="id-photo"><Avatar user={profile} size={76} /></span>
-          <div>
-            <strong className="id-card-name">{profile.name}</strong>
-            <span className="id-card-handle">{profile.handle}</span>
-            {profile.title && <span className="id-card-title">{profile.title}</span>}
-          </div>
-        </div>
-        <div className="id-card-bottom">
-          <div className="id-card-status">
-            {showVerifiedTick() && profile.idVerified
-              ? <span className="id-verified"><Icon name="badge-check" size={14} /> Verified member</span>
-              : <span className="id-unverified">Not verified yet</span>}
-            <span className="id-card-city"><Icon name="map-pin" size={12} /> {profile.city || 'Lagos'}</span>
-            <span className="id-card-url">{url.replace(/^https?:\/\//, '')}</span>
-          </div>
+        <div className="id-card-mid">
+          <span className="id-chip" aria-hidden="true"><i /><i /><i /><i /></span>
           <div className="id-qr" aria-label="QR code to your profile" dangerouslySetInnerHTML={{ __html: qr }} />
         </div>
+        <div className="id-card-person">
+          <span className="id-photo"><Avatar user={profile} size={58} /></span>
+          <div>
+            <strong className="id-card-name">{profile.name}</strong>
+            <span className="id-card-handle">{profile.handle}{profile.title ? ` · ${profile.title}` : ''}</span>
+          </div>
+        </div>
+        <footer className="id-card-foot">
+          <span><em>No.</em> {memberNo(user.id)}</span>
+          <span><em>City</em> {profile.city || 'Lagos'}</span>
+          <span><em>Since</em> {new Date(user.createdAt || Date.now()).getFullYear()}</span>
+          {showVerifiedTick() && profile.idVerified
+            ? <span className="id-verified"><Icon name="badge-check" size={13} /> Verified</span>
+            : <span className="id-unverified">Not verified</span>}
+        </footer>
       </article>
+      </div>
+      <p className="meta-dim id-url">{url.replace(/^https?:\/\//, '')}</p>
 
       <div className="id-actions">
         <button type="button" className="btn primary" onClick={share}><Icon name={copied ? 'check' : 'send'} size={15} /> {copied ? 'Link copied' : 'Share my ID'}</button>
@@ -79,7 +93,7 @@ export default function IdCard() {
 
       {showVerifiedTick() && !profile.idVerified && (
         <p className="meta-dim id-note">
-          Want the <strong>Verified</strong> tick on your card? <Link to="/jobs">Verify your ID in Quick Jobs</Link>.
+          Want the <strong>Verified</strong> tick on your card? <Link to="/settings/verification">Verify your ID</Link>.
         </p>
       )}
     </div>

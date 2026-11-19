@@ -37,8 +37,12 @@ export const adminAccounts = () => req('/admin/accounts').then((d) => d.accounts
 export const addAdminAccount = (body) => req('/admin/accounts', { method: 'POST', body }).then((d) => d.account)
 export const saveAdminAccount = (id, body) => req(`/admin/accounts/${id}`, { method: 'PATCH', body }).then((d) => d.account)
 export const deleteAdminAccount = (id) => req(`/admin/accounts/${id}`, { method: 'DELETE' })
-// Takes no ID number: nothing checked it, so nothing collects it.
-export const verifyId = () => req('/auth/verify-id', { method: 'POST', body: {} }).then((d) => d.user)
+// ID checks: a photo of the ID and a selfie, reviewed by the VOIDAJ team.
+export const myVerification = () => req('/verification')
+export const sendVerification = (body) => req('/verification', { method: 'POST', body }).then((d) => d.check)
+export const adminVerifications = () => req('/admin/verifications').then((d) => d.checks)
+export const decideVerification = (id, decision, reason) => req(`/admin/verifications/${id}`, { method: 'POST', body: { decision, reason } })
+export const revokeVerification = (userId) => req(`/admin/verifications/revoke/${userId}`, { method: 'POST' })
 
 // Communities & people
 export const listCommunities = () => req('/communities').then((d) => d.communities)
@@ -136,7 +140,9 @@ export const listAds = (params = {}) => {
 export const getAd = (id) => req(`/ads/${id}`).then((d) => d.ad)
 export const listMyAds = () => req('/ads/mine').then((d) => d.ads)
 export const createAd = (body) => req('/ads', { method: 'POST', body }).then((d) => d.ad)
-export const payForAd = (id) => req(`/ads/${id}/pay`, { method: 'POST' }).then((d) => d.ad)
+export const myAds = () => req('/ads/mine').then((d) => d.ads)
+export const adminAds = () => req('/admin/ads').then((d) => d.ads)
+export const decideAd = (id, decision, note) => req(`/admin/ads/${id}`, { method: 'POST', body: { decision, note } }).then((d) => d.ad)
 
 // Live streaming
 export const listLive = () => req('/live').then((d) => d.streams)
@@ -211,3 +217,11 @@ export const jobReview = (id, rating, body) => req(`/jobs/${id}/review`, { metho
 export const userReviews = (userId) => req(`/users/${userId}/reviews`)
 export const adminDisputes = () => req('/admin/disputes').then((d) => d.disputes)
 export const resolveDispute = (id, outcome) => req(`/admin/disputes/${id}/resolve`, { method: 'POST', body: { outcome } })
+
+// Services: what people can do, with proof photos and availability.
+export const listServices = (params = {}) => req(`/services?${new URLSearchParams(Object.entries(params).filter(([, v]) => v))}`).then((d) => d.services)
+export const myServices = () => req('/services/mine').then((d) => d.services)
+export const getService = (id) => req(`/services/${id}`).then((d) => d.service)
+export const createService = (body) => req('/services', { method: 'POST', body }).then((d) => d.service)
+export const updateService = (id, body) => req(`/services/${id}`, { method: 'PATCH', body }).then((d) => d.service)
+export const deleteService = (id) => req(`/services/${id}`, { method: 'DELETE' })

@@ -39,6 +39,7 @@ import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
 import MyCity from './pages/MyCity.jsx'
 import Admin from './pages/Admin.jsx'
+import Services from './pages/Services.jsx'
 import IdCard from './pages/IdCard.jsx'
 import Privacy from './pages/Privacy.jsx'
 import Terms from './pages/Terms.jsx'
@@ -59,6 +60,16 @@ const PRIMARY = [
   { to: '/jobs', icon: 'briefcase', tone: 'orange', label: 'Quick Jobs' },
   { to: '/communities', icon: 'users', tone: 'indigo', label: 'Communities' },
   { to: '/chats', icon: 'message-circle', tone: 'green', label: 'Chat', unread: true },
+]
+
+// What visitors who haven't signed up see: just the four places that
+// don't depend on who you are or where you live.
+const VISITOR = ['/home', '/events', '/jobs', '/communities']
+const VISITOR_MOBILE = [
+  { to: '/home', icon: 'home', short: 'Home' },
+  { to: '/events', icon: 'calendar', short: 'Events' },
+  { to: '/jobs', icon: 'briefcase', short: 'Jobs' },
+  { to: '/communities', icon: 'users', short: 'Communities' },
 ]
 
 // The phone's bottom bar (Nuel, Nov 11): Home · My City · (+) · Chat ·
@@ -163,8 +174,9 @@ function ProfileMenu({ inSide = false }) {
           <Link role="menuitem" to="/profile/me"><Icon name="user" size={15} /> My Profile</Link>
           <Link role="menuitem" to="/id"><Icon name="badge-check" size={15} /> VOIDAJ ID</Link>
           <Link role="menuitem" to="/communities?tab=mine"><Icon name="community" size={15} /> My Communities</Link>
-          <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
-          <Link role="menuitem" to="/businesses"><Icon name="store" size={15} /> Businesses</Link>
+          <Link role="menuitem" to="/jobs?view=mine"><Icon name="briefcase" size={15} /> My Jobs</Link>
+          <Link role="menuitem" to="/businesses?view=mine"><Icon name="store" size={15} /> My Businesses</Link>
+          <Link role="menuitem" to="/services?view=mine"><Icon name="hand-coins" size={15} /> My Services</Link>
           <Link role="menuitem" to="/saved"><Icon name="bookmark" size={15} /> My Stash</Link>
           <Link role="menuitem" to="/badges"><Icon name="award" size={15} /> My Badges</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
@@ -185,6 +197,7 @@ const SEARCH_SCOPES = {
   '/explore': 'Search VOIDAJ',
   '/communities': 'Search communities',
   '/jobs': 'Search jobs — e.g. plumber, Yaba',
+  '/services': 'Search services — e.g. cleaning, tutoring',
   '/businesses': 'Search businesses, services, offers',
 }
 function HeaderSearch() {
@@ -272,7 +285,7 @@ function SideNav() {
         <VoidajLockup size={16} />
       </Link>
       <div className="sidenav-links">
-        {PRIMARY.map((n) => (
+        {PRIMARY.filter((n) => user || VISITOR.includes(n.to)).map((n) => (
           <NavLink key={n.to} to={n.to} title={n.label} className={`nav-${n.tone}`}>
             <span className="sidenav-icon">
               <span className="snav-ico"><Icon name={n.icon} size={17} /></span>
@@ -281,9 +294,11 @@ function SideNav() {
             <span>{n.label}</span>
           </NavLink>
         ))}
-        <NavLink to="/add" className="sidenav-add" title="Add Hub">
-          <span className="sidenav-add-plus"><Icon name="plus" size={18} /></span><span>Add Hub</span>
-        </NavLink>
+        {user && (
+          <NavLink to="/add" className="sidenav-add" title="Add Hub">
+            <span className="sidenav-add-plus"><Icon name="plus" size={18} /></span><span>Add Hub</span>
+          </NavLink>
+        )}
       </div>
       <div className="sidenav-foot">
         {FEATURES.companion && (
@@ -309,12 +324,13 @@ function SideNav() {
 }
 
 function MobileNav() {
+  const { user } = useApp()
   const location = useLocation()
   const unread = useUnreadMessages()
   if (IMMERSIVE.includes(location.pathname)) return null
   return (
     <nav className="mobile-nav" aria-label="Primary (mobile)">
-      {MOBILE.map((n) => n.center ? (
+      {(user ? MOBILE : VISITOR_MOBILE).map((n) => n.center ? (
         <NavLink key={n.to} to={n.to} className="mobile-nav-add" aria-label={n.short}>
           <span className="mobile-nav-plus"><Icon name="plus" size={24} /></span><span>{n.short}</span>
         </NavLink>
@@ -328,6 +344,14 @@ function MobileNav() {
   )
 }
 
+
+// Visitors on Home see the short landing page, without ads beside it.
+function AdsForMembers() {
+  const { user, loading } = useApp()
+  const location = useLocation()
+  if (!user && !loading && location.pathname === '/home') return null
+  return <AdsRail />
+}
 
 function Footer() {
   const location = useLocation()
@@ -395,6 +419,7 @@ export default function App() {
               <Route path="/u/:handle" element={<Profile />} />
               <Route path="/id" element={<IdCard />} />
               <Route path="/jobs" element={<Jobs />} />
+              <Route path="/services" element={<Services />} />
               <Route path="/chats" element={<Chats />} />
               <Route path="/vision" element={<ProfileVision />} />
               {/* Public, and they must stay public: Google and Apple fetch
@@ -406,7 +431,7 @@ export default function App() {
             </Routes>
           </main>
           <Footer />
-          <AdsRail />
+          <AdsForMembers />
           {FEATURES.companion && <Assistant />}
           <MobileNav />
           <AgeGate />

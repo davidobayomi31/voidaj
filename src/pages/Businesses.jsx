@@ -20,6 +20,8 @@ export default function Businesses() {
   const [list, setList] = useState(null)
   const [mine, setMine] = useState([])
   const [moreCats, setMoreCats] = useState(false)
+  const view = params.get('view') === 'mine' && user ? 'mine' : 'explore'
+  const setView = (v) => setParams((p) => { v === 'mine' ? p.set('view', 'mine') : p.delete('view'); return p }, { replace: true })
 
   useEffect(() => {
     setList(null)
@@ -42,6 +44,37 @@ export default function Businesses() {
         </div>
         {user && <Link to="/business/new" className="btn primary"><Icon name="plus" size={15} /> Create business</Link>}
       </header>
+
+      {user && (
+        <div className="seg float-bar biz-views" role="tablist" aria-label="Businesses">
+          <button role="tab" aria-selected={view === 'explore'} className={view === 'explore' ? 'on' : ''} onClick={() => setView('explore')}><Icon name="compass" size={15} /> Explore</button>
+          <button role="tab" aria-selected={view === 'mine'} className={view === 'mine' ? 'on' : ''} onClick={() => setView('mine')}><Icon name="store" size={15} /> My businesses{mine.length ? ` (${mine.length})` : ''}</button>
+          <Link to="/jobs?view=mine" className="seg-link"><Icon name="briefcase" size={15} /> My jobs</Link>
+        </div>
+      )}
+
+      {view === 'mine' ? (
+        mine.length ? (
+          <div className="biz-grid-list stagger">
+            {mine.map((b) => (
+              <div key={b.id} className="my-biz">
+                <BusinessCard business={b} />
+                <span className="my-biz-actions">
+                  <Link to={`/business/${b.id}/edit`} className="btn ghost small"><Icon name="edit" size={13} /> Edit</Link>
+                  <Link to={`/business/${b.id}/promote`} className="btn ghost small"><Icon name="megaphone" size={13} /> Promote</Link>
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <section className="card feed-empty">
+            <Icon name="store" size={30} />
+            <strong>You haven’t set up a business yet</strong>
+            <span className="meta-dim">Give your business its own page so people nearby can find you, follow you and enquire.</span>
+            <Link to="/business/new" className="btn primary small">Create your business</Link>
+          </section>
+        )
+      ) : <>
 
       <label className="home-search biz-search page-search">
         <Icon name="search" size={17} />
@@ -107,6 +140,7 @@ export default function Businesses() {
           ].map(([icon, t, s]) => <li key={t}><Icon name={icon} size={18} /><b>{t}</b><span>{s}</span></li>)}
         </ol>
       </section>
+      </>}
     </div>
   )
 }

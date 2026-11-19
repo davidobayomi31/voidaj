@@ -18,6 +18,8 @@ import { JobFlow } from '../components/JobFlow.jsx'
 import { ReachChips, useReach } from '../components/Reach.jsx'
 import { CURRENCIES, currencyOf, currencySymbol, withCurrency, inReach } from '../countries.js'
 import { VERIFICATION_IS_REAL, verifiedLabel, showVerifiedTick } from '../verification.js'
+import { IdVerify } from '../components/IdVerify.jsx'
+import { JobHistory } from '../components/JobHistory.jsx'
 
 const catInfo = (id) => JOB_CATEGORIES.find((c) => c.id === id) || { label: id, icon: 'briefcase' }
 
@@ -83,43 +85,16 @@ export function JobPhoto({ category, size = 64 }) {
 }
 const seenKey = (uid) => `is_jobs_seen_${uid}`
 
-// Asked for a government ID number until it was clear nothing checked it —
-// the number was read, length-tested and discarded. It asks for nothing now
-// and says plainly what the badge is (src/verification.js).
-function VerifyModal({ onClose, onVerified }) {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async (e) => {
-    e.preventDefault()
-    if (busy) return
-    setBusy(true); setError('')
-    try { await onVerified(); onClose() }
-    catch (err) { setError(err.message) }
-    setBusy(false)
-  }
-
+// Quick Jobs' "Get verified" window: the same ID check as Settings.
+function VerifyModal({ onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <form className="card modal-card" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-        <div className="side-card-head"><Icon name="badge-check" size={16} /> {VERIFICATION_IS_REAL ? 'Get ID Verified' : 'Prototype badge'}</div>
-        {VERIFICATION_IS_REAL ? (
-          <p className="meta-dim">Verified pros get priority on jobs marked “verified only” and a trust badge on their profile.</p>
-        ) : (
-          <p className="meta-dim">
-            Identity checks aren’t switched on yet. This adds a badge to your account so the flow can be
-            tried out — <strong>it proves nothing, and it gives you no priority on jobs</strong>.
-            <br /><em>Don’t send anyone your NIN or passport number through VOIDAJ while this says so.</em>
-          </p>
-        )}
-        {error && <div className="auth-error"><Icon name="x" size={14} /> {error}</div>}
-        <div className="composer-foot">
-          <button type="button" className="btn ghost small" onClick={onClose}>Cancel</button>
-          <button className="btn primary small" disabled={busy}>
-            {busy ? 'Working…' : VERIFICATION_IS_REAL ? 'Verify me' : 'Add the badge'}
-          </button>
-        </div>
-      </form>
+      <div className="card modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="side-card-head"><Icon name="badge-check" size={16} /> Get ID Verified</div>
+        <p className="meta-dim">Verified pros can take jobs marked “verified only” and get a trust badge on their profile.</p>
+        <IdVerify />
+        <div className="composer-foot"><button type="button" className="btn ghost small" onClick={onClose}>Close</button></div>
+      </div>
     </div>
   )
 }
@@ -440,8 +415,8 @@ export default function Jobs() {
   // The search is in the URL (?q=) so the header search box drives it.
   const search = params.get('q') || ''
   const setSearch = (v) => setParams((p) => { v ? p.set('q', v) : p.delete('q'); return p }, { replace: true })
-  const view = params.get('view') === 'people' ? 'people' : 'work'
-  const setView = (v) => setParams((p) => { v === 'people' ? p.set('view', 'people') : p.delete('view'); return p }, { replace: true })
+  const view = ['people', 'mine'].includes(params.get('view')) ? params.get('view') : 'work'
+  const setView = (v) => setParams((p) => { v !== 'work' ? p.set('view', v) : p.delete('view'); return p }, { replace: true })
   const [posting, setPosting] = useState(params.get('post') === '1')
   const openId = params.get('job')
   const openJob = [...matched, ...jobs].find((j) => j.id === openId) || (stray?.id === openId ? stray : null)
@@ -537,6 +512,11 @@ export default function Jobs() {
         <button role="tab" aria-selected={view === 'people'} className={view === 'people' ? 'on' : ''} onClick={() => setView('people')}>
           <Icon name="users" size={15} /> Find people
         </button>
+        {user && (
+          <button role="tab" aria-selected={view === 'mine'} className={view === 'mine' ? 'on' : ''} onClick={() => setView('mine')}>
+            <Icon name="user-check" size={15} /> My jobs
+          </button>
+        )}
       </div>
       {user && (
         <button className="btn primary jobs-post-btn" onClick={() => { setView('work'); setPosting(true) }} aria-expanded={posting}>
@@ -559,7 +539,16 @@ export default function Jobs() {
         </div>
       )}
 
-      {view === 'people' ? <JobPeople /> : (
+      {view === 'mine' && user ? (
+        <div className="my-jobs">
+          <div className="my-links">
+            <span className="meta-dim">Your work on VOIDAJ</span>
+            <Link to="/businesses?view=mine" className="chip-link"><Icon name="store" size={14} /> My businesses</Link>
+            <Link to="/services?view=mine" className="chip-link"><Icon name="hand-coins" size={14} /> My services</Link>
+          </div>
+          <JobHistory profile={profile} />
+        </div>
+      ) : view === 'people' ? <JobPeople /> : (
       <div className="space-grid">
         <div className="space-main jobs-main">
           {user && posting && (
@@ -683,7 +672,7 @@ export default function Jobs() {
       {openJob && <JobSheet key={openJob.id} job={openJob} onInterest={onInterest} onOffer={onOffer} onClose={closeJob} onChange={replace} />}
 
       {showVerify && (
-        <VerifyModal onClose={() => setShowVerify(false)} onVerified={async () => { await api.verifyId(); await refreshMe() }} />
+        <VerifyModal onClose={() => setShowVerify(false)} />
       )}
     </div>
   )

@@ -36,7 +36,15 @@ export default function Privacy() {
           user-agent, so you can see where you're signed in and sign other devices out.
           Those records are deleted after 90 days.
         </p>
-        <p>We do not ask for and do not store any identity document or government ID number.</p>
+        <p>
+          <strong>If you ask to be ID verified</strong>, you send us a photo of an official
+          ID (NIN slip, passport, driver's licence or voter's card), a selfie holding it,
+          and your name as it appears on it. A person on the VOIDAJ team compares them by
+          eye. Nothing is sent to any other company. <strong>The moment the check is
+          decided, both photos and the typed name are deleted</strong>; we keep only the
+          kind of ID, the date, and whether it passed (or why not). We never ask for your
+          ID number. Verification is optional, and you can ask us to remove the badge.
+        </p>
       </Section>
 
       <Section title="Who can see what">

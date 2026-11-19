@@ -1,12 +1,8 @@
-// ── Is ID verification real yet? ─────────────────────────────────────
-// It is not. `POST /api/auth/verify-id` sets a flag and checks nothing, so
-// the badge is self-assigned. Until a real KYC provider is wired up, the
-// badge must not look like a verified identity or unlock anything that
-// depends on one — see server/verification.js for the matching server flag.
-//
-// To switch verification on for real: make this true, make the server flag
-// true, and put a real check behind the endpoint. Nothing else changes.
-export const VERIFICATION_IS_REAL = false
+// ── Is ID verification real? ─────────────────────────────────────────
+// Yes: members send a photo of their ID and a selfie, and the VOIDAJ team
+// approves it on the Admin page (server/id-checks.js). Matches the server
+// flag in server/verification.js.
+export const VERIFICATION_IS_REAL = true
 
 // What to call the badge in the interface.
 export const verifiedLabel = () => (VERIFICATION_IS_REAL ? 'Verified' : 'Demo badge')

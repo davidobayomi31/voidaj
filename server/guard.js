@@ -99,6 +99,23 @@ export const emailReady = () => !!(process.env.RESEND_API_KEY || '').trim()
 // REQUIRE_EMAIL_CONFIRM=1, which the tests use).
 export const confirmRequired = () => emailReady() || process.env.REQUIRE_EMAIL_CONFIRM === '1'
 
+// Any plain email, sent with Resend when it's set up. Without a key it is
+// printed in the server log (and nothing is held back), like the codes.
+export async function sendMail(to, subject, text) {
+  const list = (Array.isArray(to) ? to : [to]).filter(Boolean)
+  if (!list.length) return { sent: false }
+  if (!emailReady()) {
+    if (process.env.NODE_ENV !== 'test') console.log(`[email] to ${list.join(', ')}: ${subject}\n${text}`)
+    return { sent: false }
+  }
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY.trim()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'VOIDAJ <hello@voidaj.com>', to: list, subject, text }),
+  }).catch(() => null)
+  return { sent: !!r?.ok }
+}
+
 export async function sendEmailCode(user) {
   const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0')
   await q.run('UPDATE users SET email_code = ?, email_code_expires = ?, email_code_tries = 0 WHERE id = ?', hashCode(code), now() + CODE_MS, user.id)

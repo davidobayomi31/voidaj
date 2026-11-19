@@ -23,9 +23,9 @@ describe('Terms', () => {
     for (const line of CHARTER) expect(screen.getByText(line)).toBeTruthy()
   })
 
-  it('says the ID badge proves nothing while verification is a prototype', () => {
+  it('says what the Verified badge does and does not mean', () => {
     show(<Terms />)
-    expect(screen.getByText(/not a real identity\s+check/i)).toBeTruthy()
+    expect(screen.getByText(/not a background check/i)).toBeTruthy()
   })
 
   it('gives a contact address', () => {

@@ -133,18 +133,14 @@ describe('badges', () => {
 })
 
 describe('ads', () => {
-  it('creates an ad for a city and only its owner can activate it', async () => {
+  it('saves a request for the owner, who can see it, but it is not live until reviewed', async () => {
     const owner = await signUp()
-    const other = await signUp()
-    const ad = (await owner.agent.post('/api/ads').send({ businessName: 'Kola Test Foods', city: 'Ibadan' })).body.ad
-    expect(ad.businessName ?? ad.business_name).toBe('Kola Test Foods')
-    expect((await other.agent.post(`/api/ads/${ad.id}/pay`)).status).toBe(403)
-    expect((await owner.agent.post(`/api/ads/${ad.id}/pay`)).status).toBe(200)
-
-    const local = (await request(app).get('/api/ads?city=ibadan')).body.ads.map((a) => a.id)
-    expect(local).toContain(ad.id)
-    const mine = (await owner.agent.get('/api/ads/mine')).body.ads.map((a) => a.id)
-    expect(mine).toContain(ad.id)
+    const ad = (await owner.agent.post('/api/ads').send({ businessName: 'Kola Test Foods', contactEmail: 'kola@example.com' })).body.ad
+    expect(ad.businessName).toBe('Kola Test Foods')
+    expect(ad.status).toBe('pending')
+    expect((await owner.agent.post(`/api/ads/${ad.id}/pay`)).status).toBe(410)
+    expect((await request(app).get('/api/ads')).body.ads.map((a) => a.id)).not.toContain(ad.id)
+    expect((await owner.agent.get('/api/ads/mine')).body.ads.map((a) => a.id)).toContain(ad.id)
   })
 
   it('needs a business name', async () => {
