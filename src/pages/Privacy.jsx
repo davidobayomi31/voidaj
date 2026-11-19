@@ -11,7 +11,7 @@ import { LegalPage, Section } from '../components/LegalPage.jsx'
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy policy" updated="16 November 2026">
+    <LegalPage title="Privacy policy" updated="19 November 2026">
       <p>
         This explains what VOIDAJ collects, who can see it, who else it reaches, and
         what you can do about it. It describes how the service actually behaves today,
@@ -81,16 +81,19 @@ export default function Privacy() {
       <Section title="Who else your data reaches">
         <p>We don't sell your data and we never will. These are the companies involved in running VOIDAJ, and what each one gets:</p>
         <ul>
-          <li><strong>Vercel</strong> — hosts the site. Sees the usual request information, including your IP address.</li>
+          <li><strong>Vercel</strong> — hosts the site and runs Vercel Web Analytics, a simple visitor counter (see below). Sees the usual request information, including your IP address.</li>
           <li><strong>Supabase</strong> — hosts the database, so everything above is stored there, and holds uploaded images.</li>
           <li><strong>Resend</strong> — sends confirmation emails. Receives your email address, your first name and the code. We send no marketing email of any kind.</li>
           <li><strong>Google or Apple</strong> — only if you choose to sign in with them. They tell us an account identifier, your email and your name (and Google, a profile photo). We don't send them anything about what you do on VOIDAJ.</li>
           <li><strong>Google Fonts</strong> and <strong>OpenFreeMap</strong> — serve the typeface and the map tiles on My City. Like anything your browser loads, they see your IP address.</li>
         </ul>
         <p>
-          <strong>There is no analytics or tracking on VOIDAJ.</strong> No Google Analytics,
-          no advertising pixels, no session recording, no third-party trackers of any kind.
-          We don't follow you around the internet and we don't build a profile of you.
+          <strong>We count visits, and nothing more.</strong> VOIDAJ uses Vercel Web
+          Analytics to see how many people visit, which pages they open, which site
+          sent them (for example Instagram), and roughly what country and kind of device
+          they use. It sets no cookies, doesn't identify you, and doesn't follow you to
+          other sites. There is no Google Analytics, no advertising pixels, no session
+          recording and no other third-party trackers. We don't build a profile of you.
         </p>
         <p>
           VOIDAJ has an AI companion feature. <strong>It is switched off</strong>, and no

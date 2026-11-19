@@ -45,9 +45,10 @@ describe('Privacy', () => {
     expect(screen.getByText(/Former member/)).toBeTruthy()
   })
 
-  it('states there is no tracking', () => {
+  it('says what visitor counting there is, and that there is no other tracking', () => {
     show(<Privacy />)
-    expect(screen.getByText(/no analytics or tracking on VOIDAJ/i)).toBeTruthy()
+    expect(screen.getByText(/We count visits, and nothing more/i)).toBeTruthy()
+    expect(screen.getByText(/no Google Analytics, no advertising pixels/i, { exact: false })).toBeTruthy()
   })
 
   it('warns that uploaded images stay reachable by link', () => {
