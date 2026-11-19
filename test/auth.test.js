@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { app, request, signUp } from './helpers.js'
+import q from '../server/db.js'
 
 describe('auth', () => {
   it('registers a user and sets an httpOnly session cookie', async () => {
@@ -48,6 +49,16 @@ describe('auth', () => {
     const ok = await request(app).post('/api/auth/register').send({ ...base, email: `ok-${Date.now()}@ex.co`, birthDate: `${year - 17}-01-01` })
     expect(ok.status).toBe(200)
     expect(ok.body.user.needsAge).toBe(false)
+  })
+
+  it('asks for a date of birth only when an account is made, not every time an older one signs in', async () => {
+    const { agent, user } = await signUp('Age Asked')
+    // A new account with no date of birth (like a fresh Google sign-up) is asked once…
+    await q.run('UPDATE users SET birth_date = NULL, created_at = ? WHERE id = ?', Date.now(), user.id)
+    expect((await agent.get('/api/auth/me')).body.user.needsAge).toBe(true)
+    // …an account that existed before the question was added never is.
+    await q.run('UPDATE users SET created_at = ? WHERE id = ?', Date.UTC(2026, 9, 1), user.id)
+    expect((await agent.get('/api/auth/me')).body.user.needsAge).toBe(false)
   })
 
   // Nuel, Nov 12: referring people raises your citizen level.
