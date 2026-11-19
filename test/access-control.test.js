@@ -39,6 +39,7 @@ const SIGNED_IN_ONLY = [
 const ADMIN_ONLY = [
   ['get', '/api/admin/users'],
   ['get', '/api/admin/users.csv'],
+  ['get', '/api/admin/analytics'],
   ['get', '/api/admin/accounts'],
   ['post', '/api/admin/accounts'],
 ]

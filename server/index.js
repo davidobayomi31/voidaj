@@ -23,6 +23,7 @@ import { idCheckRoutes, deleteChecksFor } from './id-checks.js'
 import { serviceRoutes } from './services.js'
 import { uniqueHandle, isHandleClash, usernameTaken, USERNAME_RE, tidyCity } from './handles.js'
 import { adRoutes } from './ads.js'
+import { buildAnalytics } from './analytics.js'
 import { seedIfEmpty, seedExtras, keepDemoStatuses } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
 import { companionReply } from './companion.js'
@@ -584,6 +585,11 @@ async function adminUsers() {
 
 app.get('/api/admin/users', requireAuth, requireAdmin, async (_req, res) => {
   res.json({ users: await adminUsers() })
+})
+
+// Growth and usage numbers for the Admin → Analytics tab.
+app.get('/api/admin/analytics', requireAuth, requireAdmin, async (_req, res) => {
+  res.json(await buildAnalytics(q))
 })
 
 // The same list as a spreadsheet file. Cells that start with = + - @ are

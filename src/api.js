@@ -32,6 +32,7 @@ export const deleteAccount = (password) => req('/auth/me', { method: 'DELETE', b
 export const sendSupport = (body) => req('/support', { method: 'POST', body })
 export const exportUrl = '/api/me/export'
 export const adminUsers = () => req('/admin/users').then((d) => d.users)
+export const adminAnalytics = () => req('/admin/analytics')
 export const adminUsersCsvUrl = '/api/admin/users.csv'
 export const adminAccounts = () => req('/admin/accounts').then((d) => d.accounts)
 export const addAdminAccount = (body) => req('/admin/accounts', { method: 'POST', body }).then((d) => d.account)

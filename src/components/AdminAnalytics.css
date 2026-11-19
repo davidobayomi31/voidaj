@@ -1,0 +1,45 @@
+/* Admin → Analytics. Colours follow the theme; the charts use VOIDAJ violet. */
+.an { --an-accent: #7B6CF0; display: flex; flex-direction: column; gap: 16px; margin-top: 18px; }
+.an-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.an-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.an-tile { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.an-tile b { font-family: var(--font-display); font-size: 28px; font-weight: 800; line-height: 1.1; }
+.an-tile span { font-size: 13px; color: var(--text-dim); }
+.an-tile em { font-style: normal; font-size: 12px; color: var(--text-dim); opacity: .85; }
+.an-tile.feature { background: var(--an-accent); border-color: transparent; color: #fff; }
+.an-tile.feature span, .an-tile.feature em { color: rgba(255, 255, 255, .85); }
+
+.an-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.an-card { padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; min-width: 0; }
+.an-card.wide { grid-column: 1 / -1; }
+.an-card h3 { margin: 0 0 4px; font-size: 15px; }
+.an-hint { margin: 0 0 10px; font-size: 12.5px; }
+
+.an-chart { margin: 10px 0 0; }
+.an-chart figcaption { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11.5px; color: var(--text-dim); }
+.an-bars { display: flex; align-items: flex-end; gap: 3px; height: 120px; }
+.an-bar { flex: 1; height: 100%; display: flex; align-items: flex-end; min-width: 0; }
+.an-bar i { display: block; width: 100%; background: var(--an-accent); border-radius: 3px 3px 0 0; min-height: 0; opacity: .9; }
+.an-bar:hover i { opacity: 1; }
+.an-line { width: 100%; height: 150px; display: block; }
+.an-area { fill: color-mix(in srgb, var(--an-accent) 18%, transparent); }
+.an-stroke { fill: none; stroke: var(--an-accent); stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+
+.an-rank, .an-funnel, .an-queue { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.an-rank li, .an-funnel li { position: relative; display: flex; justify-content: space-between; gap: 10px; padding: 7px 10px; border-radius: 10px; background: var(--surface-2); overflow: hidden; font-size: 13.5px; }
+.an-rank-fill, .an-funnel-fill { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--an-accent) 28%, transparent); }
+.an-rank li > :not(.an-rank-fill), .an-funnel li > :not(.an-funnel-fill) { position: relative; }
+.an-rank b small, .an-funnel b small { font-weight: 500; color: var(--text-dim); }
+.an-queue li { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border-soft); font-size: 13.5px; }
+.an-queue li:last-child { border-bottom: 0; }
+
+.an-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 6px; }
+.an-table th, .an-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border-soft); }
+.an-table th { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+.an-table th:not(:first-child), .an-table td:not(:first-child) { text-align: right; }
+
+@media print {
+  .an-top button, .view-switch, .sidebar, nav, header { display: none !important; }
+  .an-card, .an-tile { break-inside: avoid; }
+  .an { --an-accent: #5B4CD0; }
+}

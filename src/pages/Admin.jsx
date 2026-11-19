@@ -8,6 +8,7 @@ import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 import { AdminAccounts } from '../components/AdminAccounts.jsx'
+import { AdminAnalytics } from '../components/AdminAnalytics.jsx'
 import { AdMark, coverOf } from '../components/AdsRail.jsx'
 
 const DAY = 24 * 3600 * 1000
@@ -39,7 +40,7 @@ export default function Admin() {
   const [samples, setSamples] = useState(false)
   const [sort, setSort] = useState({ by: 'joinedAt', desc: true })
   const [params, setParams] = useSearchParams()
-  const tab = ['accounts', 'disputes', 'ids', 'ads'].includes(params.get('tab')) ? params.get('tab') : 'members'
+  const tab = ['analytics', 'accounts', 'disputes', 'ids', 'ads'].includes(params.get('tab')) ? params.get('tab') : 'members'
   const setTab = (t) => setParams((p) => { t !== 'members' ? p.set('tab', t) : p.delete('tab'); return p }, { replace: true })
 
   useEffect(() => {
@@ -104,6 +105,9 @@ export default function Admin() {
         <button role="tab" aria-selected={tab === 'members'} className={tab === 'members' ? 'on' : ''} onClick={() => setTab('members')}>
           <Icon name="users" size={15} /> Members
         </button>
+        <button role="tab" aria-selected={tab === 'analytics'} className={tab === 'analytics' ? 'on' : ''} onClick={() => setTab('analytics')}>
+          <Icon name="trending-up" size={15} /> Analytics
+        </button>
         <button role="tab" aria-selected={tab === 'accounts'} className={tab === 'accounts' ? 'on' : ''} onClick={() => setTab('accounts')}>
           <Icon name="lock" size={15} /> Company accounts
         </button>
@@ -118,7 +122,7 @@ export default function Admin() {
         </button>
       </div>
 
-      {tab === 'ads' ? <AdminAds /> : tab === 'ids' ? <AdminIdChecks /> : tab === 'disputes' ? <AdminDisputes /> : tab === 'accounts' ? <AdminAccounts /> : <>
+      {tab === 'analytics' ? <AdminAnalytics /> : tab === 'ads' ? <AdminAds /> : tab === 'ids' ? <AdminIdChecks /> : tab === 'disputes' ? <AdminDisputes /> : tab === 'accounts' ? <AdminAccounts /> : <>
 
       <div className="admin-stats">
         {stats.map((s) => (
