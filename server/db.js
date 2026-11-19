@@ -806,12 +806,9 @@ CREATE TABLE IF NOT EXISTS service_photos (
   created_at BIGINT
 );
 CREATE INDEX IF NOT EXISTS service_photos_job ON service_photos (job_id, position);
--- Until now the badge was self-assigned. Now that it means a person
--- checked an ID, nobody keeps it without an approved check (the demo
--- accounts aside).
-UPDATE users SET id_verified = 0, verified_at = NULL
-  WHERE COALESCE(id_verified, 0) = 1 AND COALESCE(is_seed, 0) = 0
-  AND id NOT IN (SELECT user_id FROM id_checks WHERE status = 'approved');
+-- Until now the badge was self-assigned. Accounts that already have it keep
+-- it (David, Nov 19: the ten live members stay verified). New badges only come
+-- from an approved ID check; an admin can still remove one in Admin > ID checks.
 `
 
 // ── Roles ────────────────────────────────────────────────────────────

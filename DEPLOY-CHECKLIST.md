@@ -27,7 +27,7 @@ Done on Nov 19:
         | `@isabelle` (isabelle) | `@isabelle_3917` (Isabelle Desmarais) |
         | `@nuel` (Nuel, admin, active) | `@nuel_7a22` (Dami, unused) |
         | `@toluwanimi` (Executivee) | `@toluwanimi_47dc` (Exec) |
-      - **10 real accounts lose the old one-tap Verified badge.** They can send an ID from
+      - **The 10 live accounts with the old Verified badge keep it** (you decided Nov 19). New badges now need an ID check; an admin can remove one in Admin → ID checks. Unverified members can send an ID from
         Settings → Verification. Tell them, or list their handles to me and I'll keep their
         badges.
 
@@ -35,8 +35,11 @@ Still to do (needs you):
 
 - [ ] **Verify voidaj.com in Resend** (resend.com → Domains: add the DNS records it gives you),
       then create an API key.
-- [ ] **Set up email forwarding** for hello@voidaj.com (Cloudflare Email Routing or ImprovMX) so
-      mail to it reaches you. Send yourself a test.
+- [ ] **Set up email forwarding** for hello@voidaj.com so mail to it reaches you. voidaj.com's DNS
+      is at Wix (nameservers ns14/ns15.wixdns.net) and has no MX records yet, so use ImprovMX: add its
+      two MX records and SPF in Wix DNS. (Cloudflare Email Routing would mean moving the whole
+      domain's nameservers.) Resend's own records live on a `send.` subdomain, so they don't clash.
+      Send yourself a test.
 - [ ] **Add to Vercel → Settings → Environment Variables (Production):**
       | Name | Value |
       |---|---|
@@ -104,5 +107,4 @@ isn't connected, run `vercel --prod`).
   Service, ad and ID photos are stored in the database and work.
 - Payments, real ID provider (Smile ID / Youverify) and the iOS/Android app are not built.
 - Cities outside the ~60 in `src/places.js` get the country map without a pin.
-- Sample ads still use Nigerian pictures.
 - Nuel's Nov 18 iMessage ("editing" feature) hasn't been read.

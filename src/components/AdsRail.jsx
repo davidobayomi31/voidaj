@@ -32,20 +32,21 @@ function inkOn(hex) {
 }
 
 // Pictures for the example ads, taken from images already in the project,
-// so they look like real businesses until real advertisers sign up.
+// so they look like real businesses until real advertisers sign up. Each
+// uses a different picture, and none of them is the Lagos skyline.
 const SAMPLE_COVERS = {
   'Kola Foods': '/images/communities/balogun-market-hub.jpg',
   'Adire by Funke': '/images/events/ev-market-popup.jpg',
   'SunHome Solar': '/images/events/ev-solar-workshop.jpg',
-  'Folake Bakes': '/images/events/ev-market-popup.jpg',
+  'Folake Bakes': '/images/events/ev-farm-tour.jpg',
   'Naija Devs Bootcamp': '/images/events/ev-js-study.jpg',
   'Green Roots Nursery': '/images/events/ev-balcony-farm.jpg',
   'AfroRoam Travel': '/images/city/abuja.jpg',
   'CodeBridge Africa': '/images/communities/naija-devs.jpg',
   'Pure Water Co.': '/images/jobs/plumbing.jpg',
-  'Arewa Threads': '/images/city/kano.jpg',
+  'Arewa Threads': '/images/city/kaduna.jpg',
   'Capital Fitness': '/images/events/ev-pitch-night.jpg',
-  'Garden City Grills': '/images/events/ev-market-popup.jpg',
+  'Garden City Grills': '/images/city/benin-city.jpg',
   'Kano Spice House': '/images/city/kano.jpg',
   'Ibadan Print Hub': '/images/city/ibadan.jpg',
 }
