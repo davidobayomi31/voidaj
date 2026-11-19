@@ -1073,6 +1073,9 @@ export function readSettings(row) {
   return { ...DEFAULT_SETTINGS, ...s, notify: { ...DEFAULT_SETTINGS.notify, ...(s.notify || {}) } }
 }
 
+const AGE_ASKED_FROM = Date.UTC(2026, 10, 19, 16, 0, 0)
+const num = (v) => Number(v) || 0
+
 // The full "me" object the frontend keeps as the current user.
 export async function selfUser(row) {
   if (!row) return null
@@ -1100,8 +1103,11 @@ export async function selfUser(row) {
     isAdmin: !!row.is_admin,
     hasPassword: !!row.password_hash,
     linked: { google: !!row.google_sub, apple: !!row.apple_sub },
-    // Asked before anything else; sample accounts are never asked.
-    needsAge: !row.birth_date && !row.is_seed,
+    // Asked once, when an account is made (Google and Apple sign-ups don't
+    // give a date of birth up front). Accounts that existed before this
+    // went live on 19 Nov 2026 are never asked at sign-in, and neither are
+    // sample accounts.
+    needsAge: !row.birth_date && !row.is_seed && num(row.created_at) >= AGE_ASKED_FROM,
     country: row.country || 'NG',
     features: featuresFor(row.country || 'NG'),
     emailConfirmed: !!row.email_confirmed_at || !!row.is_seed,

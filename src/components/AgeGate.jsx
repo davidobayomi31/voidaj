@@ -1,6 +1,7 @@
 // Asked before anything else (Nuel, Nov 10: "Ask about age before
 // anything", "Our limit is 16 for now"). Email sign-up asks on the form;
-// this catches accounts made with Google or Apple, and older accounts.
+// this catches accounts made with Google or Apple. It is asked once, when the
+// account is made; accounts from before 19 Nov 2026 are never asked at sign-in.
 // A date of birth given on the sign-up page before going to Google or
 // Apple is sent straight away, so nobody is asked twice.
 import { useEffect, useState } from 'react'
