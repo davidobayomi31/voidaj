@@ -39,6 +39,7 @@ const SIGNED_IN_ONLY = [
 const ADMIN_ONLY = [
   ['get', '/api/admin/users'],
   ['get', '/api/admin/users.csv'],
+  ['get', '/api/admin/analytics'],
   ['get', '/api/admin/accounts'],
   ['post', '/api/admin/accounts'],
 ]
@@ -68,7 +69,7 @@ describe('sessions', () => {
     const { agent } = await signUp()
     const login = await agent.get('/api/auth/me')
     expect(login.body.user).not.toBeNull()
-    const real = (await request(app).post('/api/auth/register').send({ name: 'Cookie Check', email: `cookie-${Date.now()}@example.com`, password: 'correct-horse-battery' }))
+    const real = (await request(app).post('/api/auth/register').send({ name: 'Cookie Check', email: `cookie-${Date.now()}@example.com`, password: 'correct-horse-battery', birthDate: '2000-01-01' }))
       .headers['set-cookie'].find((c) => c.startsWith('is_token='))
     const token = real.split(';')[0].slice('is_token='.length)
     const tampered = token.slice(0, -2) + (token.at(-2) === 'a' ? 'b' : 'a') + token.at(-1)

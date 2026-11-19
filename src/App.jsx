@@ -7,6 +7,8 @@ import { Eagle } from './components/Eagle.jsx'
 import { Avatar } from './components/bits.jsx'
 import Assistant from './components/Assistant.jsx'
 import { AdsRail } from './components/AdsRail.jsx'
+import AgeGate from './components/AgeGate.jsx'
+import EmailConfirm from './components/EmailConfirm.jsx'
 import Home from './pages/Home.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Community from './pages/Community.jsx'
@@ -24,6 +26,7 @@ import Explore from './pages/Explore.jsx'
 import Communities from './pages/Communities.jsx'
 import Events from './pages/Events.jsx'
 import EventDetail from './pages/EventDetail.jsx'
+import EventManage from './pages/EventManage.jsx'
 import Tag from './pages/Tag.jsx'
 import Badges from './pages/Badges.jsx'
 import Business from './pages/Business.jsx'
@@ -36,7 +39,10 @@ import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
 import MyCity from './pages/MyCity.jsx'
 import Admin from './pages/Admin.jsx'
+import Services from './pages/Services.jsx'
 import IdCard from './pages/IdCard.jsx'
+import Privacy from './pages/Privacy.jsx'
+import Terms from './pages/Terms.jsx'
 import * as api from './api.js'
 import { FEATURES } from './features.js'
 
@@ -56,16 +62,56 @@ const PRIMARY = [
   { to: '/chats', icon: 'message-circle', tone: 'green', label: 'Chat', unread: true },
 ]
 
-// The phone's bottom bar, as in the mockups: Home · Chat · (+) · Community
-// · Profile, with Add Hub as the raised centre button. Explore, My City,
-// Events and Quick Jobs are one tap away from Home.
+// What visitors who haven't signed up see: just the four places that
+// don't depend on who you are or where you live.
+const VISITOR = ['/home', '/events', '/jobs', '/communities']
+const VISITOR_MOBILE = [
+  { to: '/home', icon: 'home', short: 'Home' },
+  { to: '/events', icon: 'calendar', short: 'Events' },
+  { to: '/jobs', icon: 'briefcase', short: 'Jobs' },
+  { to: '/communities', icon: 'users', short: 'Communities' },
+]
+
+// The phone's bottom bar (Nuel, Nov 11): Home · My City · (+) · Chat ·
+// Profile, with Add Hub as the raised centre button. Explore, Events,
+// Quick Jobs and Communities are one tap away from Home.
 const MOBILE = [
   { to: '/home', icon: 'home', short: 'Home' },
+  { to: '/city', icon: 'map-pin', short: 'My City' },
+  { to: '/add', icon: 'plus', short: 'Hub', center: true },
   { to: '/chats', icon: 'message-circle', short: 'Chat', unread: true },
-  { to: '/add', icon: 'plus', short: 'Add Hub', center: true },
-  { to: '/communities', icon: 'community', short: 'Community' },
   { to: '/profile/me', icon: 'user', short: 'Profile' },
 ]
+
+// A way back from every page (Nuel, Nov 11, on the Events back button: "I
+// like this but not every one got it or how do people go back?"). It goes
+// to the page you came from, or to the place a page belongs to when you
+// arrived on it directly. Home is where you start, so it has none, and
+// Settings sections keep their own "‹ Settings".
+const PARENTS = [
+  [/^\/event\/[^/]+\/manage/, (p) => p.replace(/\/manage$/, ''), 'Event'],
+  [/^\/event\//, '/events', 'Events'],
+  [/^\/community\//, '/communities', 'Communities'],
+  [/^\/communities\/new/, '/communities', 'Communities'],
+  [/^\/business\/[^/]+\/(edit|promote)/, null, 'Business'],
+  [/^\/business\//, '/businesses', 'Businesses'],
+]
+function BackBar() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const path = location.pathname
+  if (IMMERSIVE.includes(path) || path === '/home' || path === '/' || /^\/settings\/.+/.test(path)) return null
+  const [, parent, label] = PARENTS.find(([re]) => re.test(path)) || [null, '/home', 'Back']
+  const canGoBack = (window.history.state?.idx ?? 0) > 0
+  const back = () => (canGoBack ? navigate(-1) : navigate((typeof parent === 'function' ? parent(path) : parent) || '/home'))
+  return (
+    <div className="page-back">
+      <button type="button" className="btn ghost small page-back-btn" onClick={back} aria-label={label === 'Back' ? 'Go back' : `Back to ${label}`}>
+        <Icon name="back" size={16} /> {label}
+      </button>
+    </div>
+  )
+}
 
 // Unread direct messages — the number on Chat.
 function useUnreadMessages() {
@@ -128,8 +174,9 @@ function ProfileMenu({ inSide = false }) {
           <Link role="menuitem" to="/profile/me"><Icon name="user" size={15} /> My Profile</Link>
           <Link role="menuitem" to="/id"><Icon name="badge-check" size={15} /> VOIDAJ ID</Link>
           <Link role="menuitem" to="/communities?tab=mine"><Icon name="community" size={15} /> My Communities</Link>
-          <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
-          <Link role="menuitem" to="/businesses"><Icon name="store" size={15} /> Businesses</Link>
+          <Link role="menuitem" to="/jobs?view=mine"><Icon name="briefcase" size={15} /> My Jobs</Link>
+          <Link role="menuitem" to="/businesses?view=mine"><Icon name="store" size={15} /> My Businesses</Link>
+          <Link role="menuitem" to="/services?view=mine"><Icon name="hand-coins" size={15} /> My Services</Link>
           <Link role="menuitem" to="/saved"><Icon name="bookmark" size={15} /> My Stash</Link>
           <Link role="menuitem" to="/badges"><Icon name="award" size={15} /> My Badges</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
@@ -150,6 +197,7 @@ const SEARCH_SCOPES = {
   '/explore': 'Search VOIDAJ',
   '/communities': 'Search communities',
   '/jobs': 'Search jobs — e.g. plumber, Yaba',
+  '/services': 'Search services — e.g. cleaning, tutoring',
   '/businesses': 'Search businesses, services, offers',
 }
 function HeaderSearch() {
@@ -237,7 +285,7 @@ function SideNav() {
         <VoidajLockup size={16} />
       </Link>
       <div className="sidenav-links">
-        {PRIMARY.map((n) => (
+        {PRIMARY.filter((n) => user || VISITOR.includes(n.to)).map((n) => (
           <NavLink key={n.to} to={n.to} title={n.label} className={`nav-${n.tone}`}>
             <span className="sidenav-icon">
               <span className="snav-ico"><Icon name={n.icon} size={17} /></span>
@@ -246,9 +294,11 @@ function SideNav() {
             <span>{n.label}</span>
           </NavLink>
         ))}
-        <NavLink to="/add" className="sidenav-add" title="Add Hub">
-          <span className="sidenav-add-plus"><Icon name="plus" size={18} /></span><span>Add Hub</span>
-        </NavLink>
+        {user && (
+          <NavLink to="/add" className="sidenav-add" title="Add Hub">
+            <span className="sidenav-add-plus"><Icon name="plus" size={18} /></span><span>Add Hub</span>
+          </NavLink>
+        )}
       </div>
       <div className="sidenav-foot">
         {FEATURES.companion && (
@@ -274,12 +324,13 @@ function SideNav() {
 }
 
 function MobileNav() {
+  const { user } = useApp()
   const location = useLocation()
   const unread = useUnreadMessages()
   if (IMMERSIVE.includes(location.pathname)) return null
   return (
     <nav className="mobile-nav" aria-label="Primary (mobile)">
-      {MOBILE.map((n) => n.center ? (
+      {(user ? MOBILE : VISITOR_MOBILE).map((n) => n.center ? (
         <NavLink key={n.to} to={n.to} className="mobile-nav-add" aria-label={n.short}>
           <span className="mobile-nav-plus"><Icon name="plus" size={24} /></span><span>{n.short}</span>
         </NavLink>
@@ -294,6 +345,14 @@ function MobileNav() {
 }
 
 
+// Visitors on Home see the short landing page, without ads beside it.
+function AdsForMembers() {
+  const { user, loading } = useApp()
+  const location = useLocation()
+  if (!user && !loading && location.pathname === '/home') return null
+  return <AdsRail />
+}
+
 function Footer() {
   const location = useLocation()
   if (IMMERSIVE.includes(location.pathname)) return null
@@ -303,6 +362,10 @@ function Footer() {
       <div className="footer-text">
         <div className="footer-brand"><em>Connect. Discover. Participate.</em></div>
         <div className="footer-line">People · Communities · Opportunities — the intelligent community network.</div>
+        <div className="footer-links">
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
+        </div>
       </div>
     </footer>
   )
@@ -316,6 +379,8 @@ export default function App() {
           <SideNav />
           <Header />
           <main className="main">
+            <BackBar />
+            <EmailConfirm />
             <Routes>
               {/* My City merged into Home; the old address lands there. */}
               <Route path="/" element={<Navigate to="/home" replace />} />
@@ -327,6 +392,7 @@ export default function App() {
               <Route path="/communities" element={<Communities />} />
               <Route path="/events" element={<Events />} />
               <Route path="/event/:id" element={<EventDetail />} />
+              <Route path="/event/:id/manage" element={<EventManage />} />
               <Route path="/tag/:tag" element={<Tag />} />
               <Route path="/badges" element={<Badges />} />
               <Route path="/businesses" element={<Businesses />} />
@@ -353,16 +419,22 @@ export default function App() {
               <Route path="/u/:handle" element={<Profile />} />
               <Route path="/id" element={<IdCard />} />
               <Route path="/jobs" element={<Jobs />} />
+              <Route path="/services" element={<Services />} />
               <Route path="/chats" element={<Chats />} />
               <Route path="/vision" element={<ProfileVision />} />
+              {/* Public, and they must stay public: Google and Apple fetch
+                  these before they will allow sign-in with them. */}
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               {/* Unknown or retired paths (e.g. the old /discover) land on Home. */}
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           </main>
           <Footer />
-          <AdsRail />
+          <AdsForMembers />
           {FEATURES.companion && <Assistant />}
           <MobileNav />
+          <AgeGate />
         </div>
       </BrowserRouter>
     </AppProvider>

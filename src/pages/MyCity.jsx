@@ -12,7 +12,7 @@ import { useCommunities, findCommunity } from '../communities.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
-import { CITIES } from '../components/NigeriaMap.jsx'
+import { cities as citiesIn, findCity, placeLabel } from '../places.js'
 // The map library is big, so it loads only when My City opens.
 const CityMap = lazy(() => import('../components/CityMap.jsx').then((m) => ({ default: m.CityMap })))
 import { HomeAds } from '../components/AdsRail.jsx'
@@ -38,8 +38,18 @@ export default function MyCity() {
   const [jobs, setJobs] = useState([])
   const [madeEvents, setMadeEvents] = useState([])
   const { created } = useCommunities()
-  const home = profile.city || 'Lagos'
-  const city = place
+  const home = profile.city || ''
+  const city = place || home
+  // The map and its pins follow the member's country (Nigeria by default):
+  // that country's known cities, plus their own city if it isn't one of them.
+  const country = user?.country || 'NG'
+  const homeCity = findCity(home, country)
+  const places = (() => {
+    const list = citiesIn(homeCity?.country || country)
+    return homeCity && !list.some((c) => c.id === homeCity.id) ? [homeCity, ...list] : list
+  })()
+  const mapCountry = homeCity?.country || country
+  const where = placeLabel(city, mapCountry)
 
   useEffect(() => { api.listJobs().then(setJobs).catch(() => setJobs([])) }, [user])
   const [businesses, setBusinesses] = useState(null)
@@ -52,26 +62,26 @@ export default function MyCity() {
   const same = (a) => (a || '').toLowerCase() === city.toLowerCase()
   const allEvents = [...madeEvents, ...[...EVENTS].sort((a, b) => a.date.localeCompare(b.date))]
   const events = allEvents.filter((e) => same(eventCity(e))).slice(0, 6)
-  const cityJobs = jobs.filter((j) => same(j.city || 'Lagos'))
+  const cityJobs = jobs.filter((j) => same(j.city))
   const local = [...COMMUNITIES, ...created].filter((c) => c.scope !== 'global' && same(c.city))
   const global = COMMUNITIES.filter((c) => c.scope === 'global')
   const startTo = user ? '/communities/new' : '/auth'
   const show = (id) => filter === 'all' || filter === id
-  const counts = Object.fromEntries(CITIES.map((c) => {
+  const counts = Object.fromEntries(places.map((c) => {
     const s = (x) => (x || '').toLowerCase() === c.name.toLowerCase()
-    return [c.name, allEvents.filter((e) => s(eventCity(e))).length + jobs.filter((j) => s(j.city || 'Lagos')).length]
+    return [c.name, allEvents.filter((e) => s(eventCity(e))).length + jobs.filter((j) => s(j.city)).length]
   }))
   const soon = FILTERS.find((f) => f.id === filter)?.soon
-  const photo = CITIES.find((c) => same(c.name))?.photo
+  const photo = places.find((c) => same(c.name))?.photo
 
   return (
     <div className="page city-page city2">
       <section className="page-head city2-head">
         <div>
           <h1>My City</h1>
-          <p className="meta-dim">What’s happening around you in {city}, Nigeria.</p>
+          <p className="meta-dim">{city ? `What’s happening around you in ${where}.` : 'What’s happening around you.'}</p>
         </div>
-        {!same(home) && <button className="btn ghost small" onClick={() => setPlace(null)}><Icon name="navigation" size={13} /> Back to {home}</button>}
+        {home && !same(home) && <button className="btn ghost small" onClick={() => setPlace(null)}><Icon name="navigation" size={13} /> Back to {home}</button>}
       </section>
 
       <div className="chip-row float-bar" role="tablist" aria-label="What to show">
@@ -88,18 +98,18 @@ export default function MyCity() {
           <strong>{filter === 'trips' ? 'Trips' : 'Businesses'} are coming soon</strong>
           <span className="meta-dim">
             {filter === 'trips'
-              ? 'Find people going your way, share rides and plan group travel across Nigeria.'
+              ? 'Find people going your way, share rides and plan group travel.'
               : `Shops, brands and services in ${city}, with their own pages. Until then, local businesses advertise beside the page.`}
           </span>
         </section>
       ) : (
         <>
           <section className="city-map-card">
-            <Suspense fallback={<div className="cm"><div className="cm-canvas" /></div>}><CityMap value={city} onPick={setPlace} counts={counts} /></Suspense>
+            <Suspense fallback={<div className="cm"><div className="cm-canvas" /></div>}><CityMap value={city} onPick={setPlace} counts={counts} places={places} country={mapCountry} /></Suspense>
             <div className="city-place glass" key={city}>
               {photo ? <img className="city-place-photo" src={photo} alt="" /> : <IconTile name="map-pin" tone="grad" size={44} />}
               <div>
-                <strong>{city}</strong>
+                <strong>{city || 'Your city'}</strong>
                 <span>{events.length} events · {cityJobs.length} jobs · {local.length} local communities</span>
               </div>
               <span className="city-place-hint">Tap a city on the map</span>

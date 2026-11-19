@@ -52,7 +52,7 @@ export default function AdBusiness() {
         <section className="card biz-about">
           <p>{ad.tagline}</p>
           <ul>
-            <li><Icon name="map-pin" size={15} /> {ad.city}, Nigeria</li>
+            <li><Icon name="map-pin" size={15} /> {ad.city || 'Online'}</li>
             {ad.owner && <li><Icon name="user" size={15} /> Run by <Link to={`/profile/${ad.owner.id}`}>{ad.owner.name}</Link></li>}
             <li><Icon name="clock" size={15} /> Opening hours coming soon</li>
           </ul>

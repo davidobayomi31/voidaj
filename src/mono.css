@@ -252,3 +252,14 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 .dm-origin, :root[data-mode="dark"] .dm-origin { background: var(--surface-2); border-color: var(--border); box-shadow: none; }
 :root[data-mode="dark"] .settings2 .settings-nav { background: var(--surface); }
 :root[data-mode="dark"] .cm-pop, :root[data-mode="dark"] .ev-card, :root[data-mode="dark"] .job-cat:not([style]) { background: var(--surface); }
+
+/* ── Tags that sit on the brand colour ──
+   --brand is pure white in dark mode, so any tag that paired
+   `background: var(--brand)` with white text rendered as a blank white bar
+   (the "Coming next" tag on the profile's Badges tab). Use the theme's own
+   ink/on-brand pair so the label stays readable in both modes. */
+.vision-banner-tag, .vision-how-tag,
+:root[data-mode="dark"] .vision-banner-tag, :root[data-mode="dark"] .vision-how-tag {
+  background: var(--ink); color: var(--on-brand);
+}
+.vision-banner-tag .icon, .vision-how-tag .icon { color: inherit; }

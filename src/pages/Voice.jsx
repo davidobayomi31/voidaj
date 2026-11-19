@@ -8,6 +8,7 @@ import { Icon } from '../components/Icons.jsx'
 import { Avatar, PostCard } from '../components/bits.jsx'
 import { PortfolioGrid } from '../components/Portfolio.jsx'
 import { sectionMeta } from '../components/Voices.jsx'
+import { showVerifiedTick, verifiedLabel } from '../verification.js'
 
 function Section({ id, children }) {
   const meta = sectionMeta(id)
@@ -113,7 +114,7 @@ export default function Voice() {
         {owner && <Avatar user={owner} size={76} />}
         <div className="vv-hero-text">
           <span className="voice-tag">{voice.name}</span>
-          <h1>{owner?.name}{owner?.idVerified && <span className="verified-tag"><Icon name="badge-check" size={13} /> Verified</span>}</h1>
+          <h1>{owner?.name}{showVerifiedTick() && owner?.idVerified && <span className="verified-tag"><Icon name="badge-check" size={13} /> {verifiedLabel()}</span>}</h1>
           <div className="meta-dim">@{voice.handle}</div>
           {voice.headline && <p className="vv-headline">{voice.headline}</p>}
         </div>

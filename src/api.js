@@ -16,6 +16,8 @@ async function req(path, opts = {}) {
 // Auth
 export const me = () => req('/auth/me').then((d) => d.user)
 export const register = (body) => req('/auth/register', { method: 'POST', body }).then((d) => d.user)
+export const setAge = (birthDate, ref, country) => req('/me/age', { method: 'PUT', body: { birthDate, ref, country } }).then((d) => d.user)
+export const myReferrals = () => req('/me/referrals')
 export const login = (body) => req('/auth/login', { method: 'POST', body }).then((d) => d.user)
 export const logout = () => req('/auth/logout', { method: 'POST' })
 // Which of Google / Apple sign-in are set up on this server.
@@ -30,12 +32,18 @@ export const deleteAccount = (password) => req('/auth/me', { method: 'DELETE', b
 export const sendSupport = (body) => req('/support', { method: 'POST', body })
 export const exportUrl = '/api/me/export'
 export const adminUsers = () => req('/admin/users').then((d) => d.users)
+export const adminAnalytics = () => req('/admin/analytics')
 export const adminUsersCsvUrl = '/api/admin/users.csv'
 export const adminAccounts = () => req('/admin/accounts').then((d) => d.accounts)
 export const addAdminAccount = (body) => req('/admin/accounts', { method: 'POST', body }).then((d) => d.account)
 export const saveAdminAccount = (id, body) => req(`/admin/accounts/${id}`, { method: 'PATCH', body }).then((d) => d.account)
 export const deleteAdminAccount = (id) => req(`/admin/accounts/${id}`, { method: 'DELETE' })
-export const verifyId = (idNumber) => req('/auth/verify-id', { method: 'POST', body: { idNumber } }).then((d) => d.user)
+// ID checks: a photo of the ID and a selfie, reviewed by the VOIDAJ team.
+export const myVerification = () => req('/verification')
+export const sendVerification = (body) => req('/verification', { method: 'POST', body }).then((d) => d.check)
+export const adminVerifications = () => req('/admin/verifications').then((d) => d.checks)
+export const decideVerification = (id, decision, reason) => req(`/admin/verifications/${id}`, { method: 'POST', body: { decision, reason } })
+export const revokeVerification = (userId) => req(`/admin/verifications/revoke/${userId}`, { method: 'POST' })
 
 // Communities & people
 export const listCommunities = () => req('/communities').then((d) => d.communities)
@@ -56,7 +64,9 @@ export const listEvents = (params = {}) => {
 }
 export const listRsvps = () => req('/rsvps')
 export const socialNotifications = () => req('/notifications')
-export const rsvp = (id) => req(`/events/${id}/rsvp`, { method: 'POST' })
+// body: { status: 'going' | 'interested', visible, visibleOnly } — all optional.
+export const rsvp = (id, body = {}) => req(`/events/${id}/rsvp`, { method: 'POST', body })
+export const reportEvent = (id, reason) => req(`/events/${encodeURIComponent(id)}/report`, { method: 'POST', body: { reason } })
 export const uploadImage = (image, kind) => req('/uploads', { method: 'POST', body: { image, kind } }).then((d) => d.url)
 export const setCommunityCover = (id, cover) => req(`/communities/${id}/cover`, { method: 'PUT', body: { cover } }).then((d) => d.community)
 export const createEvent = (communityId, body) => req(`/communities/${communityId}/events`, { method: 'POST', body }).then((d) => d.event)
@@ -131,7 +141,9 @@ export const listAds = (params = {}) => {
 export const getAd = (id) => req(`/ads/${id}`).then((d) => d.ad)
 export const listMyAds = () => req('/ads/mine').then((d) => d.ads)
 export const createAd = (body) => req('/ads', { method: 'POST', body }).then((d) => d.ad)
-export const payForAd = (id) => req(`/ads/${id}/pay`, { method: 'POST' }).then((d) => d.ad)
+export const myAds = () => req('/ads/mine').then((d) => d.ads)
+export const adminAds = () => req('/admin/ads').then((d) => d.ads)
+export const decideAd = (id, decision, note) => req(`/admin/ads/${id}`, { method: 'POST', body: { decision, note } }).then((d) => d.ad)
 
 // Live streaming
 export const listLive = () => req('/live').then((d) => d.streams)
@@ -175,3 +187,43 @@ export const businessReviews = (id) => req(`/businesses/${id}/reviews`).then((d)
 export const reviewBusiness = (id, body) => req(`/businesses/${id}/reviews`, { method: 'POST', body })
 export const promoteListing = (id, body) => req(`/businesses/${id}/promote`, { method: 'POST', body }).then((d) => d.promotion)
 export const businessPromotions = (id) => req(`/businesses/${id}/promotions`).then((d) => d.promotions)
+
+// ── Nov 12 plan (PLAN-NOTES-AND-GLOBAL.md) ──────────────────────────
+// Security: email confirmation codes and blocking.
+export const confirmEmail = (code) => req('/auth/confirm-email', { method: 'POST', body: { code } }).then((d) => d.user)
+export const resendEmailCode = () => req('/auth/email-code', { method: 'POST' })
+export const toggleBlock = (userId) => req(`/users/${userId}/block`, { method: 'POST' })
+export const myBlocks = () => req('/me/blocks').then((d) => d.people)
+// Events: the organisers' side.
+const ev = (id) => `/events/${encodeURIComponent(id)}`
+export const manageEvent = (id) => req(`${ev(id)}/manage`)
+export const updateEvent = (id, body) => req(ev(id), { method: 'PATCH', body }).then((d) => d.event)
+export const addEventHost = (id, handle, role) => req(`${ev(id)}/hosts`, { method: 'POST', body: { handle, role } })
+export const removeEventHost = (id, userId) => req(`${ev(id)}/hosts/${userId}`, { method: 'DELETE' })
+export const eventAnnouncements = (id) => req(`${ev(id)}/announcements`)
+export const announce = (id, body) => req(`${ev(id)}/announcements`, { method: 'POST', body: { body } }).then((d) => d.announcement)
+export const deleteAnnouncement = (id, aid) => req(`${ev(id)}/announcements/${aid}`, { method: 'DELETE' })
+export const answerRequest = (id, userId, decision) => req(`${ev(id)}/requests/${userId}`, { method: 'POST', body: { decision } })
+export const inviteToEvent = (id, handle) => req(`${ev(id)}/invite`, { method: 'POST', body: { handle } })
+export const removeAttendee = (id, userId) => req(`${ev(id)}/attendees/${userId}`, { method: 'DELETE' })
+export const eventCircle = (id) => req(`${ev(id)}/circle`).then((d) => d.chatId)
+export const myHosting = () => req('/me/hosting').then((d) => d.events)
+// Jobs: hiring, agreements, stages, disputes, reviews.
+export const jobFlow = (id) => req(`/jobs/${id}`)
+export const jobApplicant = (id, userId, action, extra = {}) => req(`/jobs/${id}/applicants/${userId}`, { method: 'POST', body: { action, ...extra } })
+export const answerAgreement = (id, accept) => req(`/jobs/${id}/agreement`, { method: 'POST', body: { accept } })
+export const jobStage = (id, to) => req(`/jobs/${id}/stage`, { method: 'POST', body: { to } })
+export const jobDispute = (id, reason) => req(`/jobs/${id}/dispute`, { method: 'POST', body: { reason } })
+export const jobReview = (id, rating, body) => req(`/jobs/${id}/review`, { method: 'POST', body: { rating, body } })
+export const userReviews = (userId) => req(`/users/${userId}/reviews`)
+export const adminDisputes = () => req('/admin/disputes').then((d) => d.disputes)
+export const resolveDispute = (id, outcome) => req(`/admin/disputes/${id}/resolve`, { method: 'POST', body: { outcome } })
+
+// Services: what people can do, with proof photos and availability.
+export const listServices = (params = {}) => req(`/services?${new URLSearchParams(Object.entries(params).filter(([, v]) => v))}`).then((d) => d.services)
+export const myServices = () => req('/services/mine').then((d) => d.services)
+export const getService = (id) => req(`/services/${id}`).then((d) => d.service)
+export const createService = (body) => req('/services', { method: 'POST', body }).then((d) => d.service)
+export const updateService = (id, body) => req(`/services/${id}`, { method: 'PATCH', body }).then((d) => d.service)
+export const deleteService = (id) => req(`/services/${id}`, { method: 'DELETE' })
+export const checkHandle = (h) => req(`/handle-check?h=${encodeURIComponent(h)}`)

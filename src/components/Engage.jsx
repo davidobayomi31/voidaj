@@ -125,7 +125,7 @@ export function LoomSheet({ post, onClose, onLoomed }) {
   const [done, setDone] = useState('')
   const [error, setError] = useState('')
   const mine = (profile.communities || []).map(findCommunity).filter(Boolean)
-  const city = profile.city || 'Lagos'
+  const city = profile.city || 'your city'
   const url = `${location.origin}/post/${post.id}`
   const excerpt = (post.title || post.body || 'a post').slice(0, 80)
 

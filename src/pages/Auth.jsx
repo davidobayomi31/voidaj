@@ -5,6 +5,8 @@ import { useApp } from '../state.jsx'
 import { Icon } from '../components/Icons.jsx'
 import { VoidajMark, VJ_PATH } from '../components/VoidajMark.jsx'
 import * as api from '../api.js'
+import { MIN_AGE, ageOn, latestBirthDate, savedRef, saveRef, saveBirthDate, clearSignUpCarryOver } from '../age.js'
+import { COUNTRIES, guessCountry, flagOf } from '../countries.js'
 
 // Brand marks for the two sign-in buttons (each company's own logo, as
 // their button guidelines ask).
@@ -25,14 +27,16 @@ const AppleLogo = () => (
 // "Continue with Google / Apple". Each goes to the server, which hands the
 // browser to Google or Apple and brings it back signed in. A provider whose
 // keys aren't set yet shows its button greyed out.
-function SocialSignIn() {
+function SocialSignIn({ locked, onGo }) {
   const [on, setOn] = useState(null)
   useEffect(() => { api.authProviders().then(setOn).catch(() => setOn({ google: false, apple: false })) }, [])
   return (
     <div className="auth-social">
       {[['google', 'Google', <GoogleG key="g" />], ['apple', 'Apple', <AppleLogo key="a" />]].map(([id, label, logo]) => (
         on?.[id]
-          ? <a key={id} href={`/api/auth/${id}/start`} className={`btn auth-social-btn ${id}`}>{logo} Continue with {label}</a>
+          ? (locked
+            ? <button key={id} type="button" className={`btn auth-social-btn ${id}`} disabled title="Enter your date of birth first">{logo} Continue with {label}</button>
+            : <a key={id} href={`/api/auth/${id}/start`} onClick={onGo} className={`btn auth-social-btn ${id}`}>{logo} Continue with {label}</a>)
           : <button key={id} type="button" className={`btn auth-social-btn ${id}`} disabled title={on ? `Sign in with ${label} isn’t set up yet` : undefined}>
               {logo} Continue with {label}{on && <em>Not set up yet</em>}
             </button>
@@ -47,20 +51,38 @@ export default function Auth() {
   // ?mode=login opens on sign-in (the "Log in" link on the welcome card).
   const [params] = useSearchParams()
   const [mode, setMode] = useState(params.get('mode') === 'login' ? 'login' : 'register')
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  // `website` is a trap: it's hidden from people, so only bots fill it in.
+  const [form, setForm] = useState({ name: '', email: '', password: '', birthDate: '', country: guessCountry(), website: '' })
+  // An invite link (/auth?ref=…) is remembered until the account is made.
+  useEffect(() => { if (params.get('ref')) saveRef(params.get('ref')) }, [params])
+  const age = ageOn(form.birthDate)
+  const tooYoung = age !== null && age < MIN_AGE
+  const ageOk = age !== null && age >= MIN_AGE && age <= 120
+  const locked = mode === 'register' && !ageOk
   // A failed Google / Apple sign-in comes back as ?error=…
   const [error, setError] = useState(params.get('error') || '')
   const [busy, setBusy] = useState(false)
+  // Two steps in the same card, so the page stays short (David, Nov 19):
+  // 'choose' has the date of birth, Google, Apple and "Continue with email";
+  // 'email' has the form. The date of birth is asked first because everything
+  // else waits on it.
+  const [step, setStep] = useState('choose')
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
   const submit = async (e) => {
     e.preventDefault()
+    // Real names help people trust each other here, so ask for both.
+    if (mode === 'register' && form.name.trim().split(/\s+/).filter(Boolean).length < 2) {
+      setError('Please enter your first and last name.')
+      return
+    }
     setError(''); setBusy(true)
     try {
       const user = mode === 'register'
-        ? await register(form)
+        ? await register({ ...form, ref: savedRef() })
         : await login({ email: form.email, password: form.password })
+      clearSignUpCarryOver() // the date of birth and referrer have done their job
       navigate(user.onboarded ? '/home' : '/welcome')
     } catch (err) {
       setError(err.message)
@@ -68,7 +90,7 @@ export default function Auth() {
     setBusy(false)
   }
 
-  const switchTo = (m) => { setMode(m); setError('') }
+  const switchTo = (m) => { setMode(m); setError(''); setStep('choose') }
 
   return (
     <div className="auth-screen">
@@ -98,32 +120,62 @@ export default function Auth() {
         <h1>{mode === 'register' ? <>Step into <span className="grad-text">VOIDAJ</span></> : <>Welcome back</>}</h1>
         <div className="auth-tagline"><span>Connect.</span><span>Discover.</span><span>Participate.</span></div>
 
-        <SocialSignIn />
-        <div className="auth-or"><span>or with email</span></div>
-
-        <form onSubmit={submit} className="auth-form">
-          {mode === 'register' && (
+        {mode === 'register' && step === 'choose' && (
+          <label className="field auth-age">
+            <span><Icon name="calendar" size={14} /> First, your date of birth</span>
+            <input type="date" value={form.birthDate} onChange={set('birthDate')} max={latestBirthDate()} min="1900-01-01" aria-describedby="age-note" />
+            <em id="age-note" className={tooYoung ? 'auth-age-no' : ''}>{tooYoung ? `Sorry — you need to be at least ${MIN_AGE} to join VOIDAJ.` : `You need to be ${MIN_AGE} or older. Only you can see this.`}</em>
+          </label>
+        )}
+        {step === 'choose' ? (
+          <>
+            <SocialSignIn locked={locked} onGo={() => { if (mode === 'register') { saveBirthDate(form.birthDate); try { localStorage.setItem('voidaj_country', form.country) } catch { /* private mode */ } } }} />
+            <div className="auth-or"><span>or</span></div>
+            <button type="button" className="btn auth-social-btn email" disabled={locked} title={locked ? 'Enter your date of birth first' : undefined}
+              onClick={() => { setError(''); setStep('email') }}>
+              <Icon name="mail" size={17} /> Continue with email
+            </button>
+            {error && <div className="auth-error"><Icon name="shield" size={14} /> {error}</div>}
+          </>
+        ) : (
+          <form onSubmit={submit} className="auth-form">
+            <button type="button" className="auth-back link-btn" onClick={() => { setError(''); setStep('choose') }}>
+              <Icon name="back" size={14} /> Other ways to {mode === 'register' ? 'join' : 'sign in'}
+            </button>
+            {mode === 'register' && (
+              <label className="field">
+                <span><Icon name="user" size={14} /> Full name</span>
+                <input value={form.name} onChange={set('name')} placeholder="First and last name" autoComplete="name" autoFocus />
+              </label>
+            )}
+            {mode === 'register' && (
+              <label className="field">
+                <span><Icon name="globe" size={14} /> Country</span>
+                <select value={form.country} onChange={set('country')} autoComplete="country">
+                  {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{flagOf(c.code)} {c.name}</option>)}
+                </select>
+              </label>
+            )}
+            {mode === 'register' && (
+              <label className="auth-trap" aria-hidden="true">Website<input tabIndex={-1} value={form.website} onChange={set('website')} autoComplete="off" /></label>
+            )}
             <label className="field">
-              <span><Icon name="user" size={14} /> Name</span>
-              <input value={form.name} onChange={set('name')} placeholder="Your name" autoComplete="name" />
+              <span><Icon name="mail" size={14} /> Email</span>
+              <input type="email" value={form.email} onChange={set('email')} placeholder="you@example.com" autoComplete="email" autoFocus={mode === 'login'} />
             </label>
-          )}
-          <label className="field">
-            <span><Icon name="mail" size={14} /> Email</span>
-            <input type="email" value={form.email} onChange={set('email')} placeholder="you@example.com" autoComplete="email" />
-          </label>
-          <label className="field">
-            <span><Icon name="lock" size={14} /> Password</span>
-            <input type="password" value={form.password} onChange={set('password')} placeholder="At least 6 characters" autoComplete={mode === 'register' ? 'new-password' : 'current-password'} />
-          </label>
+            <label className="field">
+              <span><Icon name="lock" size={14} /> Password</span>
+              <input type="password" value={form.password} onChange={set('password')} placeholder="At least 6 characters" autoComplete={mode === 'register' ? 'new-password' : 'current-password'} />
+            </label>
 
-          {error && <div className="auth-error"><Icon name="shield" size={14} /> {error}</div>}
+            {error && <div className="auth-error"><Icon name="shield" size={14} /> {error}</div>}
 
-          <button className="btn primary large full" disabled={busy}>
-            {busy ? 'One moment…' : mode === 'register' ? 'Create account' : 'Sign in'}
-            <Icon name="arrow" size={16} />
-          </button>
-        </form>
+            <button className="btn primary large full" disabled={busy || locked}>
+              {busy ? 'One moment…' : mode === 'register' ? 'Create account' : 'Sign in'}
+              <Icon name="arrow" size={16} />
+            </button>
+          </form>
+        )}
 
         <div className="auth-switch">
           {mode === 'register' ? (

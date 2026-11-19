@@ -9,8 +9,9 @@ import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 import { CoverPicker } from '../components/CoverPicker.jsx'
 import { compressPhoto } from '../components/Media.jsx'
-import { CITIES } from '../components/NigeriaMap.jsx'
+import { cities as citiesIn } from '../places.js'
 import { useBusinessMeta } from '../components/BusinessBits.jsx'
+import { PhoneInput, HoursPicker } from '../components/ContactPickers.jsx'
 
 function LogoPicker({ value, name, onChange, onBusy }) {
   const input = useRef(null)
@@ -56,7 +57,7 @@ export default function BusinessNew() {
 
   useEffect(() => {
     if (!user) return
-    if (!editing) { setForm({ ...blank, city: user.city || 'Lagos' }); return }
+    if (!editing) { setForm({ ...blank, city: user.city || '' }); return }
     api.getBusiness(id).then((b) => {
       if (!b.isOwner) { setError('Only the owner can edit this business.'); return }
       setForm(Object.fromEntries(Object.keys(blank).map((k) => [k, b[k] ?? ''])))
@@ -86,60 +87,85 @@ export default function BusinessNew() {
   return (
     <div className="page biz-new">
       <header className="page-head">
-        <Link to={editing ? `/business/${id}` : '/add'} className="back-link"><Icon name="chevron-left" size={16} /> Back</Link>
         <h1>{editing ? 'Edit business' : 'Create Business'}</h1>
         <p className="meta-dim">Set up your business identity on VOIDAJ.</p>
       </header>
 
-      <form className="card biz-form" onSubmit={submit}>
-        <LogoPicker value={form.logo} name={form.name} onChange={(logo) => setForm((f) => ({ ...f, logo }))} onBusy={setUploading} />
+      {/* Sections instead of one long column, and a preview of how the
+          page will look at the top (Nuel, Nov 13 + 18: "give this a new
+          design look"). */}
+      <form className="biz-form2" onSubmit={submit}>
+        <div className="biz-preview" style={form.cover ? { '--img': `url(${form.cover})` } : undefined}>
+          <span className="biz-preview-name">
+            <b>{form.name || 'Your business name'}</b>
+            <em>{meta?.categories.find((c) => c.id === form.category)?.label || 'Category'}{form.city ? ` · ${form.area ? `${form.area}, ` : ''}${form.city}` : ''}</em>
+          </span>
+        </div>
 
-        <label className="field"><span>Business name</span>
-          <input value={form.name} onChange={set('name')} placeholder="e.g. Akinyede Estates" maxLength={80} required autoFocus={!editing} />
-        </label>
-        <label className="field"><span>Category</span>
-          <select className="job-select" value={form.category} onChange={set('category')} required>
-            <option value="" disabled>Pick a category</option>
-            {meta?.categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-          </select>
-        </label>
-        <label className="field"><span>Description</span>
-          <textarea rows={3} value={form.description} onChange={set('description')} maxLength={600} placeholder="What you do, e.g. Real estate · Property management · Sales & rentals" />
-        </label>
-        <div className="settings-row">
-          <label className="field"><span>Location / service area</span>
-            <select className="job-select" value={form.city} onChange={set('city')}>
-              {CITIES.map((c) => <option key={c.id} value={c.name}>{c.name}, Nigeria</option>)}
+        <fieldset className="card biz-sec">
+          <legend><Icon name="store" size={15} /> About the business</legend>
+          <LogoPicker value={form.logo} name={form.name} onChange={(logo) => setForm((f) => ({ ...f, logo }))} onBusy={setUploading} />
+          <label className="field"><span>Business name</span>
+            <input value={form.name} onChange={set('name')} placeholder="e.g. Akinyede Estates" maxLength={80} required autoFocus={!editing} />
+          </label>
+          <label className="field"><span>Category</span>
+            <select className="job-select" value={form.category} onChange={set('category')} required>
+              <option value="" disabled>Pick a category</option>
+              {meta?.categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </label>
-          <label className="field"><span>Area (optional)</span>
-            <input value={form.area} onChange={set('area')} placeholder="e.g. Lekki" maxLength={60} />
+          <label className="field"><span>Description</span>
+            <textarea rows={3} value={form.description} onChange={set('description')} maxLength={600} placeholder="What you do, e.g. Real estate · Property management · Sales & rentals" />
           </label>
-        </div>
+        </fieldset>
+
+        <fieldset className="card biz-sec">
+          <legend><Icon name="map-pin" size={15} /> Where you are</legend>
+          <div className="settings-row">
+            <label className="field"><span>City or town</span>
+              <input value={form.city} onChange={set('city')} placeholder="Your city" maxLength={40} list="biz-cities" autoComplete="address-level2" required />
+              <datalist id="biz-cities">{citiesIn(user.country || 'NG').map((c) => <option key={c.id} value={c.name} />)}</datalist>
+            </label>
+            <label className="field"><span>Area (optional)</span>
+              <input value={form.area} onChange={set('area')} placeholder="A neighbourhood or district" maxLength={60} />
+            </label>
+          </div>
+        </fieldset>
 
         {editing && (
           <>
-            <CoverPicker kind="business-cover" label="Cover photo" value={form.cover} onChange={(cover) => setForm((f) => ({ ...f, cover }))} onBusy={setUploading} />
-            <div className="settings-row">
-              <label className="field"><span>Phone (optional)</span><input value={form.phone} onChange={set('phone')} placeholder="+234…" maxLength={30} inputMode="tel" /></label>
-              <label className="field"><span>Website (optional)</span><input value={form.website} onChange={set('website')} placeholder="yourbusiness.com" maxLength={200} /></label>
-            </div>
-            <label className="field"><span>Opening hours (optional)</span><input value={form.hours} onChange={set('hours')} placeholder="Mon–Sat, 9am–6pm" maxLength={120} /></label>
+            <fieldset className="card biz-sec">
+              <legend><Icon name="image" size={15} /> Cover photo</legend>
+              <CoverPicker kind="business-cover" label="Shown across the top of your business page" value={form.cover} onChange={(cover) => setForm((f) => ({ ...f, cover }))} onBusy={setUploading} />
+            </fieldset>
+            <fieldset className="card biz-sec">
+              <legend><Icon name="phone" size={15} /> Contact</legend>
+              <div className="settings-row">
+                <div className="field"><span>Phone (optional)</span><PhoneInput value={form.phone} defaultCountry={user.country || 'NG'} onChange={(phone) => setForm((f) => ({ ...f, phone }))} /></div>
+                <label className="field"><span>Website (optional)</span><input value={form.website} onChange={set('website')} placeholder="yourbusiness.com" maxLength={200} /></label>
+              </div>
+            </fieldset>
+            <fieldset className="card biz-sec">
+              <legend><Icon name="clock" size={15} /> Opening hours</legend>
+              <HoursPicker value={form.hours} onChange={(hours) => setForm((f) => ({ ...f, hours }))} />
+            </fieldset>
           </>
         )}
 
         {!editing && (
-          <label className="biz-toggle">
+          <label className="card biz-toggle">
             <input type="checkbox" checked={isBusiness} onChange={(e) => setIsBusiness(e.target.checked)} />
             <span><b>Mark as business account</b><em>Your business gets its own page, separate from your personal profile. You stay the owner.</em></span>
           </label>
         )}
 
         {error && <div className="auth-error"><Icon name="info" size={14} /> {error}</div>}
-        <button className="btn primary large full" disabled={busy || uploading || !form.name.trim() || !form.category || (!editing && !isBusiness)}>
-          {busy ? 'Saving…' : editing ? 'Save changes' : <>Create Business <Icon name="check" size={16} /></>}
-        </button>
-        {editing && <button type="button" className="btn danger small" onClick={remove}><Icon name="trash" size={14} /> Delete business</button>}
+        <div className="biz-savebar">
+          {editing && <button type="button" className="btn ghost small danger" onClick={remove}><Icon name="trash" size={14} /> Delete business</button>}
+          <button className="btn primary" disabled={busy || uploading || !form.name.trim() || !form.category || !form.city.trim() || (!editing && !isBusiness)}>
+            {busy ? 'Saving…' : editing ? 'Save changes' : <>Create Business <Icon name="check" size={16} /></>}
+          </button>
+        </div>
       </form>
     </div>
   )

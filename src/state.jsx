@@ -8,7 +8,7 @@ import * as api from './api.js'
 const AppContext = createContext(null)
 
 const GUEST = {
-  id: null, name: '', handle: '', title: '', city: 'Lagos', area: '', color: '#D8A63A',
+  id: null, name: '', handle: '', title: '', city: '', area: '', color: '#D8A63A',
   bio: '', interests: [], goals: [], skills: [], privacy: 'city-only',
   onboarded: false, communities: [], moderatorOf: [], connections: [], following: [],
 }
@@ -84,7 +84,7 @@ export function AppProvider({ children }) {
     loading,
     assistantOpen, setAssistantOpen,
     theme, setTheme,
-    place: placeOverride ?? user?.city ?? 'Lagos', setPlace, adScope, setAdScope,
+    place: placeOverride ?? user?.city ?? '', setPlace, adScope, setAdScope,
     register, login, logout, refreshMe, saveProfile,
     joinCommunity, leaveCommunity, connect, follow,
   }

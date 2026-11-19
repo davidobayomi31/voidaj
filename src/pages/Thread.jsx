@@ -8,7 +8,6 @@ import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar } from '../components/bits.jsx'
 import { EngageBar, RichText } from '../components/Engage.jsx'
-import { Vote } from '../components/Vote.jsx'
 import { ReportButton } from '../components/ReportButton.jsx'
 import { MediaView } from '../components/Media.jsx'
 
@@ -33,9 +32,6 @@ function CommentNode({ comment, depth, onReplied }) {
   return (
     <div className={`comment ${depth > 0 ? 'nested' : ''}`}>
       <div className="comment-row">
-        {!comment.hidden && (
-          <Vote targetType="comment" targetId={comment.id} score={comment.score} myVote={comment.myVote} layout="vertical" />
-        )}
         <div className="comment-body">
           {comment.hidden ? (
             <p className="comment-removed"><Icon name="shield" size={13} /> Removed by a moderator</p>
@@ -103,11 +99,12 @@ export default function Thread() {
 
   return (
     <div className="page thread-page" style={{ '--accent': community?.accent ?? 'var(--gold)' }}>
-      <div className="space-grid thread-grid">
+      {/* Posts outside a community have no ThreadSide, so the grid drops to a
+          single centred column instead of reserving an empty 320px rail. */}
+      <div className={`space-grid thread-grid${community ? '' : ' thread-grid-solo'}`}>
       <div className="thread-main">
       <article className="card thread-post">
         <div className="post-card-row">
-          <Vote targetType="post" targetId={post.id} score={post.score} myVote={post.myVote} layout="vertical" />
           <div className="post-card-body">
             {post.pinned && <span className="pin-badge">Pinned</span>}
             <div className="post-head">
@@ -206,7 +203,7 @@ function ThreadSide({ community, postId }) {
             {more.map((p) => (
               <Link key={p.id} to={`/post/${p.id}`} className="thread-more-item">
                 <strong>{p.title}</strong>
-                <span className="meta-dim">{p.score ?? 0} points · {p.commentCount} {p.commentCount === 1 ? 'comment' : 'comments'}</span>
+                <span className="meta-dim">{p.commentCount} {p.commentCount === 1 ? 'comment' : 'comments'}</span>
               </Link>
             ))}
           </div>

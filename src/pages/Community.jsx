@@ -10,15 +10,18 @@ import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar, EventCard, PostCard, FavoriteButton } from '../components/bits.jsx'
 import { LiveTab, LiveBadge } from '../components/Live.jsx'
+import { CommunityChat } from '../components/CommunityChat.jsx'
 import { RatingWidget, RatingSummary } from '../components/Rating.jsx'
 import { MediaButtons, MediaTray, compressPhoto } from '../components/Media.jsx'
 import { EventForm } from '../components/EventForm.jsx'
+import { categoryOf } from '../categories.js'
+import { CategoryTag } from '../components/Categories.jsx'
 
 export default function Community() {
   const { id } = useParams()
   const { user, profile, joinCommunity, leaveCommunity } = useApp()
   const [params, setParams] = useSearchParams()
-  const tabFromUrl = () => (['live', 'events', 'members', 'manage'].includes(params.get('tab')) ? params.get('tab') : 'discussions')
+  const tabFromUrl = () => (['chat', 'live', 'events', 'members', 'manage'].includes(params.get('tab')) ? params.get('tab') : 'discussions')
   const [tab, setTabState] = useState(tabFromUrl)
   useEffect(() => setTabState(tabFromUrl()), [params]) // eslint-disable-line
   // Keep the open tab in the URL so Manage (and the rest) can be linked to.
@@ -82,6 +85,7 @@ export default function Community() {
             <h1>{community.name}</h1>
             <p className="community-tagline">{community.tagline}</p>
             <div className="meta-row">
+              <CategoryTag id={categoryOf(meta?.category ? meta : community)} short={false} />
               <span className={`scope-badge ${community.scope}`}>
                 <Icon name={community.scope === 'global' ? 'globe' : 'map-pin'} size={12} />
                 {community.scope === 'global' ? 'Global community' : community.city}
@@ -109,13 +113,14 @@ export default function Community() {
       <div className={`community-body ${tab === 'manage' ? 'managing' : ''}`}>
         <div className="community-main">
           <div className="tabs" role="tablist">
-            {['discussions', 'events', 'live', 'members', ...(isMod ? ['manage'] : [])].map((t) => (
+            {['discussions', 'chat', 'events', 'live', 'members', ...(isMod ? ['manage'] : [])].map((t) => (
               <button
                 key={t} role="tab" aria-selected={tab === t}
                 className={`tab ${tab === t ? 'active' : ''}`}
                 onClick={() => setTab(t)}
               >
                 {t === 'discussions' && <><Icon name="chat" size={15} /> Discussions ({posts.length})</>}
+                {t === 'chat' && <><Icon name="message-circle" size={15} /> Chat</>}
                 {t === 'events' && <><Icon name="calendar" size={15} /> Events ({events.length})</>}
                 {t === 'live' && <><Icon name="radio" size={15} /> Live {live && <span className="live-dot" />}</>}
                 {t === 'members' && <><Icon name="users" size={15} /> Members</>}
@@ -168,6 +173,8 @@ export default function Community() {
               </div>
             </div>
           )}
+
+          {tab === 'chat' && <CommunityChat community={community} isMember={joined} />}
 
           {tab === 'live' && <LiveTab community={community} isMember={joined} />}
 

@@ -15,6 +15,7 @@ import { EngageBar, RichText } from './Engage.jsx'
 import { MediaButtons, MediaTray, MediaView } from './Media.jsx'
 import { ReportButton } from './ReportButton.jsx'
 import { findCommunity } from '../communities.js'
+import { showVerifiedTick } from '../verification.js'
 
 export const AUDIENCES = [
   { id: 'public', icon: 'globe', label: 'Public', sub: 'Anyone on VOIDAJ' },
@@ -52,7 +53,7 @@ export function FeedPost({ post, onLoomed }) {
         <Link to={`/profile/${post.author.id}`} className="fp-who">
           <Avatar user={post.author} size={42} />
           <span>
-            <b>{post.author.name}{post.author.idVerified && <Icon name="badge-check" size={14} className="fp-tick" />}</b>
+            <b>{post.author.name}{showVerifiedTick() && post.author.idVerified && <Icon name="badge-check" size={14} className="fp-tick" />}</b>
             <em>{post.ago} ago · <Audience post={{ ...post, community: c }} /></em>
           </span>
         </Link>
@@ -83,7 +84,7 @@ export function FeedComposer({ onPosted, onCancel, start = false, defaultAudienc
   const [media, setMedia] = useState([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const city = profile.city || 'Lagos'
+  const city = profile.city || 'your city'
   const mine = profile.communities.map(findCommunity).filter(Boolean)
 
   const canPost = audience === 'community' ? title.trim() && communityId : (body.trim() || title.trim() || media.length)

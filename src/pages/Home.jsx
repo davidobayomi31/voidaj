@@ -5,6 +5,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { EVENTS, USERS, PURPOSE } from '../data/seed.js'
+import { placeLabel } from '../places.js'
+import { heroPhotos, worldHeroPhotos } from '../heroPhotos.js'
 import { Avatar, FavoriteButton } from '../components/bits.jsx'
 import { useCommunities, findCommunity } from '../communities.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
@@ -62,10 +64,10 @@ function HomeSearch({ communities, posts, jobs, events }) {
 
 // A photo that quietly removes itself if it fails to load, leaving the
 // drawn fallback (icon or skyline) underneath.
-export function Cover({ src, className = 'tile-photo' }) {
+export function Cover({ src, className = 'tile-photo', at }) {
   const [ok, setOk] = useState(true)
   if (!src || !ok) return null
-  return <img className={className} src={src} alt="" loading="lazy" decoding="async" onError={() => setOk(false)} />
+  return <img className={className} src={src} alt="" loading="lazy" decoding="async" style={at ? { objectPosition: at } : undefined} onError={() => setOk(false)} />
 }
 
 const TABS = [
@@ -148,19 +150,56 @@ export function PersonTile({ person }) {
   )
 }
 
-// The top of Home: the city's photo full-bleed, a short line over it, and
-// a glass panel of what's on. Signed-out visitors get the brand line and
-// the way in; members get a greeting and their city. (David, Nov 10:
-// "follow the images sent as examples".)
-function Hero({ user, first, city, counts, me }) {
+// The photos come from src/heroPhotos.js: the member's own city and places
+// around it, or the world for visitors.
+
+// Cross-fades between photos every few seconds. Each one keeps the slow
+// drift. Stays on the first photo for people who prefer reduced motion,
+// and while the tab is hidden.
+function HeroSlides({ photos, every = 6000 }) {
+  const [i, setI] = useState(0)
+  const sig = photos.map((p) => p.src).join()
+  useEffect(() => {
+    const still = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (still || photos.length < 2) return
+    photos.forEach(({ src }) => { const img = new Image(); img.src = src })
+    const t = setInterval(() => { if (!document.hidden) setI((n) => (n + 1) % photos.length) }, every)
+    return () => clearInterval(t)
+  }, [sig, every]) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="hero-slides" aria-hidden="true">
+      {photos.map(({ src, at }, n) => (
+        <Cover key={src} src={src} at={at} className={`hero-x-photo hero-slide${n === i ? ' on' : ''}`} />
+      ))}
+    </div>
+  )
+}
+
+// What each tile promises a visitor, instead of a count that only means
+// something to members.
+const VISITOR_TILES = [
+  { to: '/events', icon: 'calendar', label: 'Events', sub: 'Meetups and classes' },
+  { to: '/jobs', icon: 'briefcase', label: 'Open jobs', sub: 'Work and services' },
+  { to: '/communities', icon: 'users', label: 'Communities', sub: 'Find your people' },
+]
+
+// The top of Home: a full-bleed photo, a short line over it, and a glass
+// panel of what's on. Signed-out visitors get the brand line, a rotating set
+// of photos and the way in; members get a greeting and their city.
+// (David, Nov 10: "follow the images sent as examples".)
+function Hero({ user, first, city: homeCity, counts, me }) {
+  const city = homeCity || 'your city'
+  const photos = user ? heroPhotos(homeCity, user.country) : worldHeroPhotos()
   const hour = new Date().getHours()
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   return (
-    <section className="hero-x">
-      <Cover src={`/images/city/${city.toLowerCase().replace(/\s+/g, '-')}.jpg`} className="hero-x-photo" />
+    <section className="hero-x hero-x-clear">
+      <HeroSlides key={photos.map((p) => p.src).join()} photos={photos} />
       <div className="hero-x-shade" aria-hidden="true" />
       <div className="hero-x-body">
-        <span className="hero-x-eyebrow"><Icon name="map-pin" size={13} /> {city}, Nigeria</span>
+        <span className="hero-x-eyebrow">
+          {user ? <><Icon name="map-pin" size={13} /> {placeLabel(homeCity, user.country) || 'Welcome'}</> : <>Connect. Discover. Participate.</>}
+        </span>
         {user
           ? <h1>{greet}, <em>{first}</em>.</h1>
           : <h1>A new space for <em>people</em>, communities &amp; opportunities.</h1>}
@@ -181,11 +220,19 @@ function Hero({ user, first, city, counts, me }) {
       </div>
       <div className="hero-x-side">
         {me}
-        <nav className="hero-x-stats" aria-label={`What’s on in ${city}`}>
-          <Link to="/events"><b>{counts.events}</b><span>Events</span></Link>
-          <Link to="/jobs"><b>{counts.jobs}</b><span>Open jobs</span></Link>
-          <Link to="/communities"><b>{counts.communities}</b><span>Communities</span></Link>
-        </nav>
+        {user ? (
+          <nav className="hero-x-stats" aria-label={`What’s on in ${city}`}>
+            <Link to="/events"><b>{counts.events}</b><span>Events</span></Link>
+            <Link to="/jobs"><b>{counts.jobs}</b><span>Open jobs</span></Link>
+            <Link to="/communities"><b>{counts.communities}</b><span>Communities</span></Link>
+          </nav>
+        ) : (
+          <nav className="hero-x-stats hero-x-tiles" aria-label="What you can do on VOIDAJ">
+            {VISITOR_TILES.map((t) => (
+              <Link key={t.to} to={t.to}><Icon name={t.icon} size={20} /><b>{t.label}</b><span>{t.sub}</span></Link>
+            ))}
+          </nav>
+        )}
       </div>
     </section>
   )
@@ -261,8 +308,16 @@ export default function Home() {
   const events = [...madeEvents, ...[...EVENTS].sort((a, b) => a.date.localeCompare(b.date))].slice(0, 8)
   const people = USERS.filter((u) => u.id !== profile.id && !(profile.following ?? []).includes(u.id)).slice(0, 8)
   const trending = communities.filter((c) => c.trending || c.scope === 'global' || c.cover).slice(0, 8)
+  // For visitors: communities that aren't tied to one city, so the page
+  // doesn't read as a Lagos site. Global ones first, then any whose name
+  // doesn't mention a city.
+  const CITY_WORDS = /lagos|abuja|ibadan|kano|enugu|kaduna|port harcourt|benin/i
+  const visitorCommunities = [
+    ...communities.filter((c) => c.scope === 'global' && c.cover),
+    ...communities.filter((c) => c.scope !== 'global' && c.cover && !CITY_WORDS.test(c.name)),
+  ].slice(0, 4)
   const first = profile.name?.split(' ')[0]
-  const city = profile.city || 'Lagos'
+  const city = profile.city || ''
   // Nearby: posts for your city and from local communities.
   const shown = feed && (tab === 'nearby'
     ? feed.filter((p) => p.audience === 'city' || (p.community && findCommunity(p.community.id)?.scope !== 'global'))
@@ -290,6 +345,11 @@ export default function Home() {
         jobs: jobs.length,
         communities: communities.filter((c) => (c.city || '').toLowerCase() === city.toLowerCase()).length || communities.length,
       }} />
+
+      {/* Visitors who aren't signed in get a short tour, not the whole feed
+          (Nuel, Nov 18: "limited things… the rest should only be for people
+          who have… created a page already"). */}
+      {!user && !loading ? <Landing communities={visitorCommunities} /> : <>
 
       {/* Phones only: on larger screens the header search does this. */}
       <HomeSearch communities={communities} posts={posts} jobs={jobs} events={[...madeEvents, ...EVENTS]} />
@@ -346,6 +406,92 @@ export default function Home() {
           )}
         </aside>
       </div>
+      </>}
+    </div>
+  )
+}
+
+// What a visitor sees: what VOIDAJ is for, what they can do on it, a taste
+// of the communities, why it's safe, and the way in. Nothing personal.
+const PILLARS = [
+  { icon: 'users', tone: 'violet', title: 'People', sub: 'Your profile, your VOIDAJ ID, and people near you worth knowing.' },
+  { icon: 'community', tone: 'teal', title: 'Communities', sub: 'Groups for what you care about, near you or across Africa.' },
+  { icon: 'briefcase', tone: 'orange', title: 'Opportunities', sub: 'Quick jobs, services, events and businesses in one place.' },
+]
+const DOING = [
+  { icon: 'briefcase', title: 'Find work or hire help', sub: 'Plumbers, tutors, designers, movers. Post a job in a minute.' },
+  { icon: 'hand-coins', title: 'Offer your services', sub: 'Show what you do, photos of past work and when you’re free.' },
+  { icon: 'calendar', title: 'Go to events', sub: 'Meetups, classes and gatherings happening near you.' },
+  { icon: 'store', title: 'Grow a business', sub: 'A page for your business that people can follow and message.' },
+]
+const TRUST = [
+  { icon: 'badge-check', title: 'Real IDs, checked by a person', sub: 'Verified members have had their ID looked at by the VOIDAJ team.' },
+  { icon: 'shield', title: '16 and over, with moderators', sub: 'Every community has moderators, and anything can be reported.' },
+  { icon: 'lock', title: 'Your data stays yours', sub: 'No selling your data. Download or delete it any time.' },
+]
+
+function Landing({ communities }) {
+  return (
+    <div className="landing">
+      <section className="landing-pillars">
+        {PILLARS.map((p) => (
+          <div key={p.title} className="card landing-pillar">
+            <IconTile name={p.icon} tone={p.tone} size={44} />
+            <b>{p.title}</b>
+            <span>{p.sub}</span>
+          </div>
+        ))}
+      </section>
+
+      <section className="landing-block">
+        <h2>What you can do on VOIDAJ</h2>
+        <div className="landing-doing">
+          {DOING.map((d) => (
+            <div key={d.title} className="landing-do">
+              <Icon name={d.icon} size={20} />
+              <span><b>{d.title}</b><em>{d.sub}</em></span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {communities.length > 0 && (
+        <section className="landing-block">
+          <h2>Communities to join</h2>
+          <div className="landing-comms">
+            {communities.slice(0, 4).map((c) => (
+              <div key={c.id} className="landing-comm" style={c.cover ? { '--img': `url(${c.cover})` } : undefined}>
+                <b>{c.name}</b>
+                <span>{c.memberCount ? `${c.memberCount.toLocaleString()} members` : c.tagline || ''}</span>
+              </div>
+            ))}
+          </div>
+          <p className="meta-dim">Sign up to see what they’re talking about and join in.</p>
+        </section>
+      )}
+
+      <section className="landing-block">
+        <h2>Built to be trusted</h2>
+        <div className="landing-trust">
+          {TRUST.map((t) => (
+            <div key={t.title} className="landing-do">
+              <Icon name={t.icon} size={20} />
+              <span><b>{t.title}</b><em>{t.sub}</em></span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card landing-cta">
+        <div>
+          <h2>Step into VOIDAJ</h2>
+          <p>Free to join. Takes a minute. Sign up with your email, Google or Apple.</p>
+        </div>
+        <div className="hero-x-actions">
+          <Link to="/auth" className="btn primary">Create your account <Icon name="arrow" size={15} /></Link>
+          <Link to="/auth?mode=login" className="btn ghost">Log in</Link>
+        </div>
+      </section>
     </div>
   )
 }

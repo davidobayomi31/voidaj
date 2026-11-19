@@ -54,18 +54,25 @@ function ListingSheet({ business, listing, onClose, onDeleted }) {
   return (
     <Sheet title={LISTING_KIND[listing.kind]?.label || 'Listing'} onClose={onClose}>
       <div className="lst-detail">
-        {listing.image && <img className="lst-detail-photo" src={listing.image} alt="" />}
+        {listing.image
+          ? <img className="lst-detail-photo" src={listing.image} alt="" />
+          : <div className="lst-detail-photo lst-detail-blank"><Icon name={LISTING_KIND[listing.kind]?.icon || 'tag'} size={34} /></div>}
         <div className="lst-detail-tags">
           {status && <span className="lst-status inline">{status}</span>}
           {listing.promoted && <span className="biz-promoted inline">Promoted</span>}
         </div>
-        <h2>{listing.title}</h2>
-        {listing.price != null && <div className="lst-price big">{naira(listing.price)}</div>}
-        {listing.area && <div className="meta-dim"><Icon name="map-pin" size={13} /> {listing.area}</div>}
+        <div className="lst-detail-head">
+          <h2>{listing.title}</h2>
+          {listing.price != null && <div className="lst-price big">{naira(listing.price)}</div>}
+        </div>
+        {listing.area && <div className="lst-detail-where"><Icon name="map-pin" size={13} /> {listing.area}</div>}
         {listing.description && <p>{listing.description}</p>}
         {business.isOwner ? (
           <>
-            <div className="lst-detail-stats meta-dim"><Icon name="eye" size={13} /> {listing.views} views · <Icon name="message-circle" size={13} /> {listing.enquiries} enquiries</div>
+            <div className="lst-detail-stats">
+              <span><Icon name="eye" size={15} /><b>{listing.views}</b> views</span>
+              <span><Icon name="message-circle" size={15} /><b>{listing.enquiries}</b> enquiries</span>
+            </div>
             <div className="biz-actions">
               {listing.promoted
                 ? <span className="btn ghost" aria-disabled="true"><Icon name="megaphone" size={15} /> Being promoted</span>
@@ -204,7 +211,7 @@ function BusinessPage({ id }) {
           <div className="biz-logo"><BusinessLogo business={biz} size={88} /></div>
           <h1>{biz.name} <Verified on={biz.verified} size={18} /></h1>
           <p className="meta-dim">{biz.categoryLabel}</p>
-          <span className="biz-where"><Icon name="map-pin" size={13} /> {[biz.area, biz.city].filter(Boolean).join(', ')}, Nigeria</span>
+          <span className="biz-where"><Icon name="map-pin" size={13} /> {[biz.area, biz.city, countryName(biz.country)].filter(Boolean).join(', ')}</span>
           {biz.isOwner ? (
             <div className="biz-actions">
               <button className="btn primary" onClick={() => setAdding(true)}><Icon name="plus" size={15} /> Add listing</button>
@@ -266,7 +273,7 @@ function BusinessPage({ id }) {
               {biz.description && <p>{biz.description}</p>}
               <ul>
                 <li><Icon name="tag" size={15} /> {biz.categoryLabel}</li>
-                <li><Icon name="map-pin" size={15} /> {[biz.area, biz.city].filter(Boolean).join(', ')}, Nigeria</li>
+                <li><Icon name="map-pin" size={15} /> {[biz.area, biz.city, countryName(biz.country)].filter(Boolean).join(', ')}</li>
                 {biz.hours && <li><Icon name="clock" size={15} /> {biz.hours}</li>}
                 {biz.owner && <li><Icon name="user" size={15} /> Run by <Link to={`/profile/${biz.owner.id}`}>{biz.owner.name}</Link></li>}
                 <li><Icon name="badge-check" size={15} /> {biz.verified ? 'Verified business' : 'Not verified yet'}</li>
@@ -274,7 +281,7 @@ function BusinessPage({ id }) {
               <div className="biz-buttons">
                 {biz.phone && <a className="btn ghost small" href={`tel:${biz.phone.replace(/\s/g, '')}`}><Icon name="phone" size={14} /> Call</a>}
                 {biz.website && <a className="btn ghost small" href={biz.website} target="_blank" rel="noopener noreferrer nofollow"><Icon name="globe" size={14} /> Website</a>}
-                <a className="btn ghost small" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent([biz.name, biz.area, biz.city, 'Nigeria'].filter(Boolean).join(', '))}`} target="_blank" rel="noopener noreferrer"><Icon name="navigation" size={14} /> Directions</a>
+                <a className="btn ghost small" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent([biz.name, biz.area, biz.city, countryName(biz.country)].filter(Boolean).join(', '))}`} target="_blank" rel="noopener noreferrer"><Icon name="navigation" size={14} /> Directions</a>
               </div>
             </section>
           )}

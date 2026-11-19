@@ -30,6 +30,9 @@ import { FEATURES } from '../features.js'
 import { BadgeArt } from './Badges.jsx'
 import { AboutSection } from '../components/Socials.jsx'
 import { OCCUPATIONS } from '../components/JobPeople.jsx'
+import { ReviewsPanel, ProfileMore } from '../components/Trust.jsx'
+import { showVerifiedTick, verifiedLabel, verifiedLongLabel } from '../verification.js'
+import { flagOf } from '../countries.js'
 
 const PRIVACY_LEVELS = [
   { id: 'exact', label: 'Exact area' },
@@ -42,6 +45,7 @@ const TABS = [
   { id: 'communities', label: 'Communities' },
   { id: 'activity', label: 'Activity' },
   { id: 'badges', label: 'Badges' },
+  { id: 'reviews', label: 'Reviews' },
   { id: 'saved', label: 'Saved', mine: true },
 ]
 const LISTS = [
@@ -236,7 +240,7 @@ function PeopleSheet({ user, list, onList, onClose }) {
               <li key={p.id}>
                 <Link to={`/profile/${p.id}`} onClick={onClose} className="people-row">
                   <Avatar user={p} size={42} />
-                  <span><b>{p.name}{p.idVerified && <Icon name="badge-check" size={13} className="fp-tick" />}</b><em>{p.title || p.handle}</em></span>
+                  <span><b>{p.name}{showVerifiedTick() && p.idVerified && <Icon name="badge-check" size={13} className="fp-tick" />}</b><em>{p.title || p.handle}</em></span>
                 </Link>
                 {p.id !== me?.id && (
                   <button className={`btn small ${following ? 'ghost' : 'primary'}`} onClick={() => (me ? follow(p.id) : navigate('/auth'))}>
@@ -290,7 +294,7 @@ function EditSheet({ onClose }) {
         <label className="field"><span>Bio</span><textarea value={f.bio} onChange={set('bio')} rows={3} maxLength={300} placeholder="A line or two about you" /></label>
         <div className="field-row">
           <label className="field"><span>Area</span><input value={f.area} onChange={set('area')} placeholder="e.g. Yaba" /></label>
-          <label className="field"><span>City</span><input value={f.city} onChange={set('city')} placeholder="e.g. Lagos" /></label>
+          <label className="field"><span>City</span><input value={f.city} onChange={set('city')} placeholder="Your city" /></label>
         </div>
         <label className="field"><span>Interests <em>separate with commas</em></span><input value={f.interests} onChange={set('interests')} placeholder="music, art, tech" /></label>
         <label className="field"><span>Skills</span><input value={f.skills} onChange={set('skills')} placeholder="photography, web design" /></label>
@@ -348,6 +352,42 @@ function FactsCard({ user, isMe }) {
       <div><Icon name="zap" size={16} /><div><strong>Skills</strong><span>{user.skills?.length ? user.skills.join(', ') : 'Not set yet'}</span></div></div>
       <div><Icon name="sparkle" size={16} /><div><strong>Goals</strong><span>{user.goals?.length ? user.goals.join(' · ') : 'Not set yet'}</span></div></div>
       {joined(user.joinedAt) && <div><Icon name="calendar" size={16} /><div><strong>Joined</strong><span>{joined(user.joinedAt)}</span></div></div>}
+    </section>
+  )
+}
+
+// Work visibility. Job history was always private; this covers the part
+// other people can see — the Find people directory on Quick Jobs.
+function WorkPrivacyCard() {
+  const { user, setUser } = useApp()
+  const [busy, setBusy] = useState(false)
+  const hidden = !!user?.settings?.workPrivate
+  const set = async (next) => {
+    setBusy(true)
+    try { setUser(await api.patchMe({ settings: { workPrivate: next } })) } finally { setBusy(false) }
+  }
+  return (
+    <section className="card privacy-card">
+      <div className="side-card-head"><Icon name="briefcase" size={15} /> Work visibility</div>
+      <p className="meta-dim">
+        Your job history — what you applied to and who hired you — is private to you either way.
+        This controls whether other people can find you by the work you do.
+      </p>
+      <div className="privacy-toggle" role="radiogroup" aria-label="Work visibility">
+        <button role="radio" aria-checked={!hidden} disabled={busy}
+          className={`toggle-seg ${hidden ? '' : 'active'}`} onClick={() => set(false)}>
+          Show my work
+        </button>
+        <button role="radio" aria-checked={hidden} disabled={busy}
+          className={`toggle-seg ${hidden ? 'active' : ''}`} onClick={() => set(true)}>
+          Keep it private
+        </button>
+      </div>
+      <p className="meta-dim" style={{ marginTop: 8 }}>
+        {hidden
+          ? 'You won’t appear under Find people on Quick Jobs. You can still apply to and post jobs.'
+          : 'You can appear under Find people on Quick Jobs, so people looking to hire can reach you.'}
+      </p>
     </section>
   )
 }
@@ -448,7 +488,7 @@ export default function Profile() {
     .filter((c) => (user.communities ?? []).includes(c.id))
   const recentlyActive = user.active || (user.lastSeenAt && Date.now() - user.lastSeenAt < 7 * 24 * 3600 * 1000)
   const badges = [
-    user.idVerified && { id: 'verified', icon: 'badge-check', label: 'Verified', tone: 'green', note: 'ID checked' },
+    showVerifiedTick() && user.idVerified && { id: 'verified', icon: 'badge-check', label: verifiedLabel(), tone: 'green', note: verifiedLongLabel() },
     recentlyActive && { id: 'active', icon: 'zap', label: 'Active', tone: 'blue', note: 'Around this week' },
     stats.posts >= 5 && { id: 'top', icon: 'star', label: 'Top Contributor', tone: 'yellow', note: '5 or more posts' },
     (followers ?? stats.followers) >= 10 && { id: 'known', icon: 'users', label: 'Well Known', tone: 'violet', note: '10+ followers' },
@@ -474,8 +514,8 @@ export default function Profile() {
         <Cover user={user} />
         {isMe && <button className="pf2-cover-edit" onClick={() => setEditing(true)} aria-label="Change cover photo"><Icon name="camera" size={15} /></button>}
         <div className="pf2-photo">
-          <Avatar user={user} size={112} />
-          {user.idVerified && <span className="pf-tick" title="ID verified"><Icon name="badge-check" size={18} /></span>}
+          <Avatar user={user} size={112} level />
+          {showVerifiedTick() && user.idVerified && <span className="pf-tick" title={verifiedLongLabel()}><Icon name="badge-check" size={18} /></span>}
         </div>
         <div className="pf2-id">
           <h1>{user.name} {isMe && <span className="you-badge">You</span>}</h1>
@@ -483,7 +523,7 @@ export default function Profile() {
           {(picked?.headline || user.title) && <p className="pf-headline">{picked ? picked.headline || user.title : user.title}</p>}
           {user.bio && !picked && <p className="pf2-bio">{user.bio}</p>}
           <div className="pf-meta">
-            <span><Icon name="map-pin" size={13} /> {locationFor(user, isMe)}</span>
+            <span><Icon name="map-pin" size={13} /> {locationFor(user, isMe)}{user.country && (isMe ? user.privacy !== 'hidden' : true) && ` ${flagOf(user.country)}`}</span>
             {joined(user.joinedAt) && <span><Icon name="calendar" size={13} /> Joined {joined(user.joinedAt)}</span>}
             {seen && <span className={`presence-text ${user.active ? 'on' : ''}`}>{user.active && <span className="presence-dot" aria-hidden="true" />}{seen}</span>}
           </div>
@@ -496,21 +536,27 @@ export default function Profile() {
         <div className="pf2-actions">
           {isMe ? (
             <>
+              {/* No Settings cog here — Settings is in the left sidebar. */}
               <button type="button" className="btn primary" onClick={() => setEditing(true)}><Icon name="edit" size={15} /> Edit profile</button>
               <ShareButton user={user} />
-              <Link to="/settings" className="btn ghost icon-only" aria-label="Settings"><Icon name="settings" size={16} /></Link>
             </>
           ) : (
             <>
-              <button className={following ? 'btn ghost' : 'btn primary'} onClick={doFollow}>
-                {following ? <><Icon name="check" size={15} /> Following</> : <><Icon name="user-plus" size={15} /> Follow</>}
-              </button>
-              <button className={`btn ${connected ? 'ghost connected' : 'ghost'}`} onClick={() => (me ? connect(user.id) : navigate('/auth'))}
+              {/* Connect is the one action on the surface; Follow, Message and
+                  Save sit under ••• so the header stays uncluttered. */}
+              <button className={`btn ${connected ? 'ghost connected' : 'primary'}`} onClick={() => (me ? connect(user.id) : navigate('/auth'))}
                 title={connected ? 'Remove from your connections' : 'Add to your connections — the people you pick out'}>
                 <Icon name={connected ? 'user-check' : 'users'} size={15} /> {connected ? 'Connected' : 'Connect'}
               </button>
-              <Link to={me ? `/chats?dm=${user.id}&from=profile` : '/auth'} className="btn ghost"><Icon name="message-circle" size={15} /> Message</Link>
-              <FavoriteButton item={{ kind: 'person', id: user.id, title: user.name, subtitle: user.title, href: `/profile/${user.id}` }} />
+              <ProfileMore user={user} blocked={user.blockedByMe} canBlock={!!me}>
+                <button role="menuitem" type="button" onClick={doFollow}>
+                  <Icon name={following ? 'check' : 'user-plus'} size={14} /> {following ? 'Following' : 'Follow'}
+                </button>
+                <Link role="menuitem" to={me ? `/chats?dm=${user.id}&from=profile` : '/auth'}>
+                  <Icon name="message-circle" size={14} /> Message
+                </Link>
+                <FavoriteButton item={{ kind: 'person', id: user.id, title: user.name, subtitle: user.title, href: `/profile/${user.id}` }} label />
+              </ProfileMore>
             </>
           )}
         </div>
@@ -588,6 +634,8 @@ export default function Profile() {
               </section>
             )}
 
+            {isMe && <WorkPrivacyCard />}
+
             <PortfolioSection items={user.portfolio} editable={isMe} onSave={(portfolio) => saveProfile({ portfolio })} />
             {FEATURES.vis && isMe && <VoicesSection profile={profile} />}
           </div>
@@ -637,7 +685,7 @@ export default function Profile() {
                 ['briefcase', stats.jobsPosted, 'Jobs posted'],
                 ['wrench', stats.jobsDone, 'Jobs done'],
               ].map(([icon, n, label]) => (
-                <div key={label} className="pf-impact-tile"><Icon name={icon} size={18} /><b>{n}</b><span>{label}</span></div>
+                <div key={label} className="pf-impact-tile"><span className="pf-impact-ico"><Icon name={icon} size={20} /></span><b>{n}</b><span>{label}</span></div>
               ))}
             </div>
             <Link to="/vision" className="card vision-teaser">
@@ -650,6 +698,8 @@ export default function Profile() {
             </Link>
           </div>
         )}
+
+        {tab === 'reviews' && <div className="pf-panel"><ReviewsPanel userId={user.id} /></div>}
 
         {tab === 'saved' && isMe && <div className="pf-panel"><SavedTab /></div>}
       </>}

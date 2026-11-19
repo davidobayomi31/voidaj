@@ -2,7 +2,7 @@
 // sections, with every item saying where it came from (Nuel, Oct 25:
 // "you can either suggest where the notification is from or create
 // notification sections" — this does both). Gathered from the systems
-// that already track each thing: messages (and what they're about), jobs
+// that already track each thing (messages live in Chat, not here), jobs
 // that match what you do and offers on yours, new followers, replies to
 // your posts, events you're going to, and reports in communities you run.
 import { useEffect, useState } from 'react'
@@ -15,14 +15,14 @@ import { Avatar } from '../components/bits.jsx'
 
 const SECTIONS = [
   { id: 'all', label: 'All' },
-  { id: 'messages', label: 'Messages', icon: 'message-circle', tone: 'green', from: 'Chat' },
   { id: 'jobs', label: 'Jobs', icon: 'wrench', tone: 'orange', from: 'Quick Jobs' },
   { id: 'social', label: 'People', icon: 'users', tone: 'violet', from: 'Followers' },
   { id: 'posts', label: 'Posts', icon: 'edit', tone: 'blue', from: 'Your posts' },
+  { id: 'connections', label: 'Connections', icon: 'user-plus', tone: 'green', from: 'Connections' },
   { id: 'events', label: 'Events', icon: 'calendar', tone: 'pink', from: 'Events' },
   { id: 'community', label: 'Communities', icon: 'community', tone: 'teal', from: 'Communities' },
 ]
-const ABOUT = { job: 'about a job', post: 'about a post', event: 'about an event', community: 'from a community', profile: 'from your profile', map: 'from My City' }
+const SPARK_WORD = { spark: 'sparked', insight: 'found insight in', support: 'supported', fire: 'put fire on', relate: 'related to' }
 const ago = (t) => {
   const m = Math.floor((Date.now() - t) / 60000)
   if (m < 60) return `${Math.max(1, m)}m`
@@ -33,6 +33,7 @@ const ago = (t) => {
 export default function Notifications() {
   const { user, profile, loading } = useApp()
   const [items, setItems] = useState(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [params, setParams] = useSearchParams()
   const section = SECTIONS.some((s) => s.id === params.get('s')) ? params.get('s') : 'all'
 
@@ -43,21 +44,13 @@ export default function Notifications() {
     const notify = user.settings?.notify ?? {}
     const want = (k) => notify[k] !== false
     Promise.all([
-      want('messages') ? api.listConversations().catch(() => []) : [],
       want('jobs') && profile.jobSkills?.length ? api.listJobs({ matchMine: 1 }).catch(() => []) : [],
       want('jobs') ? api.myJobs().catch(() => ({})) : {},
       mod && want('community') ? api.modReports().then((d) => d.reports).catch(() => []) : [],
-      api.socialNotifications().catch(() => ({ followers: [], comments: [] })),
+      api.socialNotifications().catch(() => ({})),
       want('events') ? api.listRsvps().catch(() => ({ mine: [] })) : { mine: [] },
-    ]).then(([convos, matched, mine, reports, social, rsvps]) => {
+    ]).then(([matched, mine, reports, social, rsvps]) => {
       const list = []
-      for (const c of convos.filter((c) => c.unread > 0)) {
-        list.push({
-          key: `dm-${c.other.id}`, section: 'messages', at: c.lastAt, person: c.other,
-          text: <><strong>{c.other.name}</strong> sent you {c.unread === 1 ? 'a message' : `${c.unread} messages`}{c.context ? <> {ABOUT[c.context.kind]}{c.context.kind !== 'profile' ? <> — <em>{c.context.title}</em></> : null}</> : null}: “{c.lastMessage}”</>,
-          to: `/chats?dm=${c.other.id}`, origin: c.context,
-        })
-      }
       for (const j of (mine.posted ?? []).filter((j) => j.interested > 0)) {
         list.push({
           key: `posted-${j.id}`, section: 'jobs', at: j.createdAt,
@@ -74,11 +67,20 @@ export default function Notifications() {
           to: `/jobs?job=${j.id}`,
         })
       }
-      for (const f of social.followers) {
+      for (const f of social.connections ?? []) {
+        list.push({ key: `cn-${f.user.id}`, section: 'connections', at: f.at, person: f.user, text: <><strong>{f.user.name}</strong> added you as a connection</>, to: `/profile/${f.user.id}` })
+      }
+      for (const sp of social.sparks ?? []) {
+        list.push({ key: `sp-${sp.postId}-${sp.user.id}`, section: 'posts', at: sp.at, person: sp.user, text: <><strong>{sp.user.name}</strong> {SPARK_WORD[sp.kind] || 'sparked'} your post “{sp.postTitle}”</>, to: `/post/${sp.postId}` })
+      }
+      for (const l of social.looms ?? []) {
+        list.push({ key: `lm-${l.postId}-${l.user.id}-${l.at}`, section: 'posts', at: l.at, person: l.user, text: <><strong>{l.user.name}</strong> loomed your post “{l.postTitle}”</>, to: `/post/${l.postId}` })
+      }
+      for (const f of social.followers ?? []) {
         list.push({ key: `f-${f.user.id}`, section: 'social', at: f.at, person: f.user, text: <><strong>{f.user.name}</strong> started following you</>, to: `/profile/${f.user.id}` })
       }
-      for (const c of social.comments) {
-        list.push({ key: `c-${c.postId}-${c.at}`, section: 'posts', at: c.at, person: c.user, text: <><strong>{c.user.name}</strong> replied to “{c.postTitle}”: {c.text}</>, to: `/post/${c.postId}` })
+      for (const c of social.comments ?? []) {
+        list.push({ key: `c-${c.postId}-${c.at}`, section: 'posts', at: c.at, person: c.user, text: <><strong>{c.user.name}</strong> left a take on “{c.postTitle}”: {c.text}</>, to: `/post/${c.postId}` })
       }
       const today = new Date().toISOString().slice(0, 10)
       for (const id of rsvps.mine) {
@@ -102,18 +104,28 @@ export default function Notifications() {
 
   const count = (id) => (items || []).filter((n) => id === 'all' || n.section === id).length
   const shown = (items || []).filter((n) => section === 'all' || n.section === section)
+  const active = SECTIONS.find((s) => s.id === section) ?? SECTIONS[0]
 
   return (
     <div className="page notif-page notif2">
       <header className="page-head">
         <h1>Notifications</h1>
-        <p className="meta-dim">Messages, jobs, people and community activity — each one says where it’s from.</p>
+        <p className="meta-dim">Sparks, looms, takes, follows, connections and jobs. Messages are in Chat.</p>
       </header>
 
-      <div className="chip-row float-bar" role="tablist" aria-label="Sections">
-        {SECTIONS.map((s) => (
-          <button key={s.id} role="tab" aria-selected={section === s.id} className={section === s.id ? 'on' : ''}
-            onClick={() => setParams(s.id === 'all' ? {} : { s: s.id }, { replace: true })}>
+      {/* Only the active section shows (All, to start). Clicking it opens the
+          rest — Jobs, People, Posts and so on — and picking one closes it
+          again, so the page leads with the notifications, not the filters. */}
+      <div className={`chip-row float-bar notif-filter${filtersOpen ? ' open' : ''}`} role="tablist" aria-label="Sections">
+        <button role="tab" aria-selected className="on" aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((v) => !v)}>
+          {active.icon && <Icon name={active.icon} size={13} />} {active.label}
+          {items && count(active.id) > 0 && <span className="filter-count">{count(active.id)}</span>}
+          <Icon name="chevron-down" size={13} className="notif-filter-caret" />
+        </button>
+        {filtersOpen && SECTIONS.filter((s) => s.id !== section).map((s) => (
+          <button key={s.id} role="tab" aria-selected={false}
+            onClick={() => { setParams(s.id === 'all' ? {} : { s: s.id }, { replace: true }); setFiltersOpen(false) }}>
             {s.icon && <Icon name={s.icon} size={13} />} {s.label}{items && count(s.id) > 0 && <span className="filter-count">{count(s.id)}</span>}
           </button>
         ))}
@@ -126,7 +138,7 @@ export default function Notifications() {
           <IconTile name="check" tone="grad" size={52} />
           <strong>You’re all caught up</strong>
           <span className="meta-dim">
-            New messages, jobs that match your skills, followers and replies will show up here.
+            Sparks, looms and takes on your posts, new followers and connections, and jobs that match your skills will show up here.
             {!profile.jobSkills?.length && <> <Link to="/jobs">Tell Quick Jobs what you can do</Link> to get matched work.</>}
             {' '}<Link to="/settings/notifications">Choose what you’re notified about</Link>.
           </span>

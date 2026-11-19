@@ -216,7 +216,7 @@ export function askCompanion(text, profile) {
     const res = matchEvents(tags, profile)
     out.text = res.length
       ? `Here are events I think are worth your time, ${name}:`
-      : `I couldn’t find events matching that yet — Lagos has more coming every week. Here’s what’s trending instead:`
+      : `I couldn’t find events matching that yet — there’s more coming every week. Here’s what’s trending instead:`
     out.sections.push({ kind: 'events', results: res.length ? res : EVENTS.slice(0, 3).map((e) => ({ item: e, shared: [] })) })
     return out
   }

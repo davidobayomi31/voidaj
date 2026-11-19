@@ -9,3 +9,8 @@ export const FEATURES = {
   trips: false, // ride share (Add Hub, My City, Stash)
   organization: false, // organisation pages (Add Hub)
 }
+
+// Ads are shown but can't be opened yet. There are no paying advertisers,
+// and the example ads don't lead anywhere. Turn this on once real ads have
+// a page or link to send people to (Nuel/David, Nov 19).
+export const ADS_CLICKABLE = false

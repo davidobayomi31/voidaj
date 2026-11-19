@@ -12,7 +12,7 @@ export async function signUp(name = 'Test User') {
   const agent = request.agent(app)
   const email = `user-${unique()}@example.com`
   const password = 'correct-horse-battery'
-  const res = await agent.post('/api/auth/register').send({ name, email, password })
+  const res = await agent.post('/api/auth/register').send({ name, email, password, birthDate: '2000-01-01' })
   if (res.status !== 200) throw new Error(`sign-up failed: ${res.status} ${JSON.stringify(res.body)}`)
   return { agent, user: res.body.user, email, password }
 }

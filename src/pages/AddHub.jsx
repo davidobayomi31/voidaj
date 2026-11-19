@@ -14,10 +14,14 @@ import { FeedComposer } from '../components/Feed.jsx'
 import { EventForm } from '../components/EventForm.jsx'
 import { FEATURES } from '../features.js'
 
+// Each tile's colour, used for its glow (Nuel, Nov 18: "give us something
+// cool here"). Post and Event are the big ones: they're made most often.
+const TONE = { violet: '#7C3AED', pink: '#DB2777', orange: '#EA580C', red: '#DC2626', teal: '#0D9488', green: '#16A34A', blue: '#2563EB' }
 const ROWS = [
-  { id: 'post', icon: 'edit', tone: 'violet', title: 'Post', sub: 'Share photos, updates and ideas — public, your city or a community', sheet: true },
-  { id: 'event', icon: 'calendar', tone: 'pink', title: 'Event', sub: 'A meetup, class or gathering — public, your city or a community', sheet: true },
-  { id: 'job', icon: 'briefcase', tone: 'orange', title: 'Job', sub: 'Get local help — plumbing, moving, tutoring and more', to: '/jobs?post=1' },
+  { id: 'post', icon: 'edit', tone: 'violet', title: 'Post', big: true, eg: 'A photo, a thought, a question', sub: 'Share photos, updates and ideas — public, your city or a community', sheet: true },
+  { id: 'event', icon: 'calendar', tone: 'pink', title: 'Event', big: true, eg: 'Meetups, classes, parties', sub: 'A meetup, class or gathering — public, your city or a community', sheet: true },
+  { id: 'job', icon: 'briefcase', tone: 'orange', title: 'Job', sub: 'Find help — paid work, volunteering, free help or a skill swap', to: '/jobs?post=1' },
+  { id: 'service', icon: 'hand-coins', tone: 'red', title: 'Service', sub: 'Show what you can do, proof of past work and when you’re free', to: '/services?new=1' },
   { id: 'community', icon: 'community', tone: 'teal', title: 'Community', sub: 'Bring people together around a place or a passion', to: '/communities/new' },
   { id: 'business', icon: 'store', tone: 'green', title: 'Business', sub: 'Showcase your business, services or products', to: '/business/new' },
   { id: 'voice', icon: 'megaphone', tone: 'blue', title: 'Voice', sub: 'A focused page for one side of who you are', to: '/voices/new', on: FEATURES.vis },
@@ -25,7 +29,6 @@ const ROWS = [
 const SOON = [
   { id: 'trip', icon: 'car', tone: 'indigo', title: 'Trip', sub: 'Offer or find a ride — road trips and carpools', on: FEATURES.trips },
   { id: 'organization', icon: 'layers', tone: 'yellow', title: 'Organization', sub: 'Schools, NGOs, churches, associations', on: FEATURES.organization },
-  { id: 'service', icon: 'hand-coins', tone: 'red', title: 'Service', sub: 'List what you offer so people can hire you' },
 ].filter((r) => r.on !== false)
 
 function Sheet({ title, icon, tone, onClose, children }) {
@@ -62,35 +65,46 @@ export default function AddHub() {
 
   return (
     <div className="page addhub2">
-      <header className="page-head">
-        <h1>Add to VOIDAJ</h1>
+      <header className="page-head addhub-head">
+        <span className="addhub-eyebrow"><Icon name="sparkle" size={13} /> Create</span>
+        <h1>What are you making{user.name ? `, ${user.name.split(' ')[0]}` : ''}?</h1>
         <p className="meta-dim">Share, create and connect opportunities.</p>
       </header>
 
-      <div className="addhub-list stagger">
+      <div className="addhub-bento stagger">
         {ROWS.map((r) => {
           const body = (
             <>
-              <IconTile name={r.icon} tone={r.tone} size={48} iconSize={22} />
-              <span className="addhub-row-text"><b>{r.title}</b><em>{r.sub}</em></span>
-              <Icon name="chevron-right" size={20} className="addhub-chev" />
+              <span className="addhub-glow" aria-hidden="true" />
+              <IconTile name={r.icon} tone={r.tone} size={r.big ? 58 : 46} iconSize={r.big ? 26 : 21} />
+              <span className="addhub-tile-text">
+                <b>{r.title}</b>
+                <em>{r.sub}</em>
+                {r.eg && <span className="addhub-eg">{r.eg}</span>}
+              </span>
+              <span className="addhub-go" aria-hidden="true"><Icon name="arrow" size={16} /></span>
             </>
           )
+          const props = { className: `addhub-tile${r.big ? ' big' : ''}`, style: { '--tone': TONE[r.tone] || 'var(--brand)' } }
           return r.to
-            ? <Link key={r.id} to={r.to} className="card addhub-row">{body}</Link>
-            : <button key={r.id} className="card addhub-row" onClick={() => open(r.id)}>{body}</button>
+            ? <Link key={r.id} to={r.to} {...props}>{body}</Link>
+            : <button key={r.id} type="button" {...props} onClick={() => open(r.id)}>{body}</button>
         })}
       </div>
 
-      <h2 className="addhub-soon-head">Coming soon</h2>
-      <div className="addhub-list soon">
-        {SOON.map((r) => (
-          <div key={r.id} className="card addhub-row soon" aria-disabled="true">
-            <IconTile name={r.icon} tone={r.tone} size={48} iconSize={22} />
-            <span className="addhub-row-text"><b>{r.title} <span className="soon-badge">Coming soon</span></b><em>{r.sub}</em></span>
+      {SOON.length > 0 && (
+        <>
+          <h2 className="addhub-soon-head">Coming soon</h2>
+          <div className="addhub-list soon">
+            {SOON.map((r) => (
+              <div key={r.id} className="card addhub-row soon" aria-disabled="true">
+                <IconTile name={r.icon} tone={r.tone} size={48} iconSize={22} />
+                <span className="addhub-row-text"><b>{r.title} <span className="soon-badge">Coming soon</span></b><em>{r.sub}</em></span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       <section className="addhub-banner">
         <div>
