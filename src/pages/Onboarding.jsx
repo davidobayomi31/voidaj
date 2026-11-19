@@ -1,4 +1,4 @@
-// Welcome to VOIDAJ — six short steps, one question each, from Nuel's
+// Welcome to VOIDAJ — seven short steps, one question each, from Nuel's
 // onboarding plan (Oct 14, DO-LATER.md) and his Nov 18 ask: "I want this
 // redesigned also with new prompt questions". Why you're here, what kind of
 // profile, where you are (and who sees it), what you're into, how you want
@@ -15,6 +15,8 @@ import { Icon, IconTile } from '../components/Icons.jsx'
 import { VoidajLockup } from '../components/VoidajMark.jsx'
 import { CommunityCard, PersonCard, EventCard } from '../components/bits.jsx'
 import { CITIES } from '../components/NigeriaMap.jsx'
+import { COUNTRIES, flagOf } from '../countries.js'
+import * as api from '../api.js'
 
 const INTENTS = [
   { id: 'community', icon: 'community', label: 'Find my community', sub: 'People who care about what I care about' },
@@ -31,8 +33,8 @@ const TYPES = [
   { id: 'organisation', icon: 'layers', label: 'Organisation or community leader', sub: 'Schools, churches, NGOs, clubs' },
 ]
 const PRIVACY = [
-  { id: 'exact', icon: 'map-pin', label: 'My area', sub: 'e.g. “Yaba, Lagos”' },
-  { id: 'city-only', icon: 'globe', label: 'Just my city', sub: '“Lagos”, nothing closer' },
+  { id: 'exact', icon: 'map-pin', label: 'My area', sub: 'Your neighbourhood and city' },
+  { id: 'city-only', icon: 'globe', label: 'Just my city', sub: 'The city, nothing closer' },
   { id: 'hidden', icon: 'lock', label: 'Hide it', sub: 'Nobody sees where I am' },
 ]
 const EXTRA_INTERESTS = { faith: 'Faith', sport: 'Sport', education: 'Education', health: 'Health', travel: 'Travel', film: 'Film & TV', gaming: 'Gaming', parenting: 'Parenting' }
@@ -57,6 +59,7 @@ const MESSAGES = [
 const STEPS = [
   { id: 'intent', q: (n) => `Welcome${n ? `, ${n}` : ''}! What brings you to VOIDAJ?`, hint: 'Pick as many as you like. This decides what you see first.' },
   { id: 'type', q: () => 'Which of these sounds most like you?', hint: 'It shapes how your profile looks to others.' },
+  { id: 'username', q: () => 'Pick your username', hint: 'This is how people find and mention you. It’s one of a kind, and it’s in your link and VOIDAJ ID.' },
   { id: 'place', q: () => 'Where are you based?', hint: 'For things near you. You decide who sees it.' },
   { id: 'interests', q: () => 'What are you into?', hint: 'Tap a few, or say it in your own words.' },
   { id: 'part', q: () => 'How do you want to take part?', hint: 'Nothing’s locked in.' },
@@ -82,16 +85,33 @@ export default function Onboarding() {
   const [done, setDone] = useState(false)
   const [busy, setBusy] = useState(false)
   const [a, setA] = useState({
-    intents: [], type: 'individual', city: '', area: '', privacy: 'city-only',
-    interests: [], said: '', part: [], skills: [], messages: 'everyone',
+    intents: [], type: 'individual', country: '', city: '', area: '', privacy: 'city-only',
+    interests: [], said: '', part: [], skills: [], messages: 'everyone', username: '',
   })
-  useEffect(() => { if (profile?.city && !a.city) setA((x) => ({ ...x, city: profile.city })) }, [profile?.city]) // eslint-disable-line
+  // Whether the username typed is free: null = not checked, true/false = answer.
+  const [uname, setUname] = useState({ ok: null, note: '' })
+  // Start from the country they signed up with. The city starts empty: the
+  // account's stored default is Lagos, which would be wrong for most of the
+  // world, so it's asked rather than assumed (David, Nov 19).
+  useEffect(() => { if (!a.country && (user?.country || profile?.country)) setA((x) => ({ ...x, country: user?.country || profile?.country })) }, [user?.country, profile?.country]) // eslint-disable-line
   const set = (k, v) => setA((x) => ({ ...x, [k]: v }))
+  // Start from the username made for them at sign-up (@grace, @grace_ojion…).
+  const current = (profile?.handle || user?.handle || '').replace(/^@/, '')
+  useEffect(() => { if (current && !a.username) setA((x) => ({ ...x, username: current })) }, [current]) // eslint-disable-line
+  useEffect(() => {
+    const h = a.username.trim().toLowerCase()
+    if (!h || h === current.toLowerCase()) { setUname({ ok: h ? true : null, note: '' }); return }
+    setUname({ ok: null, note: 'Checking…' })
+    const t = setTimeout(() => {
+      api.checkHandle(h).then((r) => setUname({ ok: r.available, note: r.available ? '' : r.reason || 'That one’s taken.' })).catch(() => setUname({ ok: null, note: '' }))
+    }, 350)
+    return () => clearTimeout(t)
+  }, [a.username, current])
   const flip = (k, id) => setA((x) => ({ ...x, [k]: x[k].includes(id) ? x[k].filter((y) => y !== id) : [...x[k], id] }))
 
   const first = (profile?.name || user?.name || '').split(' ')[0]
   const step = STEPS[i]
-  const canNext = { intent: a.intents.length > 0, type: !!a.type, place: !!a.city, interests: true, part: a.part.length > 0, safety: true }[step.id]
+  const canNext = { intent: a.intents.length > 0, type: !!a.type, username: uname.ok !== false && /^[a-z0-9_]{3,20}$/i.test(a.username.trim()), place: a.city.trim().length >= 2 && !!a.country, interests: true, part: a.part.length > 0, safety: true }[step.id]
 
   // Free text adds to the tapped interests.
   const tags = useMemo(() => [...new Set([...a.interests, ...extractTags(a.said)])], [a.interests, a.said])
@@ -100,7 +120,8 @@ export default function Onboarding() {
     setBusy(true)
     try {
       await saveProfile({
-        city: a.city, area: a.area.trim(), privacy: a.privacy, profileType: a.type,
+        city: a.city.trim(), country: a.country, area: a.area.trim(), privacy: a.privacy, profileType: a.type,
+        ...(a.username.trim() && uname.ok === true && a.username.trim().toLowerCase() !== current.toLowerCase() ? { handle: a.username.trim().toLowerCase() } : {}),
         interests: tags,
         goals: INTENTS.filter((x) => a.intents.includes(x.id)).map((x) => x.label),
         ...(a.part.includes('offer') ? { jobSkills: a.skills } : {}),
@@ -113,11 +134,14 @@ export default function Onboarding() {
     setDone(true)
   }
   const next = () => (i < STEPS.length - 1 ? setI(i + 1) : finishSteps())
-  const skip = () => (i < STEPS.length - 1 ? setI(i + 1) : finishSteps())
+  const skip = () => {
+    if (step.id === 'username') set('username', current) // keep the one made for them
+    return i < STEPS.length - 1 ? setI(i + 1) : finishSteps()
+  }
 
   const understood = tags.length > 0
   const forReveal = understood ? tags : ['community', 'networking']
-  const because = understood ? undefined : `Popular in ${a.city || 'Lagos'} right now. Tell the companion more and it’ll retune this`
+  const because = understood ? undefined : `Popular on VOIDAJ right now. Tell the companion more and it’ll retune this`
   const enter = () => {
     setAssistantOpen(false)
     // Home leads with what they came for (DO-LATER.md, "After onboarding").
@@ -133,7 +157,7 @@ export default function Onboarding() {
           {!done && <span className="ob-count">{i + 1} of {STEPS.length}</span>}
         </div>
         {!done && (
-          <div className="ob-progress" aria-hidden="true">
+          <div className="ob-progress" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${STEPS.length}, 1fr)` }}>
             {STEPS.map((s, n) => <span key={s.id} className={n <= i ? 'on' : ''} />)}
           </div>
         )}
@@ -155,15 +179,40 @@ export default function Onboarding() {
               </div>
             )}
 
+            {step.id === 'username' && (
+              <div className="ob-place">
+                <label className="field"><span>Username</span>
+                  <span className="settings-prefixed ob-handle"><span>@</span>
+                    <input value={a.username} onChange={(e) => set('username', e.target.value.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20))}
+                      placeholder="yourname" maxLength={20} autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-describedby="uname-note" autoFocus />
+                  </span>
+                </label>
+                <p id="uname-note" className={`ob-uname ${uname.ok === true ? 'ok' : uname.ok === false ? 'bad' : ''}`}>
+                  {uname.ok === true && a.username.trim().toLowerCase() === current.toLowerCase() && <><Icon name="check" size={13} /> This is yours: voidaj.com/u/{a.username.trim().toLowerCase()}</>}
+                  {uname.ok === true && a.username.trim().toLowerCase() !== current.toLowerCase() && <><Icon name="check" size={13} /> @{a.username.trim().toLowerCase()} is free</>}
+                  {uname.ok === false && <><Icon name="x" size={13} /> {uname.note}</>}
+                  {uname.ok === null && (uname.note || 'Letters, numbers and underscores, 3 to 20 characters.')}
+                </p>
+                <p className="meta-dim">You can change it later in Settings.</p>
+              </div>
+            )}
+
             {step.id === 'place' && (
               <div className="ob-place">
-                <div className="chip-row ob-cities">
-                  {CITIES.map((c) => (
-                    <button key={c.id} type="button" className={a.city === c.name ? 'on' : ''} onClick={() => set('city', c.name)}>{c.name}</button>
-                  ))}
+                <div className="settings-row">
+                  <label className="field"><span>Country</span>
+                    <select value={a.country} onChange={(e) => set('country', e.target.value)} autoComplete="country">
+                      {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{flagOf(c.code)} {c.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="field"><span>City or town</span>
+                    <input value={a.city} onChange={(e) => set('city', e.target.value)} placeholder="Your city" maxLength={60}
+                      list={a.country === 'NG' ? 'ob-ng-cities' : undefined} autoComplete="address-level2" autoFocus />
+                    {a.country === 'NG' && <datalist id="ob-ng-cities">{CITIES.map((c) => <option key={c.id} value={c.name} />)}</datalist>}
+                  </label>
                 </div>
                 <label className="field"><span>Your area (optional)</span>
-                  <input value={a.area} onChange={(e) => set('area', e.target.value)} placeholder={a.city === 'Lagos' ? 'e.g. Yaba, Lekki, Ikeja' : 'Your neighbourhood'} maxLength={60} />
+                  <input value={a.area} onChange={(e) => set('area', e.target.value)} placeholder="A neighbourhood or district" maxLength={60} />
                 </label>
                 <span className="ob-sub">Who can see where you are?</span>
                 <div className="ob-grid three">
@@ -225,7 +274,7 @@ export default function Onboarding() {
             <div className="ob-nav">
               {i > 0 ? <button type="button" className="btn ghost" onClick={() => setI(i - 1)}><Icon name="back" size={15} /> Back</button> : <span />}
               <span className="ob-nav-right">
-                {step.id !== 'safety' && <button type="button" className="btn ghost" onClick={skip}>Skip</button>}
+                {step.id !== 'safety' && step.id !== 'place' && <button type="button" className="btn ghost" onClick={skip}>Skip</button>}
                 <button type="button" className="btn primary" onClick={next} disabled={!canNext || busy}>
                   {busy ? 'Saving…' : i === STEPS.length - 1 ? 'Finish' : 'Next'} <Icon name="arrow" size={15} />
                 </button>
@@ -235,7 +284,7 @@ export default function Onboarding() {
         ) : (
           <div className="ob-step reveal">
             <h1>You’re in, {first || 'friend'}. 🎉</h1>
-            <p className="meta-dim">{understood ? `Here’s a starting map of ${a.city || 'your city'}, from what you told me.` : `Here’s what’s popular in ${a.city || 'Lagos'} to start with.`}</p>
+            <p className="meta-dim">{understood ? `Here’s a starting map of ${a.city || 'your city'}, from what you told me.` : 'Here’s what’s popular on VOIDAJ to start with.'}</p>
             <div className="assistant-section-label">Communities for you</div>
             <div className="card-grid three tight">
               {matchCommunities(forReveal, { communities: [] }, 3).map(({ item, shared }) => <CommunityCard key={item.id} community={item} shared={shared} source="said" because={because} />)}

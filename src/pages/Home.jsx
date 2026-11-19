@@ -5,6 +5,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { EVENTS, USERS, PURPOSE } from '../data/seed.js'
+import { placeLabel } from '../places.js'
+import { heroPhotos, worldHeroPhotos } from '../heroPhotos.js'
 import { Avatar, FavoriteButton } from '../components/bits.jsx'
 import { useCommunities, findCommunity } from '../communities.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
@@ -62,10 +64,10 @@ function HomeSearch({ communities, posts, jobs, events }) {
 
 // A photo that quietly removes itself if it fails to load, leaving the
 // drawn fallback (icon or skyline) underneath.
-export function Cover({ src, className = 'tile-photo' }) {
+export function Cover({ src, className = 'tile-photo', at }) {
   const [ok, setOk] = useState(true)
   if (!src || !ok) return null
-  return <img className={className} src={src} alt="" loading="lazy" decoding="async" onError={() => setOk(false)} />
+  return <img className={className} src={src} alt="" loading="lazy" decoding="async" style={at ? { objectPosition: at } : undefined} onError={() => setOk(false)} />
 }
 
 const TABS = [
@@ -148,26 +150,26 @@ export function PersonTile({ person }) {
   )
 }
 
-// The six photos the hero cycles through for visitors. All Nigerian cities,
-// none of them named, so the page doesn't read as one city's (David, Nov 19).
-const HERO_PHOTOS = ['lagos', 'abuja', 'ibadan', 'kano', 'enugu', 'kaduna'].map((c) => `/images/city/${c}.jpg`)
+// The photos come from src/heroPhotos.js: the member's own city and places
+// around it, or the world for visitors.
 
 // Cross-fades between photos every few seconds. Each one keeps the slow
 // drift. Stays on the first photo for people who prefer reduced motion,
 // and while the tab is hidden.
-function HeroSlides({ photos = HERO_PHOTOS, every = 6000 }) {
+function HeroSlides({ photos, every = 6000 }) {
   const [i, setI] = useState(0)
+  const sig = photos.map((p) => p.src).join()
   useEffect(() => {
     const still = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (still || photos.length < 2) return
-    photos.forEach((src) => { const img = new Image(); img.src = src })
+    photos.forEach(({ src }) => { const img = new Image(); img.src = src })
     const t = setInterval(() => { if (!document.hidden) setI((n) => (n + 1) % photos.length) }, every)
     return () => clearInterval(t)
-  }, [photos, every])
+  }, [sig, every]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="hero-slides" aria-hidden="true">
-      {photos.map((src, n) => (
-        <Cover key={src} src={src} className={`hero-x-photo hero-slide${n === i ? ' on' : ''}`} />
+      {photos.map(({ src, at }, n) => (
+        <Cover key={src} src={src} at={at} className={`hero-x-photo hero-slide${n === i ? ' on' : ''}`} />
       ))}
     </div>
   )
@@ -185,18 +187,18 @@ const VISITOR_TILES = [
 // panel of what's on. Signed-out visitors get the brand line, a rotating set
 // of photos and the way in; members get a greeting and their city.
 // (David, Nov 10: "follow the images sent as examples".)
-function Hero({ user, first, city, counts, me }) {
+function Hero({ user, first, city: homeCity, counts, me }) {
+  const city = homeCity || 'your city'
+  const photos = user ? heroPhotos(homeCity, user.country) : worldHeroPhotos()
   const hour = new Date().getHours()
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   return (
-    <section className="hero-x">
-      {user
-        ? <Cover src={`/images/city/${city.toLowerCase().replace(/\s+/g, '-')}.jpg`} className="hero-x-photo" />
-        : <HeroSlides />}
+    <section className="hero-x hero-x-clear">
+      <HeroSlides key={photos.map((p) => p.src).join()} photos={photos} />
       <div className="hero-x-shade" aria-hidden="true" />
       <div className="hero-x-body">
         <span className="hero-x-eyebrow">
-          {user ? <><Icon name="map-pin" size={13} /> {city}, Nigeria</> : <>Connect. Discover. Participate.</>}
+          {user ? <><Icon name="map-pin" size={13} /> {placeLabel(homeCity, user.country) || 'Welcome'}</> : <>Connect. Discover. Participate.</>}
         </span>
         {user
           ? <h1>{greet}, <em>{first}</em>.</h1>
@@ -315,7 +317,7 @@ export default function Home() {
     ...communities.filter((c) => c.scope !== 'global' && c.cover && !CITY_WORDS.test(c.name)),
   ].slice(0, 4)
   const first = profile.name?.split(' ')[0]
-  const city = profile.city || 'Lagos'
+  const city = profile.city || ''
   // Nearby: posts for your city and from local communities.
   const shown = feed && (tab === 'nearby'
     ? feed.filter((p) => p.audience === 'city' || (p.community && findCommunity(p.community.id)?.scope !== 'global'))

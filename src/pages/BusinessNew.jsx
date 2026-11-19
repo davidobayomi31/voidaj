@@ -9,7 +9,7 @@ import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 import { CoverPicker } from '../components/CoverPicker.jsx'
 import { compressPhoto } from '../components/Media.jsx'
-import { CITIES } from '../components/NigeriaMap.jsx'
+import { cities as citiesIn } from '../places.js'
 import { useBusinessMeta } from '../components/BusinessBits.jsx'
 import { PhoneInput, HoursPicker } from '../components/ContactPickers.jsx'
 
@@ -57,7 +57,7 @@ export default function BusinessNew() {
 
   useEffect(() => {
     if (!user) return
-    if (!editing) { setForm({ ...blank, city: user.city || 'Lagos' }); return }
+    if (!editing) { setForm({ ...blank, city: user.city || '' }); return }
     api.getBusiness(id).then((b) => {
       if (!b.isOwner) { setError('Only the owner can edit this business.'); return }
       setForm(Object.fromEntries(Object.keys(blank).map((k) => [k, b[k] ?? ''])))
@@ -122,13 +122,12 @@ export default function BusinessNew() {
         <fieldset className="card biz-sec">
           <legend><Icon name="map-pin" size={15} /> Where you are</legend>
           <div className="settings-row">
-            <label className="field"><span>City</span>
-              <select className="job-select" value={form.city} onChange={set('city')}>
-                {CITIES.map((c) => <option key={c.id} value={c.name}>{c.name}, Nigeria</option>)}
-              </select>
+            <label className="field"><span>City or town</span>
+              <input value={form.city} onChange={set('city')} placeholder="Your city" maxLength={40} list="biz-cities" autoComplete="address-level2" required />
+              <datalist id="biz-cities">{citiesIn(user.country || 'NG').map((c) => <option key={c.id} value={c.name} />)}</datalist>
             </label>
             <label className="field"><span>Area (optional)</span>
-              <input value={form.area} onChange={set('area')} placeholder="e.g. Lekki" maxLength={60} />
+              <input value={form.area} onChange={set('area')} placeholder="A neighbourhood or district" maxLength={60} />
             </label>
           </div>
         </fieldset>
@@ -163,7 +162,7 @@ export default function BusinessNew() {
         {error && <div className="auth-error"><Icon name="info" size={14} /> {error}</div>}
         <div className="biz-savebar">
           {editing && <button type="button" className="btn ghost small danger" onClick={remove}><Icon name="trash" size={14} /> Delete business</button>}
-          <button className="btn primary" disabled={busy || uploading || !form.name.trim() || !form.category || (!editing && !isBusiness)}>
+          <button className="btn primary" disabled={busy || uploading || !form.name.trim() || !form.category || !form.city.trim() || (!editing && !isBusiness)}>
             {busy ? 'Saving…' : editing ? 'Save changes' : <>Create Business <Icon name="check" size={16} /></>}
           </button>
         </div>

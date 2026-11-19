@@ -32,7 +32,7 @@ export default function MySpace() {
   // point — trending communities, labelled as exactly that rather than
   // dressed up as a match against a profile that is still empty.
   const noInterests = !profile.interests?.length
-  const trendingBecause = 'Trending in Lagos — tell the companion what you’re into to tune this'
+  const trendingBecause = 'Trending now — tell the companion what you’re into to tune this'
   const suggestedCommunities = noInterests
     ? COMMUNITIES.filter((c) => c.trending && !profile.communities.includes(c.id))
         .slice(0, 2).map((item) => ({ item, shared: [] }))
@@ -49,7 +49,7 @@ export default function MySpace() {
           <div>
             <h1>{first}’s Space</h1>
             <div className="meta-dim">
-              <Icon name="map-pin" size={13} /> {profile.privacy === 'hidden' ? 'Location hidden' : profile.privacy === 'city-only' ? 'Lagos' : `${profile.area}, Lagos`}
+              <Icon name="map-pin" size={13} /> {profile.privacy === 'hidden' ? 'Location hidden' : profile.privacy === 'city-only' ? (profile.city || 'Your city') : [profile.area, profile.city].filter(Boolean).join(', ')}
               <span className="privacy-note"><Icon name="eye" size={12} /> {profile.privacy === 'hidden' ? 'hidden from members' : profile.privacy === 'city-only' ? 'city only' : 'exact area shown'}</span>
             </div>
             {profile.interests.length > 0 && <TagPills tags={profile.interests} max={5} />}

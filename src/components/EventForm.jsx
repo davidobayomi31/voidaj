@@ -48,7 +48,7 @@ export function EventForm({ community, onCreated, onCancel, heading, editing }) 
   const [error, setError] = useState('')
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const today = new Date().toISOString().slice(0, 10)
-  const city = profile.city || 'Lagos'
+  const city = profile.city || 'your city'
   const mine = profile.communities.map(findCommunity).filter(Boolean)
   const ready = form.title.trim() && form.date && form.category && (editing || audience !== 'community' || communityId)
 

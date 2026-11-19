@@ -73,7 +73,7 @@ export default function NewCommunity() {
             <button type="button" className={`toggle-seg ${form.scope === 'global' ? 'active' : ''}`} onClick={() => pick('scope', 'global')}><Icon name="globe" size={13} /> Anywhere</button>
           </div>
           {form.scope === 'local' && (
-            <input className="job-input" value={form.city} onChange={set('city')} placeholder={user.city || 'Lagos'} maxLength={40} aria-label="City" />
+            <input className="job-input" value={form.city} onChange={set('city')} placeholder={user.city || 'Your city'} maxLength={40} aria-label="City" />
           )}
         </div>
 

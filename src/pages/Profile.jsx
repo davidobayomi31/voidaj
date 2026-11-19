@@ -294,7 +294,7 @@ function EditSheet({ onClose }) {
         <label className="field"><span>Bio</span><textarea value={f.bio} onChange={set('bio')} rows={3} maxLength={300} placeholder="A line or two about you" /></label>
         <div className="field-row">
           <label className="field"><span>Area</span><input value={f.area} onChange={set('area')} placeholder="e.g. Yaba" /></label>
-          <label className="field"><span>City</span><input value={f.city} onChange={set('city')} placeholder="e.g. Lagos" /></label>
+          <label className="field"><span>City</span><input value={f.city} onChange={set('city')} placeholder="Your city" /></label>
         </div>
         <label className="field"><span>Interests <em>separate with commas</em></span><input value={f.interests} onChange={set('interests')} placeholder="music, art, tech" /></label>
         <label className="field"><span>Skills</span><input value={f.skills} onChange={set('skills')} placeholder="photography, web design" /></label>

@@ -142,7 +142,7 @@ export function serviceRoutes(app) {
     await q.run(`INSERT INTO jobs (id, poster_id, title, category, description, area, city, budget, verified_only, timing, remote, open_to_offers, created_at,
       kind, opportunity, arrangement, exchange, country, currency, status_at, availability)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'Flexible', ?, ?, ?, 'service', ?, ?, ?, ?, ?, ?, ?)`,
-    id, req.userId, f.title, f.category, f.description || '', f.area || '', req.userRow.city || 'Lagos', f.budget || '',
+    id, req.userId, f.title, f.category, f.description || '', f.area || '', req.userRow.city || '', f.budget || '',
     f.arrangement && f.arrangement !== 'local' ? 1 : 0, f.opportunity === 'paid' ? 1 : 0, now(),
     f.opportunity, f.arrangement || 'local', f.exchange || '', country, currency, now(), f.availability || '')
     try { await savePhotos(id, req.body?.photos) } catch (e) {

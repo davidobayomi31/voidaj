@@ -53,13 +53,13 @@ export const PROMOTION = {
   audiences: [
     { id: 'city', label: 'Your city' },
     { id: 'nearby', label: 'Your city and nearby areas' },
-    { id: 'nigeria', label: 'All of Nigeria' },
+    { id: 'nigeria', label: 'Everywhere on VOIDAJ' },
   ],
   days: [3, 7, 14],
   budgets: [5000, 15000, 30000],
 }
 // A rough estimate of how many people a promotion reaches. It's shown as a
-// range, not a promise: ₦15,000 for 7 days in Lagos and nearby ≈ 8,000–25,000.
+// range, not a promise: ₦15,000 for 7 days in a big city and nearby ≈ 8,000–25,000.
 export function estimateReach({ budget, days, audience }) {
   const spread = { city: 0.8, nearby: 1, nigeria: 1.6 }[audience] ?? 1
   const round = (n) => Math.max(500, Math.round(n / 500) * 500)
@@ -101,7 +101,7 @@ async function serializeBusiness(row, viewerId, { full = false } = {}) {
   const cat = CATEGORIES.find((c) => c.id === row.category) ?? CATEGORIES.at(-1)
   const out = {
     id: row.id, name: row.name, category: cat.id, categoryLabel: cat.label, listingKinds: cat.listings,
-    description: row.description || '', city: row.city || '', area: row.area || '',
+    description: row.description || '', city: row.city || '', country: row.country || 'NG', area: row.area || '',
     logo: full ? row.logo || '' : listImage(row.logo), cover: full ? row.cover || '' : listImage(row.cover),
     verified: !!row.verified, ownerId: row.owner_id, isOwner: viewerId === row.owner_id,
     followers: followers?.n || 0, isFollowing: !!following,
@@ -216,9 +216,9 @@ export function businessRoutes(app) {
     const count = await q.get('SELECT COUNT(*) AS n FROM businesses WHERE owner_id = ?', req.userId)
     if ((count?.n || 0) >= 5) return err(res, 400, 'You can run up to five businesses on one account.')
     const id = uid('biz')
-    await q.run(`INSERT INTO businesses (id, owner_id, name, category, description, city, area, logo, cover, phone, website, hours, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, b.name, b.category, b.description || '',
-      b.city || req.userRow.city || 'Lagos', b.area || '', b.logo || '', b.cover || '', b.phone || '', b.website || '', b.hours || '', now())
+    await q.run(`INSERT INTO businesses (id, owner_id, name, category, description, city, country, area, logo, cover, phone, website, hours, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, b.name, b.category, b.description || '',
+      b.city || req.userRow.city || '', req.userRow.country || 'NG', b.area || '', b.logo || '', b.cover || '', b.phone || '', b.website || '', b.hours || '', now())
     res.json({ business: await serializeBusiness(await q.get('SELECT * FROM businesses WHERE id = ?', id), req.userId, { full: true }) })
   })
 

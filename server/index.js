@@ -21,6 +21,7 @@ import { eventRoutes, eventRole, joinEventCircle } from './events-extra.js'
 import { jobFlowRoutes } from './jobs-flow.js'
 import { idCheckRoutes, deleteChecksFor } from './id-checks.js'
 import { serviceRoutes } from './services.js'
+import { uniqueHandle, isHandleClash, usernameTaken, USERNAME_RE, tidyCity } from './handles.js'
 import { adRoutes } from './ads.js'
 import { seedIfEmpty, seedExtras, keepDemoStatuses } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
@@ -156,10 +157,15 @@ app.post('/api/auth/register', async (req, res) => {
 
   const id = uid('u')
   const color = NEW_USER_COLORS[Math.floor(Math.random() * NEW_USER_COLORS.length)]
-  const handle = '@' + name.trim().toLowerCase().split(/\s+/)[0].replace(/[^a-z0-9]/g, '')
-  await q.run(`INSERT INTO users (id, email, password_hash, name, handle, title, color, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, id, email.toLowerCase(), hashPassword(password), name.trim(), handle, 'New citizen of VOIDAJ', color, now())
-  await q.run('UPDATE users SET birth_date = ?, referred_by = ?, country = ? WHERE id = ?', String(req.body.birthDate), await referrerId(req.body?.ref, id), country, id)
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await q.run(`INSERT INTO users (id, email, password_hash, name, handle, title, color, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, id, email.toLowerCase(), hashPassword(password), name.trim(), await uniqueHandle(name), 'New citizen of VOIDAJ', color, now())
+      break
+    } catch (e) { if (!isHandleClash(e) || attempt >= 4) throw e }
+  }
+  // The city starts empty: it's asked in onboarding rather than assumed.
+  await q.run("UPDATE users SET birth_date = ?, referred_by = ?, country = ?, city = '' WHERE id = ?", String(req.body.birthDate), await referrerId(req.body?.ref, id), country, id)
   // A code to confirm the email address (server/guard.js).
   await guard.sendEmailCode(await getUserById(id))
   issueSession(res, id)
@@ -250,10 +256,14 @@ async function socialSignIn(req, provider, profile) {
   if (!row) {
     const id = uid('u')
     const name = (profile.name || profile.email?.split('@')[0] || 'New member').trim().slice(0, 80)
-    const handle = '@' + (name.toLowerCase().split(/\s+/)[0].replace(/[^a-z0-9]/g, '') || 'member')
     const color = NEW_USER_COLORS[Math.floor(Math.random() * NEW_USER_COLORS.length)]
-    await q.run(`INSERT INTO users (id, email, password_hash, name, handle, title, color, photo, ${col}, created_at)
-      VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`, id, profile.email, name, handle, 'New citizen of VOIDAJ', color, profile.photo || '', profile.sub, now())
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await q.run(`INSERT INTO users (id, email, password_hash, name, handle, title, color, photo, ${col}, created_at, city)
+          VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, '')`, id, profile.email, name, await uniqueHandle(name), 'New citizen of VOIDAJ', color, profile.photo || '', profile.sub, now())
+        break
+      } catch (e) { if (!isHandleClash(e) || attempt >= 4) throw e }
+    }
     row = await getUserById(id)
   }
   // Google and Apple only hand over an email they've confirmed themselves.
@@ -387,9 +397,8 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
   let handle = cur.handle
   if (b.handle != null) {
     const h = String(b.handle).trim().replace(/^@/, '').toLowerCase()
-    if (!/^[a-z0-9_]{3,20}$/.test(h)) return err(res, 400, 'Usernames are 3–20 letters, numbers or underscores.')
-    const taken = await q.get('SELECT id FROM users WHERE LOWER(handle) = ? AND id <> ?', '@' + h, cur.id)
-    if (taken) return err(res, 409, `@${h} is already taken.`)
+    if (!USERNAME_RE.test(h)) return err(res, 400, 'Usernames are 3–20 letters, numbers or underscores.')
+    if (await usernameTaken(h, cur.id)) return err(res, 409, `@${h} is already taken.`)
     handle = '@' + h
   }
   let country = cur.country || DEFAULT_COUNTRY
@@ -405,7 +414,7 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
     if (phone === null) return err(res, 400, 'Enter a valid phone number.')
   }
   const settings = cleanSettings(b.settings, readSettings(cur))
-  const city = b.city != null ? (String(b.city).trim().slice(0, 60) || cur.city) : cur.city
+  const city = b.city != null ? (tidyCity(b.city) || cur.city) : cur.city
   let photo = cur.photo || ''
   let cover = cur.cover || ''
   try {
@@ -666,7 +675,7 @@ app.post('/api/communities', requireAuth, guard.requireConfirmed, async (req, re
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'community'
   const id = `${slug}-${crypto.randomUUID().slice(0, 4)}`
   const scope = b.scope === 'global' ? 'global' : 'local'
-  const city = scope === 'global' ? 'Global' : (String(b.city || req.userRow.city || 'Lagos').trim().slice(0, 40) || 'Lagos')
+  const city = scope === 'global' ? 'Global' : (String(b.city || req.userRow.city || '').trim().slice(0, 40) || 'Local')
   const accent = COMMUNITY_ACCENTS.includes(b.accent) ? b.accent : COMMUNITY_ACCENTS[0]
   const icon = COMMUNITY_ICONS.includes(b.icon) ? b.icon : 'community'
   const tags = cleanList(b.tags, 6, 24).map((t) => t.toLowerCase())
@@ -758,7 +767,7 @@ async function createEvent(req, res, audience, communityId) {
     if (!member) return err(res, 403, 'Join the community to create an event in it.')
     city = community.city || ''
   } else {
-    city = (await getUserById(req.userId))?.city || 'Lagos'
+    city = (await getUserById(req.userId))?.city || ''
   }
   const b = req.body || {}
   const title = String(b.title || '').trim().slice(0, 100)
@@ -965,7 +974,7 @@ app.post('/api/posts', requireAuth, async (req, res) => {
     if (!title?.trim() && !body?.trim() && !media.length) return err(res, 400, 'Write something or add a photo first.')
     const me = await getUserById(req.userId)
     await q.run(`INSERT INTO posts (id, community_id, author_id, title, body, media, audience, city, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
-      id, req.userId, (title || '').trim(), (body || '').trim(), JSON.stringify(media), audience, me?.city || 'Lagos', now())
+      id, req.userId, (title || '').trim(), (body || '').trim(), JSON.stringify(media), audience, me?.city || '', now())
   }
   res.json({ post: await serializePost(await q.get('SELECT * FROM posts WHERE id = ?', id), req.userId) })
 })
@@ -984,7 +993,7 @@ app.get('/api/feed', async (req, res) => {
       AND p.author_id IN (SELECT followee_id FROM follows WHERE follower_id = ?)
       ORDER BY p.created_at DESC LIMIT ?`, req.userId, limit)
   } else {
-    const city = me?.city || 'Lagos'
+    const city = me?.city || ''
     // Members see their own communities' posts; guests see every community's.
     const communities = me
       ? 'p.community_id IN (SELECT community_id FROM memberships WHERE user_id = ?)'
@@ -1256,10 +1265,10 @@ app.post('/api/posts/:id/loom', requireAuth, async (req, res) => {
     const member = await q.get('SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, communityId)
     if (!member) return err(res, 403, 'Join the community to loom into it.')
     await q.run(`INSERT INTO posts (id, community_id, author_id, title, body, media, audience, city, loom_of, created_at) VALUES (?, ?, ?, ?, ?, '[]', 'community', ?, ?, ?)`,
-      id, communityId, req.userId, `Loomed: ${(post.title || post.body || 'a post').slice(0, 100)}`, note, me?.city || 'Lagos', post.id, now())
+      id, communityId, req.userId, `Loomed: ${(post.title || post.body || 'a post').slice(0, 100)}`, note, me?.city || '', post.id, now())
   } else {
     await q.run(`INSERT INTO posts (id, community_id, author_id, title, body, media, audience, city, loom_of, created_at) VALUES (?, NULL, ?, '', ?, '[]', ?, ?, ?, ?)`,
-      id, req.userId, note, to, me?.city || 'Lagos', post.id, now())
+      id, req.userId, note, to, me?.city || '', post.id, now())
   }
   res.json({ post: await serializePost(await q.get('SELECT * FROM posts WHERE id = ?', id), req.userId) })
 })
@@ -1274,6 +1283,13 @@ app.get('/api/tags/:tag', async (req, res) => {
 })
 
 // @handle → the member, for mentions.
+// Is this username free? Used by the "pick your username" step and Settings.
+app.get('/api/handle-check', async (req, res) => {
+  const h = String(req.query.h || '').trim().replace(/^@/, '').toLowerCase()
+  if (!USERNAME_RE.test(h)) return res.json({ available: false, reason: 'Use 3–20 letters, numbers or underscores.' })
+  res.json({ available: !(await usernameTaken(h, req.userId || null)), reason: '' })
+})
+
 app.get('/api/handles/:handle', async (req, res) => {
   const h = '@' + String(req.params.handle || '').replace(/^@/, '').toLowerCase().slice(0, 40)
   const row = await q.get('SELECT * FROM users WHERE LOWER(handle) = ? AND deleted_at IS NULL', h)
@@ -1570,7 +1586,7 @@ app.post('/api/jobs', requireAuth, guard.requireConfirmed, async (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, title.trim(), category, (description || '').trim(), (area || '').trim(),
     // "Verified only" would be a promise we can't keep while the badge is
     // self-assigned, so no new job carries it until verification is real.
-    req.userRow.city || 'Lagos', opportunity === 'paid' ? (budget || '').trim() : '', VERIFICATION_IS_REAL && verifiedOnly ? 1 : 0, when, remote ? 1 : 0,
+    req.userRow.city || '', opportunity === 'paid' ? (budget || '').trim() : '', VERIFICATION_IS_REAL && verifiedOnly ? 1 : 0, when, remote ? 1 : 0,
     opportunity === 'paid' && openToOffers !== false ? 1 : 0, now())
   await q.run('UPDATE jobs SET kind = ?, opportunity = ?, arrangement = ?, exchange = ?, country = ?, currency = ?, status_at = ? WHERE id = ?',
     kind, opportunity, arrangement, opportunity === 'exchange' ? String(req.body.exchange).trim().slice(0, 200) : '', country, currency, now(), id)

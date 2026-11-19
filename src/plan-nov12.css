@@ -491,3 +491,39 @@
   .hero-x-tiles b { font-size: 13px; }
   .hero-x-tiles span { font-size: 11px; }
 }
+
+/* ── Visitors: the column members use for their tools (Jobs) ── */
+.visitor-side { margin-top: 0; gap: 14px; }
+.visitor-join { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.visitor-perks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; }
+.visitor-perks li { display: flex; gap: 8px; align-items: flex-start; }
+.visitor-perks svg { flex: none; margin-top: 3px; color: #22C55E; }
+.visitor-join .btn { justify-content: center; }
+.visitor-login { text-align: center; text-decoration: underline; text-underline-offset: 2px; }
+.visitor-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.visitor-steps li { display: flex; gap: 10px; align-items: flex-start; }
+.visitor-steps span { display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+.visitor-steps em { font-style: normal; font-size: 12px; color: var(--text-dim); }
+
+/* ── Hero for visitors: let the photo show (David, Nov 19: "lower the tint") ──
+   The dark wash used to cover the whole image. Now it is a soft fade only
+   behind the words on the left, and the words carry their own shadow. */
+.hero-x-clear .hero-x-shade {
+  background:
+    linear-gradient(90deg, rgba(5, 8, 16, 0.62) 0%, rgba(5, 8, 16, 0.4) 34%, rgba(5, 8, 16, 0.12) 56%, rgba(5, 8, 16, 0) 70%),
+    linear-gradient(0deg, rgba(5, 8, 16, 0.38) 0%, rgba(5, 8, 16, 0) 38%);
+}
+.hero-x-clear h1, .hero-x-clear p { text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.5); }
+.hero-x-clear p { color: rgba(255, 255, 255, 0.9); }
+.hero-x-clear .hero-x-eyebrow { background: rgba(10, 14, 24, 0.35); }
+.hero-x-clear .hero-x-stats { background: rgba(10, 14, 24, 0.42); }
+
+/* ── Sign in: "Continue with email" is its own step (David, Nov 19) ── */
+.auth-social-btn.email { width: 100%; background: transparent; color: var(--text); border: 1px solid color-mix(in srgb, var(--text) 25%, transparent); }
+.auth-card .auth-social-btn.email { color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+.auth-card .auth-social-btn.email:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+.auth-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; text-decoration: none; margin-bottom: 4px; }
+.ob-handle { display: flex; align-items: center; }
+.ob-uname { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-dim); min-height: 20px; }
+.ob-uname.ok { color: #22C55E; }
+.ob-uname.bad { color: var(--danger, #F87171); }

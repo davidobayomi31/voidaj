@@ -75,3 +75,13 @@ describe('notifications', () => {
     expect(n.messages).toBeUndefined()
   })
 })
+
+describe('businesses belong to a country', () => {
+  it('records the owner’s country, so the page can say where it is', async () => {
+    const owner = await signUp('Owner Person')
+    await owner.agent.patch('/api/auth/me').send({ country: 'CA', city: 'Toronto' })
+    const res = await owner.agent.post('/api/businesses').send({ name: 'Maple Bakes', category: 'food', city: 'Toronto' })
+    expect(res.status).toBe(200)
+    expect(res.body.business).toMatchObject({ city: 'Toronto', country: 'CA' })
+  })
+})

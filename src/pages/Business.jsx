@@ -211,7 +211,7 @@ function BusinessPage({ id }) {
           <div className="biz-logo"><BusinessLogo business={biz} size={88} /></div>
           <h1>{biz.name} <Verified on={biz.verified} size={18} /></h1>
           <p className="meta-dim">{biz.categoryLabel}</p>
-          <span className="biz-where"><Icon name="map-pin" size={13} /> {[biz.area, biz.city].filter(Boolean).join(', ')}, Nigeria</span>
+          <span className="biz-where"><Icon name="map-pin" size={13} /> {[biz.area, biz.city, countryName(biz.country)].filter(Boolean).join(', ')}</span>
           {biz.isOwner ? (
             <div className="biz-actions">
               <button className="btn primary" onClick={() => setAdding(true)}><Icon name="plus" size={15} /> Add listing</button>
@@ -273,7 +273,7 @@ function BusinessPage({ id }) {
               {biz.description && <p>{biz.description}</p>}
               <ul>
                 <li><Icon name="tag" size={15} /> {biz.categoryLabel}</li>
-                <li><Icon name="map-pin" size={15} /> {[biz.area, biz.city].filter(Boolean).join(', ')}, Nigeria</li>
+                <li><Icon name="map-pin" size={15} /> {[biz.area, biz.city, countryName(biz.country)].filter(Boolean).join(', ')}</li>
                 {biz.hours && <li><Icon name="clock" size={15} /> {biz.hours}</li>}
                 {biz.owner && <li><Icon name="user" size={15} /> Run by <Link to={`/profile/${biz.owner.id}`}>{biz.owner.name}</Link></li>}
                 <li><Icon name="badge-check" size={15} /> {biz.verified ? 'Verified business' : 'Not verified yet'}</li>
@@ -281,7 +281,7 @@ function BusinessPage({ id }) {
               <div className="biz-buttons">
                 {biz.phone && <a className="btn ghost small" href={`tel:${biz.phone.replace(/\s/g, '')}`}><Icon name="phone" size={14} /> Call</a>}
                 {biz.website && <a className="btn ghost small" href={biz.website} target="_blank" rel="noopener noreferrer nofollow"><Icon name="globe" size={14} /> Website</a>}
-                <a className="btn ghost small" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent([biz.name, biz.area, biz.city, 'Nigeria'].filter(Boolean).join(', '))}`} target="_blank" rel="noopener noreferrer"><Icon name="navigation" size={14} /> Directions</a>
+                <a className="btn ghost small" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent([biz.name, biz.area, biz.city, countryName(biz.country)].filter(Boolean).join(', '))}`} target="_blank" rel="noopener noreferrer"><Icon name="navigation" size={14} /> Directions</a>
               </div>
             </section>
           )}

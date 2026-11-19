@@ -320,8 +320,8 @@ function Privacy() {
     <>
       <Block title="Location visibility" sub="What other members see about where you are.">
         <Choice name="privacy" value={user.privacy} onChange={(v) => loc.run(() => saveProfile({ privacy: v }))} options={[
-          { id: 'exact', label: 'Show my area', sub: `${user.area || 'Your area'}, ${user.city || 'Lagos'}` },
-          { id: 'city-only', label: 'City only', sub: user.city || 'Lagos' },
+          { id: 'exact', label: 'Show my area', sub: [user.area || 'Your area', user.city].filter(Boolean).join(', ') },
+          { id: 'city-only', label: 'City only', sub: user.city || 'Your city' },
           { id: 'hidden', label: 'Hidden', sub: 'No location on your profile' },
         ]} />
         {loc.note}
@@ -485,7 +485,7 @@ function ThemeBlock() {
 function Preferences() {
   const { user, saveProfile } = useApp()
   const { settings, set, note } = useInstantSettings()
-  const [place, setPlace] = useState({ country: user.country || 'NG', city: user.city || 'Lagos', area: user.area || '' })
+  const [place, setPlace] = useState({ country: user.country || 'NG', city: user.city || '', area: user.area || '' })
   const placeSave = useSaver()
   const [interests, setInterests] = useState(user.interests)
   const interestSave = useSaver()

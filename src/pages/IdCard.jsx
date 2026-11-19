@@ -75,7 +75,7 @@ export default function IdCard() {
         </div>
         <footer className="id-card-foot">
           <span><em>No.</em> {memberNo(user.id)}</span>
-          <span><em>City</em> {profile.city || 'Lagos'}</span>
+          <span><em>City</em> {profile.city || '—'}</span>
           <span><em>Since</em> {new Date(user.createdAt || Date.now()).getFullYear()}</span>
           {showVerifiedTick() && profile.idVerified
             ? <span className="id-verified"><Icon name="badge-check" size={13} /> Verified</span>

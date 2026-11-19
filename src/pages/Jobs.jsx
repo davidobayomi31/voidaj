@@ -99,6 +99,39 @@ function VerifyModal({ onClose }) {
   )
 }
 
+// What a visitor gets in the column members use for their own tools, so it
+// isn't left empty: what signing up unlocks, and how it works.
+const HOW_IT_WORKS = [
+  ['edit', 'Post or offer', 'Say what you need, or what you can do.'],
+  ['message-circle', 'Agree it in chat', 'Settle price and timing with the other person.'],
+  ['check', 'Get it done', 'Mark it complete when the work is finished.'],
+  ['star', 'Review each other', 'Reviews build a record people can trust.'],
+]
+function VisitorSide() {
+  return (
+    <aside className="space-side visitor-side">
+      <div className="card side-card visitor-join">
+        <div className="side-card-head"><Icon name="sparkle" size={15} /> Join to take part</div>
+        <ul className="visitor-perks">
+          <li><Icon name="check" size={14} /> Post a job or offer a service</li>
+          <li><Icon name="check" size={14} /> Get alerts for work that matches your skills</li>
+          <li><Icon name="check" size={14} /> Build a profile and reviews people trust</li>
+        </ul>
+        <Link to="/auth" className="btn primary small">Create your account <Icon name="arrow" size={14} /></Link>
+        <Link to="/auth?mode=login" className="meta-dim visitor-login">Already a member? Log in</Link>
+      </div>
+      <div className="card side-card">
+        <div className="side-card-head"><Icon name="briefcase" size={15} /> How Quick Jobs works</div>
+        <ol className="visitor-steps">
+          {HOW_IT_WORKS.map(([icon, t, sub], n) => (
+            <li key={t}><IconTile name={icon} tone="blue" size={30} iconSize={14} /><span><b>{n + 1}. {t}</b><em>{sub}</em></span></li>
+          ))}
+        </ol>
+      </div>
+    </aside>
+  )
+}
+
 // Opened by the "Post a quick job" button beside Find work / Find people.
 function PostJobForm({ onCreated, onClose, startCategory, startKind }) {
   const { profile } = useApp()
@@ -468,7 +501,7 @@ export default function Jobs() {
   }
 
   const matchedIds = new Set(matched.map((j) => j.id))
-  const city = (profile.city || 'Lagos').toLowerCase()
+  const city = (profile.city || '').toLowerCase()
   const term = search.trim().toLowerCase()
   const savedIds = new Set(saved.filter((f) => f.kind === 'job').map((f) => f.id))
   const kind = params.get('kind') === 'service' ? 'service' : params.get('kind') === 'job' ? 'job' : ''
@@ -480,14 +513,14 @@ export default function Jobs() {
     volunteer: j.opportunity === 'volunteer',
     free: j.opportunity === 'free',
     exchange: j.opportunity === 'exchange',
-    near: (j.city || 'Lagos').toLowerCase() === city,
+    near: !!city && (j.city || '').toLowerCase() === city,
     offers: j.openToOffers,
     verified: j.verified,
     saved: savedIds.has(j.id),
   }[filter])
   // Jobs near you come first; verified ones lead within a category.
   const rest = jobs.filter((j) => (filter !== 'all' || term || !matchedIds.has(j.id)) && keep(j))
-    .sort((a, b) => (((b.city || 'Lagos').toLowerCase() === city) - ((a.city || 'Lagos').toLowerCase() === city)) || (category ? Number(b.verified) - Number(a.verified) : 0))
+    .sort((a, b) => (((b.city || '').toLowerCase() === city) - ((a.city || '').toLowerCase() === city)) || (category ? Number(b.verified) - Number(a.verified) : 0))
   const MATCH_PREVIEW = 2
   const matchShown = allMatches ? matched : matched.slice(0, MATCH_PREVIEW)
   const listTitle = term ? `Results for “${search.trim()}”` : `${FILTERS.find((f) => f.id === filter).id === 'all' ? '' : FILTERS.find((f) => f.id === filter).label + ' · '}${category ? catInfo(category).label : kind === 'service' ? 'All services' : kind === 'job' ? 'All open jobs' : 'All jobs & services'}`
@@ -666,6 +699,7 @@ export default function Jobs() {
             <SkillsPicker profile={profile} onSave={(jobSkills) => saveProfile({ jobSkills })} />
           </aside>
         )}
+        {!user && <VisitorSide />}
       </div>
       )}
 

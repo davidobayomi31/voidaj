@@ -770,7 +770,25 @@ CREATE TABLE IF NOT EXISTS id_checks (
 );
 CREATE INDEX IF NOT EXISTS id_checks_user ON id_checks (user_id, created_at);
 -- Services (server/services.js): proof-of-work photos and availability.
+-- Usernames must be unique, whatever the capitals. Until now they were made
+-- from the first name alone, so duplicates exist. The newest account of
+-- each pair gets a short suffix, then the rule is enforced.
+UPDATE users u SET handle = LEFT(u.handle, 15) || '_' || RIGHT(u.id, 4)
+  WHERE u.handle IS NOT NULL AND EXISTS (
+    SELECT 1 FROM users o WHERE o.id <> u.id AND LOWER(o.handle) = LOWER(u.handle)
+      AND (COALESCE(o.created_at, 0) < COALESCE(u.created_at, 0)
+        OR (COALESCE(o.created_at, 0) = COALESCE(u.created_at, 0) AND o.id < u.id)));
+CREATE UNIQUE INDEX IF NOT EXISTS users_handle_unique ON users (LOWER(handle)) WHERE handle IS NOT NULL;
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS availability TEXT DEFAULT '';
+-- A business belongs to a country, not just a city, so its page doesn't say
+-- "Nigeria" for everyone. Existing ones are the owner's country.
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS country TEXT;
+-- The example adverts named Nigerian districts; they now read the same anywhere.
+UPDATE ads SET tagline = 'Northern fabrics, tailored to order' WHERE business_name = 'Arewa Threads' AND tagline = 'Northern fabrics, tailored in Abuja';
+UPDATE ads SET tagline = 'Gyms, classes and coaching' WHERE business_name = 'Capital Fitness' AND tagline = 'Gyms in Wuse and Garki';
+UPDATE ads SET tagline = 'The best suya, grilled fresh' WHERE business_name = 'Garden City Grills' AND tagline LIKE 'Port Harcourt%';
+UPDATE ads SET tagline = 'Spices, ground fresh' WHERE business_name = 'Kano Spice House' AND tagline = 'Spices from Kurmi market';
+UPDATE businesses b SET country = COALESCE((SELECT u.country FROM users u WHERE u.id = b.owner_id), 'NG') WHERE b.country IS NULL;
 -- What kind of profile someone chose in onboarding (Nuel, Oct 14 + Nov 18).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_type TEXT DEFAULT 'individual';
 CREATE TABLE IF NOT EXISTS service_photos (

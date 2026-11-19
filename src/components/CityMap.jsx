@@ -1,6 +1,8 @@
 // My City's map: a real, zoomable map in place of the flat Nigeria
-// outline. It opens on a globe and flies in to Nigeria; tapping a city pin
-// (or picking a city on the page) flies there and switches the page.
+// outline. It opens on a globe and flies in to the member's country
+// (Nigeria by default); tapping a city pin (or picking a city on the page)
+// flies there and switches the page. `places` are the pins and `home` is
+// where to open (src/places.js), so it works for any country.
 // The base is OpenFreeMap's dark vector map (free, no key), recoloured to
 // deep indigo-black: indigo land, near-black water, lit violet roads, bright borders,
 // and street names only once you're close.
@@ -8,6 +10,8 @@ import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { CITIES } from './NigeriaMap.jsx'
+import { countryView } from '../places.js'
+import { countryName } from '../countries.js'
 
 const STYLE = 'https://tiles.openfreemap.org/styles/dark'
 // Colours laid over the dark style, by layer id.
@@ -31,7 +35,8 @@ const PAINT = {
   'boundary_country_z5-': { 'line-color': '#A596FF' },
 }
 const LABEL = { 'text-color': '#B4B0DA', 'text-halo-color': 'rgba(8, 8, 16, 0.92)' }
-// Nigeria's bounds; the bottom padding keeps cities clear of the city card.
+// Nigeria's bounds, the default view; the bottom padding keeps cities clear
+// of the city card.
 const BOUNDS = [[2.6, 4.2], [14.7, 13.9]]
 const PAD = { top: 70, left: 40, right: 40, bottom: 130 }
 const CITY_ZOOM = 10.5
@@ -54,18 +59,21 @@ function pin(city, count, onPick) {
   return el
 }
 
-export function CityMap({ value, onPick, counts = {} }) {
+export function CityMap({ value, onPick, counts = {}, places = CITIES, country = 'NG' }) {
   const box = useRef(null)
   const map = useRef(null)
   const pins = useRef({})
   const pick = useRef(onPick)
   pick.current = onPick
-  const current = CITIES.find((c) => c.name.toLowerCase() === (value || '').toLowerCase())
+  const current = places.find((c) => c.name.toLowerCase() === (value || '').toLowerCase())
+  // Where the map opens: all of Nigeria, or the member's country.
+  const view = country === 'NG' ? null : countryView(country)
+  const overview = () => (view ? map.current?.flyTo({ center: [view.lon, view.lat], zoom: view.zoom, duration: reduced() ? 0 : 1400 }) : map.current?.fitBounds(BOUNDS, { padding: PAD, duration: reduced() ? 0 : 1400 }))
 
   // Build the map once.
   useEffect(() => {
     const m = new maplibregl.Map({
-      container: box.current, style: STYLE, center: [8.2, 9.1], zoom: 2.6,
+      container: box.current, style: STYLE, center: view ? [view.lon, view.lat] : [8.2, 9.1], zoom: 2.6,
       attributionControl: false,
       dragRotate: false, pitchWithRotate: false, maxPitch: 0,
     })
@@ -104,10 +112,11 @@ export function CityMap({ value, onPick, counts = {} }) {
       })
       style.layers.filter((l) => l.type === 'symbol' && l.paint?.['text-color']).forEach((l) =>
         Object.entries(LABEL).forEach(([k, v]) => m.setPaintProperty(l.id, k, v)))
-      const target = CITIES.find((c) => c.name.toLowerCase() === (value || '').toLowerCase())
+      const target = places.find((c) => c.name.toLowerCase() === (value || '').toLowerCase())
       // Street and area names only once you're close; the pins name the cities.
       style.layers.filter((l) => l.type === 'symbol').forEach((l) => m.setLayerZoomRange(l.id, Math.max(l.minzoom ?? 0, 7.5), l.maxzoom ?? 24))
       if (target && !target.live) m.flyTo({ center: [target.lon, target.lat], zoom: CITY_ZOOM, duration: reduced() ? 0 : 1800, essential: true })
+      else if (view) m.flyTo({ center: [view.lon, view.lat], zoom: view.zoom, duration: reduced() ? 0 : 1600, essential: true })
       else m.fitBounds(BOUNDS, { padding: PAD, duration: reduced() ? 0 : 1600, essential: true })
     })
     return () => {
@@ -123,9 +132,9 @@ export function CityMap({ value, onPick, counts = {} }) {
     const m = map.current
     if (!m) return
     Object.values(pins.current).forEach((p) => p.remove())
-    pins.current = Object.fromEntries(CITIES.map((c) => [c.id,
+    pins.current = Object.fromEntries(places.map((c) => [c.id,
       new maplibregl.Marker({ element: pin(c, counts[c.name], (n) => pick.current?.(n)), anchor: 'bottom', offset: [0, 4] }).setLngLat([c.lon, c.lat]).addTo(m)]))
-  }, [JSON.stringify(counts)]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(counts), places.map((p) => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Highlight the city being looked at…
   useEffect(() => {
@@ -144,12 +153,12 @@ export function CityMap({ value, onPick, counts = {} }) {
     else m.flyTo({ ...to, duration: 1800, essential: true })
   }, [current?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const zoomOut = () => map.current?.fitBounds(BOUNDS, { padding: PAD, duration: reduced() ? 0 : 1400 })
+  const zoomOut = overview
 
   return (
     <div className="cm">
-      <div ref={box} className="cm-canvas" role="region" aria-label="Map of Nigeria with the cities on VOIDAJ" />
-      <button type="button" className="cm-all" onClick={zoomOut}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>All of Nigeria</button>
+      <div ref={box} className="cm-canvas" role="region" aria-label={`Map of ${country === 'NG' ? 'Nigeria' : countryName(country) || 'your country'} with the cities on VOIDAJ`} />
+      <button type="button" className="cm-all" onClick={zoomOut}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>All of {country === 'NG' ? 'Nigeria' : countryName(country) || 'the world'}</button>
     </div>
   )
 }

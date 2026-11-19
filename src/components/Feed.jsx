@@ -84,7 +84,7 @@ export function FeedComposer({ onPosted, onCancel, start = false, defaultAudienc
   const [media, setMedia] = useState([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const city = profile.city || 'Lagos'
+  const city = profile.city || 'your city'
   const mine = profile.communities.map(findCommunity).filter(Boolean)
 
   const canPost = audience === 'community' ? title.trim() && communityId : (body.trim() || title.trim() || media.length)
