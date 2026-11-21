@@ -4,6 +4,7 @@
 // spam limits and blocking.
 import crypto from 'crypto'
 import q from './db.js'
+import { codeEmail } from './email-templates.js'
 
 const now = () => Date.now()
 const err = (res, code, msg) => res.status(code).json({ error: msg })
@@ -101,7 +102,7 @@ export const confirmRequired = () => emailReady() || process.env.REQUIRE_EMAIL_C
 
 // Any plain email, sent with Resend when it's set up. Without a key it is
 // printed in the server log (and nothing is held back), like the codes.
-export async function sendMail(to, subject, text) {
+export async function sendMail(to, subject, text, html) {
   const list = (Array.isArray(to) ? to : [to]).filter(Boolean)
   if (!list.length) return { sent: false }
   if (!emailReady()) {
@@ -111,7 +112,7 @@ export async function sendMail(to, subject, text) {
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY.trim()}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'VOIDAJ <hello@voidaj.com>', to: list, subject, text }),
+    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'VOIDAJ <hello@voidaj.com>', to: list, subject, text, ...(html ? { html } : {}) }),
   }).catch(() => null)
   return { sent: !!r?.ok }
 }
@@ -130,8 +131,7 @@ export async function sendEmailCode(user) {
     body: JSON.stringify({
       from: process.env.EMAIL_FROM || 'VOIDAJ <hello@voidaj.com>',
       to: [user.email],
-      subject: `${code} is your VOIDAJ code`,
-      text: `Hi ${String(user.name || '').split(' ')[0] || 'there'},\n\nYour VOIDAJ confirmation code is ${code}. It works for 30 minutes.\n\nIf you didn’t make a VOIDAJ account, you can ignore this email.`,
+      ...codeEmail({ name: user.name, code, minutes: CODE_MS / 60000 }),
     }),
   }).catch(() => null)
   return { sent: !!r?.ok }

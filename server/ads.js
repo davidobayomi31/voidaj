@@ -19,6 +19,7 @@ import q, { serializeAd, publicUser, getUserById } from './db.js'
 import { requireAuth } from './auth.js'
 import { uploadImage, readImage, storageReady } from './storage.js'
 import * as guard from './guard.js'
+import { adReceivedEmail, adDecisionEmail } from './email-templates.js'
 
 const now = () => Date.now()
 const err = (res, code, msg) => res.status(code).json({ error: msg })
@@ -82,8 +83,8 @@ export function adRoutes(app) {
     const who = req.userRow.name || 'A member'
     guard.sendMail(adsNotifyEmail(), `New advert request: ${businessName}`,
       `${who} (${req.userRow.email || 'no email'}) asked to advertise “${businessName}”.\n\n“${row.tagline}”\nContact: ${contactEmail}${row.phone ? ` · ${row.phone}` : ''}${link ? `\nLink: ${link}` : ''}\n\nReview it in Admin → Ads.`).catch(() => {})
-    guard.sendMail(contactEmail, 'We got your VOIDAJ advert request',
-      `Hi ${String(who).split(' ')[0]},\n\nThanks. We’ve received your request to advertise “${businessName}” on VOIDAJ. Someone on the team will look at it and reply here, usually within a day.\n\nNothing is charged until you’ve agreed the details with us.\n\nVOIDAJ`).catch(() => {})
+    const received = adReceivedEmail({ name: who, business: businessName })
+    guard.sendMail(contactEmail, received.subject, received.text, received.html).catch(() => {})
     res.json({ ad: mine(row) })
   })
 
@@ -118,11 +119,8 @@ export function adRoutes(app) {
     else await q.run("UPDATE ads SET active = 0, status = 'rejected', review_note = ?, reviewed_at = ? WHERE id = ?", note, now(), row.id)
 
     if (row.status === 'pending' && row.contact_email) {
-      const first = String((await getUserById(row.owner_id))?.name || '').split(' ')[0] || 'there'
-      const text = decision === 'approve'
-        ? `Hi ${first},\n\nGood news: your advert for “${row.business_name}” has been approved and is live on VOIDAJ.\n\nVOIDAJ`
-        : `Hi ${first},\n\nWe couldn’t approve your advert for “${row.business_name}” yet.\n\nReason: ${note}\n\nYou’re welcome to send a new request with that changed.\n\nVOIDAJ`
-      guard.sendMail(row.contact_email, decision === 'approve' ? 'Your VOIDAJ advert is live' : 'About your VOIDAJ advert request', text).catch(() => {})
+      const decided = adDecisionEmail({ name: (await getUserById(row.owner_id))?.name, business: row.business_name, approved: decision === 'approve', note })
+      guard.sendMail(row.contact_email, decided.subject, decided.text, decided.html).catch(() => {})
     }
     res.json({ ad: mine(await q.get('SELECT * FROM ads WHERE id = ?', row.id)) })
   })
