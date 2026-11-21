@@ -50,7 +50,19 @@ const SAMPLE_COVERS = {
   'Kano Spice House': '/images/city/kano.jpg',
   'Ibadan Print Hub': '/images/city/ibadan.jpg',
 }
-export const coverOf = (ad) => ad.cover || SAMPLE_COVERS[ad.businessName] || ''
+
+// An ad with no cover of its own, and no example picture, still gets a
+// photo rather than a bare gradient. Which one is picked from the business
+// name, so an ad always shows the same picture and neighbours differ.
+const DEFAULT_COVERS = [
+  '/images/communities/lagos-entrepreneurs.jpg',
+  '/images/communities/african-startup-network.jpg',
+  '/images/events/ev-asn-demo-day.jpg',
+  '/images/events/ev-photo-walk.jpg',
+  '/images/city/enugu.jpg',
+]
+const defaultCover = (name) => DEFAULT_COVERS[[...String(name || '')].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % DEFAULT_COVERS.length]
+export const coverOf = (ad) => ad.cover || SAMPLE_COVERS[ad.businessName] || defaultCover(ad.businessName)
 
 // The advertiser's logo if they gave one, otherwise a monogram from the
 // name in their own accent colour, inside a ring like a profile picture.
