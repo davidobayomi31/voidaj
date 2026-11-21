@@ -146,6 +146,7 @@ function useAttentionCount() {
 // name and the menu opens upward from the foot of the nav.
 function ProfileMenu({ inSide = false }) {
   const { user, logout } = useApp()
+  const attention = useAttentionCount()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const location = useLocation()
@@ -181,6 +182,7 @@ function ProfileMenu({ inSide = false }) {
           <Link role="menuitem" to="/badges"><Icon name="award" size={15} /> My Badges</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
           {user.isAdmin && <Link role="menuitem" to="/admin"><Icon name="lock" size={15} /> Admin</Link>}
+          <Link role="menuitem" to="/notifications"><Icon name="bell" size={15} /> Notifications{attention > 0 && <b className="bar-badge menu-badge">{attention > 9 ? '9+' : attention}</b>}</Link>
           <Link role="menuitem" to="/settings"><Icon name="edit" size={15} /> Settings</Link>
           <button role="menuitem" onClick={logout}><Icon name="log-out" size={15} /> Sign out</button>
         </div>
@@ -308,11 +310,7 @@ function SideNav() {
         )}
         {user ? (
           <>
-            <NavLink to="/notifications" title="Notifications" aria-label={attention ? `Notifications, ${attention} new` : 'Notifications'}>
-              <span className="sidenav-icon"><Icon name="bell" size={18} />{attention > 0 && <b className="bar-badge">{attention > 9 ? '9+' : attention}</b>}</span>
-              <span>Notifications</span>
-            </NavLink>
-            <NavLink to="/settings" title="Settings"><Icon name="settings" size={18} /> <span>Settings</span></NavLink>
+            {/* Notifications and Settings live in the profile menu (Nuel, Nov 19: "This should go away"). */}
             <ProfileMenu inSide />
           </>
         ) : (

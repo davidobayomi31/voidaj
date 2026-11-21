@@ -12,6 +12,7 @@ import { Icon, IconTile } from '../components/Icons.jsx'
 import { Avatar } from '../components/bits.jsx'
 import { Eagle } from '../components/Eagle.jsx'
 import { FEATURES } from '../features.js'
+import { CONTACT_EMAIL } from '../contact.js'
 import { COUNTRIES, flagOf, countryName } from '../countries.js'
 import { VERIFICATION_IS_REAL } from '../verification.js'
 import { IdVerify } from '../components/IdVerify.jsx'
@@ -586,6 +587,10 @@ function Help() {
             {send.note}
           </div>
         </form>
+      </Block>
+
+      <Block title="Support contact email" sub="Prefer email? Write to us and a person will reply.">
+        <a className="btn brand-outline small" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
       </Block>
 
       {FEATURES.companion && (
