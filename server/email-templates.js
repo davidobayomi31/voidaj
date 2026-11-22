@@ -60,7 +60,7 @@ export function codeEmail({ name, code, minutes = 30 }) {
 // box (a reason, a name). Used for the advert emails.
 const firstName = (name) => String(name || '').trim().split(/\s+/)[0] || 'there'
 
-function noticeEmail({ subject, name, heading, paragraphs, callout, preheader }) {
+export function noticeEmail({ subject, name, heading, paragraphs, callout, preheader }) {
   const first = firstName(name)
   const p = (t, extra = '') => `        <p style="margin:0 0 16px;font-size:15px;line-height:23px;color:#44444d;${extra}">${esc(t)}</p>`
   const box = callout

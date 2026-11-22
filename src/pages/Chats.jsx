@@ -17,6 +17,7 @@ import * as api from '../api.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { MediaButtons, MediaTray, MediaView } from '../components/Media.jsx'
 import { showVerifiedTick } from '../verification.js'
+import { moneyTalk } from '../money-words.js'
 
 // ── Helpers ────────────────────────────────────────────────────────────
 const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR
@@ -61,6 +62,12 @@ function OriginCard({ context, compact = false }) {
       <Icon name="chevron-right" size={18} />
     </Link>
   )
+}
+
+// A quiet note under messages about paying outside VOIDAJ or "I've paid
+// you" alerts (moneyTalk in src/money-words.js), and on job chats.
+function MoneyNote() {
+  return <p className="dm-money-note"><Icon name="shield" size={12} /> Money paid outside VOIDAJ isn’t protected, and a screenshot or SMS alert isn’t proof of payment. For a job, only trust the payment status on the job page.</p>
 }
 
 // The chip under a name in the inbox.
@@ -142,6 +149,7 @@ function Thread({ messages, meId, other, isGroup, intro }) {
               {m.context && <OriginCard context={m.context} compact />}
               {m.media?.length > 0 && <div className="dm-media" title={stamp(m.createdAt)}><MediaView media={m.media} /></div>}
               {m.body && <div className="dm-bubble" title={stamp(m.createdAt)}>{m.body}</div>}
+              {!isGroup && !mine && moneyTalk(m.body) && <MoneyNote />}
               {last && <Delivery m={m} mine={mine} isGroup={isGroup} />}
             </div>
           </div>
@@ -465,6 +473,7 @@ export default function Chats() {
                 <Link to={`/profile/${dmUser.id}`} className="dm-icon-btn" aria-label="Profile details"><Icon name="info" size={24} /></Link>
               </header>
               {(threadContext || pending) && <div className="dm-origin-bar"><OriginCard context={threadContext && !pending ? threadContext : { ...pending, link: pendingLink(pending) }} /></div>}
+              {(threadContext || pending)?.kind === 'job' && <MoneyNote />}
               <Thread
                 messages={messages} meId={user.id} other={dmUser}
                 intro={(

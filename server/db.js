@@ -809,6 +809,171 @@ CREATE INDEX IF NOT EXISTS service_photos_job ON service_photos (job_id, positio
 -- Until now the badge was self-assigned. Accounts that already have it keep
 -- it (David, Nov 19: the ten live members stay verified). New badges only come
 -- from an approved ID check; an admin can still remove one in Admin > ID checks.
+-- Quick Job payments with Paystack (server/payments.js). VOIDAJ takes no cut
+-- and never holds the money: the worker has a Paystack subaccount, and the
+-- poster's saved card is charged straight to it when the job is done.
+CREATE TABLE IF NOT EXISTS payout_accounts (
+  user_id TEXT PRIMARY KEY,
+  subaccount_code TEXT NOT NULL,
+  bank_code TEXT,
+  bank_name TEXT,
+  account_name TEXT,
+  last4 TEXT,
+  created_at BIGINT
+);
+CREATE TABLE IF NOT EXISTS payment_cards (
+  user_id TEXT PRIMARY KEY,
+  authorization_code TEXT NOT NULL,
+  email TEXT NOT NULL,
+  brand TEXT,
+  last4 TEXT,
+  exp TEXT,
+  bank TEXT,
+  created_at BIGINT
+);
+CREATE TABLE IF NOT EXISTS job_payments (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  payer_id TEXT NOT NULL,
+  payee_id TEXT NOT NULL,
+  amount BIGINT NOT NULL,
+  fee BIGINT NOT NULL,
+  currency TEXT NOT NULL,
+  reference TEXT UNIQUE,
+  status TEXT DEFAULT 'awaiting',
+  failure TEXT DEFAULT '',
+  created_at BIGINT,
+  paid_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS job_payments_job ON job_payments (job_id, created_at);
+-- Card checks (a small charge that is refunded) the server has started,
+-- so a returning reference can be tied to the person who started it.
+CREATE TABLE IF NOT EXISTS payment_setups (
+  reference TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  job_id TEXT,
+  created_at BIGINT,
+  done_at BIGINT
+);
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS amount BIGINT;
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS currency TEXT;
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS fee BIGINT;
+-- Keeping both sides honest on paid jobs (server/job-safety.js).
+-- A payment row is one charge: the job itself, a part paid up front, or a
+-- cancellation fee. Failed charges are retried by themselves (Uber-style),
+-- and the poster is reminded before an automatic charge.
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS kind TEXT DEFAULT 'job';
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 0;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS next_try_at BIGINT;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS reminded INTEGER DEFAULT 0;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS was_due INTEGER DEFAULT 0;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS how TEXT DEFAULT '';
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS evidence TEXT;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS chargeback_at BIGINT;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS chargeback_status TEXT;
+-- An agreement can include a part paid when the work starts, and a count
+-- of "please fix this" rounds the poster has asked for.
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS upfront BIGINT;
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS change_rounds INTEGER DEFAULT 0;
+-- A fingerprint of the card (Paystack's signature), to spot one card on
+-- several accounts, and a keyed hash of the payout account number.
+ALTER TABLE payment_cards ADD COLUMN IF NOT EXISTS signature TEXT;
+ALTER TABLE payout_accounts ADD COLUMN IF NOT EXISTS account_hash TEXT;
+-- Changing where you get paid needs a code from your email and only takes
+-- effect 24 hours later; until then payments go to the old account and
+-- the change can be cancelled.
+CREATE TABLE IF NOT EXISTS payout_changes (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  bank_code TEXT NOT NULL,
+  bank_name TEXT,
+  account_name TEXT,
+  last4 TEXT,
+  account_number TEXT,
+  account_hash TEXT,
+  subaccount_code TEXT,
+  code_hash TEXT,
+  code_expires BIGINT,
+  tries INTEGER DEFAULT 0,
+  confirmed_at BIGINT,
+  effective_at BIGINT,
+  applied_at BIGINT,
+  cancelled_at BIGINT,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS payout_changes_user ON payout_changes (user_id, created_at);
+-- Everything that happens on a job, with who did it and from where: the
+-- record the team uses for disputes and to answer a bank chargeback.
+CREATE TABLE IF NOT EXISTS job_events (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  user_id TEXT,
+  action TEXT NOT NULL,
+  detail TEXT DEFAULT '',
+  ip TEXT DEFAULT '',
+  user_agent TEXT DEFAULT '',
+  at BIGINT
+);
+CREATE INDEX IF NOT EXISTS job_events_job ON job_events (job_id, at);
+-- Photos of the finished work, and evidence attached to a problem report.
+-- Kept in the database and shown only to the two people and the team.
+CREATE TABLE IF NOT EXISTS job_photos (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  dispute_id TEXT,
+  src TEXT NOT NULL,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS job_photos_job ON job_photos (job_id, created_at);
+-- A new price either side proposes once work is agreed; the other accepts.
+CREATE TABLE IF NOT EXISTS job_price_changes (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  by_id TEXT NOT NULL,
+  price TEXT,
+  amount BIGINT NOT NULL,
+  note TEXT DEFAULT '',
+  status TEXT DEFAULT 'pending',
+  created_at BIGINT,
+  answered_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS job_price_changes_job ON job_price_changes (job_id, created_at);
+-- No-shows: the poster says the worker never came. Counts on the worker's
+-- record unless the team overturns it.
+CREATE TABLE IF NOT EXISTS job_no_shows (
+  job_id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  reported_by TEXT NOT NULL,
+  overturned INTEGER DEFAULT 0,
+  created_at BIGINT
+);
+-- Problem reports: what kind, the other side's answer, and how it ended.
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'other';
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS response TEXT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS responded_at BIGINT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS outcome TEXT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS paid_amount BIGINT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS unfounded INTEGER DEFAULT 0;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS resolved_at BIGINT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS resolver_id TEXT;
+-- Things the team should look at: the same card or bank on two accounts,
+-- two accounts on one connection, a chargeback.
+CREATE TABLE IF NOT EXISTS risk_flags (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  other_id TEXT,
+  job_id TEXT,
+  kind TEXT NOT NULL,
+  detail TEXT DEFAULT '',
+  created_at BIGINT,
+  cleared_at BIGINT,
+  cleared_by TEXT
+);
+CREATE INDEX IF NOT EXISTS risk_flags_open ON risk_flags (cleared_at, created_at);
 `
 
 // ── Roles ────────────────────────────────────────────────────────────

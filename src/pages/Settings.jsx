@@ -4,7 +4,7 @@
 // Payments (coming soon), Appearance, Security, Preferences, Help &
 // Support, Terms & Policies and Data.
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, NavLink, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { TAGS, CHARTER } from '../data/seed.js'
@@ -22,7 +22,7 @@ const SECTIONS = [
   { id: 'privacy', icon: 'eye', tone: 'violet', label: 'Privacy', sub: 'Who sees your location and can message you' },
   { id: 'notifications', icon: 'bell', tone: 'orange', label: 'Notifications', sub: 'What you hear about, and how' },
   { id: 'verification', icon: 'badge-check', tone: 'green', label: 'Verification', sub: 'Identity and the Verified tick' },
-  { id: 'payments', icon: 'wallet', tone: 'teal', label: 'Payments', sub: 'Wallet, payment methods — coming soon' },
+  { id: 'payments', icon: 'wallet', tone: 'teal', label: 'Payments', sub: 'Get paid for jobs, your card for hiring' },
   { id: 'appearance', icon: 'moon', tone: 'indigo', label: 'Appearance', sub: 'Light or dark mode' },
   { id: 'security', icon: 'lock', tone: 'red', label: 'Security', sub: 'Sign-ins and devices' },
   { id: 'preferences', icon: 'sparkle', tone: 'pink', label: 'Preferences', sub: 'Language, location, accessibility, interests' },
@@ -91,29 +91,167 @@ function Verification() {
   )
 }
 
-// From Nuel's payment designs (Oct 27). Not built yet — see DO-LATER.md.
+// Quick Job payments are live once Paystack is switched on
+// (server/payments.js); the rest of Nuel's Oct 27 payment designs are still
+// to come (DO-LATER.md).
+const PAY_SOON = [
+  ['wallet', 'Wallet', 'Add funds and pay for things on VOIDAJ'],
+  ['rocket', 'Promote a business or post', 'Plans from a few days to two weeks'],
+  ['award', 'Premium', 'Custom profile designs, advanced search, priority support'],
+  ['ticket', 'Event tickets', 'Regular, VIP and group tickets'],
+  ['heart', 'Support a creator', 'One-off or monthly tips'],
+]
+
+function PaySoonList({ withJobs }) {
+  const rows = withJobs ? [...PAY_SOON, ['hand-coins', 'Quick Job payments', 'The worker gets the full price, straight to their bank']] : PAY_SOON
+  return (
+    <ul className="settings-pay-list">
+      {rows.map(([icon, title, sub]) => (
+        <li key={title} className="card"><Icon name={icon} size={18} /><span><b>{title}</b><em>{sub}</em></span><span className="soon-badge">Soon</span></li>
+      ))}
+    </ul>
+  )
+}
+
+// A worker's bank account, which Paystack pays job money into. Adding or
+// changing it takes a code from the member's email; a change takes effect
+// 24 hours later and can be cancelled until then (server/payments.js).
+const fmtWhen = (t) => new Date(t).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+
+function PayoutCode({ pending, onSaved }) {
+  const [code, setCode] = useState('')
+  const save = useSaver()
+  const cancel = useSaver()
+  return (
+    <form className="settings-form" onSubmit={(e) => { e.preventDefault(); save.run(async () => onSaved(await api.confirmPayout(code)), 'Bank account confirmed') }}>
+      <p className="meta-dim">We emailed you a 6-digit code to confirm <b>{pending.bankName} ••••{pending.last4}</b> ({pending.accountName}). It works for 30 minutes.</p>
+      <Field label="Code from your email">
+        <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="482915" required />
+      </Field>
+      <div className="settings-actions">
+        <button type="button" className="btn ghost small" disabled={cancel.busy} onClick={() => cancel.run(async () => onSaved(await api.cancelPayout()))}>Cancel</button>
+        <button className="btn primary small" disabled={save.busy || code.length !== 6}>{save.busy ? 'Checking…' : 'Confirm'}</button>
+        {save.note}
+      </div>
+    </form>
+  )
+}
+
+function PayoutForm({ current, pending, onSaved }) {
+  const [banks, setBanks] = useState(null)
+  const [bankCode, setBankCode] = useState('')
+  const [account, setAccount] = useState('')
+  const [editing, setEditing] = useState(!current)
+  const [banksError, setBanksError] = useState('')
+  const save = useSaver()
+  const cancel = useSaver()
+  useEffect(() => {
+    if (editing && !banks) api.payoutBanks().then(setBanks).catch(() => { setBanks([]); setBanksError('We couldn’t load the list of banks. Try again in a few minutes.') })
+  }, [editing, banks])
+  if (pending && !pending.confirmed) return <PayoutCode pending={pending} onSaved={(r) => { onSaved(r); setEditing(false) }} />
+  if (!editing) {
+    return (
+      <>
+        {current && (
+          <div className="settings-pay-saved">
+            <Icon name="check" size={16} />
+            <span><b>{current.accountName}</b><em>{current.bankName} · ••••{current.last4}</em></span>
+            {!pending && <button className="btn ghost small" onClick={() => setEditing(true)}>Change</button>}
+          </div>
+        )}
+        {pending?.confirmed && (
+          <div className="settings-pay-saved pending">
+            <Icon name="clock" size={16} />
+            <span><b>Changing to {pending.bankName} ••••{pending.last4}</b><em>From {fmtWhen(pending.effectiveAt)}. Until then, payments go to your current account. Wasn’t you? Cancel it and change your password.</em></span>
+            <button className="btn ghost small" disabled={cancel.busy} onClick={() => cancel.run(async () => onSaved(await api.cancelPayout()), 'Change cancelled')}>Cancel change</button>
+          </div>
+        )}
+        {cancel.note}
+      </>
+    )
+  }
+  const submit = (e) => {
+    e.preventDefault()
+    save.run(async () => { const r = await api.savePayout(bankCode, account); onSaved(r); setEditing(false) })
+  }
+  return (
+    <form className="settings-form" onSubmit={submit}>
+      <Field label="Bank">
+        <select className="job-select" value={bankCode} onChange={(e) => setBankCode(e.target.value)} required>
+          <option value="">{banks ? 'Choose your bank' : 'Loading banks…'}</option>
+          {(banks || []).map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
+        </select>
+      </Field>
+      {banksError && <p className="auth-error" role="alert">{banksError}</p>}
+      <Field label="Account number" hint={current ? 'We check the name on the account with your bank and email you a code. The change takes effect 24 hours later.' : '10 digits. We check the name on the account with your bank and email you a code.'}>
+        <input value={account} onChange={(e) => setAccount(e.target.value.replace(/\D/g, '').slice(0, 10))} inputMode="numeric" placeholder="0123456789" required />
+      </Field>
+      <div className="settings-actions">
+        {current && <button type="button" className="btn ghost small" onClick={() => setEditing(false)}>Cancel</button>}
+        <button className="btn primary small" disabled={save.busy || !bankCode || account.length !== 10}>{save.busy ? 'Checking…' : 'Continue'}</button>
+        {save.note}
+      </div>
+    </form>
+  )
+}
+
 function Payments() {
-  const rows = [
-    ['wallet', 'Wallet', 'Add funds and pay for things on VOIDAJ'],
-    ['tag', 'Payment methods', 'Card, bank transfer, mobile money, Apple Pay, Google Pay'],
-    ['rocket', 'Promote a business or post', 'Plans from a few days to two weeks'],
-    ['award', 'Premium', 'Custom profile designs, advanced search, priority support'],
-    ['ticket', 'Event tickets', 'Regular, VIP and group tickets'],
-    ['hand-coins', 'Quick Job payments', 'Held safely until the job is done'],
-    ['heart', 'Support a creator', 'One-off or monthly tips'],
-    ['clock', 'Transaction history', 'Everything you’ve paid and received'],
-  ]
+  const [me, setMe] = useState(null)
+  const [params, setParams] = useSearchParams()
+  const [note, setNote] = useState(null)
+  const card = useSaver()
+  useEffect(() => { api.myPayments().then(setMe).catch(() => setMe({ enabled: false })) }, [])
+  // Back from Paystack after saving a card.
+  const reference = params.get('reference') || params.get('trxref')
+  useEffect(() => {
+    if (params.get('paystack') !== 'card' || !reference) return
+    api.verifyPayment(reference)
+      .then((r) => { setMe(r); setNote(r.ok ? { ok: true, text: 'Card saved. The ₦50 check is being returned to your card; your bank may take a few days to show it.' } : { ok: false, text: 'That card couldn’t be saved. Try another card.' }) })
+      .catch((e) => setNote({ ok: false, text: e.message }))
+      .finally(() => setParams((p) => { p.delete('paystack'); p.delete('reference'); p.delete('trxref'); return p }, { replace: true }))
+  }, [reference]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!me) return <p className="meta-dim">Loading…</p>
+  if (!me.enabled) {
+    return (
+      <>
+        <div className="card settings-soon-card">
+          <IconTile name="wallet" tone="teal" size={52} />
+          <div><strong>Payments are coming soon</strong><span className="meta-dim">Here’s what’s on the way.</span></div>
+        </div>
+        <PaySoonList withJobs />
+      </>
+    )
+  }
+  const addCard = () => card.run(async () => { window.location.href = await api.startCardSetup() }, 'Opening Paystack…')
   return (
     <>
-      <div className="card settings-soon-card">
-        <IconTile name="wallet" tone="teal" size={52} />
-        <div><strong>Payments are coming soon</strong><span className="meta-dim">Here’s what’s on the way.</span></div>
-      </div>
-      <ul className="settings-pay-list">
-        {rows.map(([icon, title, sub]) => (
-          <li key={title} className="card"><Icon name={icon} size={18} /><span><b>{title}</b><em>{sub}</em></span><span className="soon-badge">Soon</span></li>
-        ))}
-      </ul>
+      <Block title="Get paid for jobs" sub="When you do a paid Quick Job, the full agreed price goes straight to this account. VOIDAJ takes no cut and never holds the money.">
+        <PayoutForm current={me.payout} pending={me.pendingPayout} onSaved={setMe} />
+      </Block>
+
+      <Block title="Card for hiring" sub="Saved securely by Paystack. It’s only charged when a job you hired for is done: the agreed price plus the card processing fee. It can’t be removed while a job you hired for is still going, but you can replace it.">
+        {me.card ? (
+          <div className="settings-pay-saved">
+            <Icon name="wallet" size={16} />
+            <span><b>{me.card.brand} ••••{me.card.last4}</b><em>{[me.card.bank, me.card.exp && `expires ${me.card.exp}`].filter(Boolean).join(' · ')}</em></span>
+            <button className="btn ghost small" disabled={card.busy} onClick={addCard}>Replace</button>
+            <button className="btn ghost small" disabled={card.busy} onClick={() => card.run(async () => setMe(await api.removeCard()), 'Card removed')}>Remove</button>
+          </div>
+        ) : (
+          <div className="settings-actions">
+            <button className="btn primary small" disabled={card.busy} onClick={addCard}>
+              <Icon name="plus" size={14} /> Add a card
+            </button>
+            <span className="meta-dim">We check it with a ₦50 charge that’s returned to you. Your bank may take a few days to show it.</span>
+          </div>
+        )}
+        {card.note}
+        {note && <span className={`settings-note ${note.ok ? 'ok' : 'bad'}`} role="status">{note.ok && <Icon name="check" size={13} />} {note.text}</span>}
+      </Block>
+
+      <div className="side-card-head" style={{ marginTop: 8 }}>Coming soon</div>
+      <PaySoonList />
     </>
   )
 }

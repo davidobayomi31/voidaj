@@ -19,6 +19,7 @@ import { cleanCountry, cleanCurrency, currencyOf, normalisePhone, isTimeZone, fi
 import * as guard from './guard.js'
 import { eventRoutes, eventRole, joinEventCircle } from './events-extra.js'
 import { jobFlowRoutes } from './jobs-flow.js'
+import { paymentRoutes } from './payments.js'
 import { idCheckRoutes, deleteChecksFor } from './id-checks.js'
 import { serviceRoutes } from './services.js'
 import { uniqueHandle, isHandleClash, usernameTaken, USERNAME_RE, tidyCity } from './handles.js'
@@ -39,7 +40,11 @@ const app = express()
 app.use(requestLogger)
 // Photos, voice notes and short videos travel inline in JSON for now, so
 // the body limit sits above the default (see cleanMedia below).
-app.use(express.json({ limit: '25mb' }))
+app.use(express.json({
+  limit: '25mb',
+  // Paystack signs the exact bytes it sent, so the webhook needs them as-is.
+  verify: (req, _res, buf) => { if (req.originalUrl?.startsWith('/api/paystack/webhook')) req.rawBody = buf },
+}))
 app.use(cookieParser())
 
 // Creating the schema and seeding used to happen once at startup, when the
@@ -515,6 +520,13 @@ app.delete('/api/auth/me', requireAuth, async (req, res) => {
   const { password } = req.body || {}
   if (req.userRow.password_hash && !checkPassword(password || '', req.userRow.password_hash)) return err(res, 401, 'That password isn’t right.')
   const id = req.userId
+  // Deleting the account isn't a way out of a paid job: not while someone is
+  // waiting to be paid by you, you're waiting to be paid, or a job you're on
+  // is still going or being looked at by the team (server/job-safety.js).
+  const owes = await q.get(`SELECT 1 FROM job_payments WHERE (payer_id = ? OR payee_id = ?) AND status IN ('awaiting', 'pending', 'charging', 'due') LIMIT 1`, id, id)
+    || await q.get(`SELECT 1 FROM jobs j JOIN job_agreements a ON a.job_id = j.id WHERE (j.poster_id = ? OR j.worker_id = ?) AND a.amount IS NOT NULL
+      AND j.status IN ('selected', 'in_progress', 'disputed') LIMIT 1`, id, id)
+  if (owes) return err(res, 400, 'You have a paid job that isn’t finished or paid yet. Finish it, cancel it, or wait for the VOIDAJ team to decide it, then you can delete your account.')
   const owned = await q.all("SELECT community_id FROM memberships WHERE user_id = ? AND role = 'owner'", id)
   await transaction(async (t) => {
     // A community shouldn't lose its owner: hand it to the most senior,
@@ -538,6 +550,12 @@ app.delete('/api/auth/me', requireAuth, async (req, res) => {
       'DELETE FROM votes WHERE user_id = ?',
       'DELETE FROM ratings WHERE user_id = ?',
       'DELETE FROM login_events WHERE user_id = ?',
+      // The saved card token and payout details (server/payments.js).
+      'DELETE FROM payment_cards WHERE user_id = ?',
+      'DELETE FROM payout_accounts WHERE user_id = ?',
+      'DELETE FROM payout_changes WHERE user_id = ?',
+      // Photos of work and evidence they added to jobs (server/job-safety.js).
+      'DELETE FROM job_photos WHERE user_id = ?',
     ]) await t.run(sql, ...Array((sql.match(/\?/g) || []).length).fill(id))
     await t.run("UPDATE jobs SET status = 'closed' WHERE poster_id = ?", id)
     await t.run('DELETE FROM service_photos WHERE job_id IN (SELECT id FROM jobs WHERE poster_id = ?)', id)
@@ -2025,6 +2043,7 @@ app.post('/api/live/:id/stop', requireAuth, async (req, res) => {
 businessRoutes(app)
 eventRoutes(app)
 jobFlowRoutes(app)
+paymentRoutes(app)
 idCheckRoutes(app)
 serviceRoutes(app)
 adRoutes(app)

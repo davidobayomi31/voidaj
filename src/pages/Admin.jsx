@@ -186,28 +186,93 @@ export default function Admin() {
   )
 }
 
-// Problems reported on Quick Jobs (server/jobs-flow.js). Resolving one
-// closes the job as completed or cancelled.
+// Problems reported on Quick Jobs (server/jobs-flow.js), and the payment
+// checks that need a look (server/job-safety.js). Opening a dispute shows
+// both accounts, the photos and the job's record; deciding it pays the
+// worker in full or in part, or cancels with nothing owed.
+const KIND = { not_done: 'Work not done', poor_quality: 'Poor quality', no_show: 'No-show', not_paid: 'Not paid', damage: 'Damage or theft', off_platform: 'Asked to pay outside VOIDAJ', other: 'Other' }
+const FLAG = { same_person: 'Same person on both sides', shared_connection: 'Same internet connection', shared_bank: 'Bank account on two accounts', shared_card: 'Card on two accounts', name_mismatch: 'Bank name doesn’t match', chargeback: 'Chargeback' }
+const day = (t) => new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+
+function DisputeDetail({ id, onDone }) {
+  const [d, setD] = useState(null)
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
+  const [unfounded, setUnfounded] = useState(false)
+  const [noShow, setNoShow] = useState(false)
+  const [msg, setMsg] = useState('')
+  useEffect(() => { api.adminDispute(id).then(setD).catch((e) => setMsg(e.message)) }, [id])
+  if (!d) return <p className="meta-dim">{msg || 'Loading…'}</p>
+  const decide = async (outcome) => {
+    setMsg('')
+    try {
+      const r = await api.resolveDispute(id, { outcome, amount, note, unfounded, noShow })
+      if (r.warning) window.alert(r.warning)
+      onDone()
+    } catch (e) { setMsg(e.message) }
+  }
+  const open = d.disputeStatus === 'open'
+  return (
+    <div className="admin-dispute-detail">
+      <p><b>{d.byRole === 'poster' ? d.poster?.name : d.worker?.name}</b> ({d.byRole}) · {KIND[d.category] || d.category}: “{d.reason}”</p>
+      <p>{d.response ? <><b>Answer:</b> “{d.response}”</> : <span className="meta-dim">No answer yet (due {day(d.respondBy)})</span>}</p>
+      {d.agreement && <p className="meta-dim">Agreed: {d.agreement.price}{d.agreement.terms ? ` · ${d.agreement.terms}` : ''} · sent back {d.agreement.changeRounds}×</p>}
+      {d.payments.map((p) => <p key={p.id} className="meta-dim">{p.kind}: {p.label} · {p.status}{p.chargeback ? ` · chargeback ${p.chargeback}` : ''}</p>)}
+      {d.photos.length > 0 && <div className="job-photos"><div>{d.photos.map((p) => <a key={p.id} href={p.url} target="_blank" rel="noreferrer" title={p.purpose}><img src={p.url} alt={p.purpose} /></a>)}</div></div>}
+      <details><summary>Job record ({d.events.length})</summary>
+        <ul className="admin-events">{d.events.map((e, i) => <li key={i}>{day(e.at)} · <b>{e.by}</b> · {e.action}{e.detail ? ` (${e.detail})` : ''}{e.ip ? ` · ${e.ip}` : ''}</li>)}</ul>
+      </details>
+      {open && (
+        <div className="admin-decide">
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note to both (optional)" maxLength={600} />
+          <label className="check-row"><input type="checkbox" checked={unfounded} onChange={(e) => setUnfounded(e.target.checked)} /> The report was made up</label>
+          <label className="check-row"><input type="checkbox" checked={noShow} onChange={(e) => setNoShow(e.target.checked)} /> Count a no-show against the worker</label>
+          <span className="composer-foot">
+            <button className="btn ghost small" onClick={() => decide('cancel')}>Cancel, nothing owed</button>
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Part, e.g. 10,000" maxLength={20} style={{ width: 130 }} />
+            <button className="btn ghost small" disabled={!amount} onClick={() => decide('pay_part')}>Pay part</button>
+            <button className="btn primary small" onClick={() => decide('pay_full')}>Pay in full</button>
+          </span>
+        </div>
+      )}
+      {msg && <p className="auth-error" role="alert">{msg}</p>}
+    </div>
+  )
+}
+
 function AdminDisputes() {
   const [list, setList] = useState(null)
-  const load = () => api.adminDisputes().then(setList).catch(() => setList([]))
+  const [flags, setFlags] = useState([])
+  const [openId, setOpenId] = useState('')
+  const load = () => {
+    api.adminDisputes().then(setList).catch(() => setList([]))
+    api.adminFlags().then(setFlags).catch(() => setFlags([]))
+  }
   useEffect(() => { load() }, [])
   if (!list) return <p className="meta-dim">Loading…</p>
-  if (!list.length) return <p className="meta-dim empty-note">No job disputes.</p>
-  const resolve = async (id, outcome) => { await api.resolveDispute(id, outcome); load() }
   return (
     <div className="stack">
+      {flags.length > 0 && (
+        <div className="card admin-dispute">
+          <b><Icon name="shield" size={15} /> Payment checks ({flags.length})</b>
+          <ul className="admin-flags">
+            {flags.map((f) => (
+              <li key={f.id}>
+                <span><b>{FLAG[f.kind] || f.kind}</b> · {f.user?.name}{f.other ? ` and ${f.other.name}` : ''}{f.jobId ? <> · <Link to={`/jobs?job=${f.jobId}`}>job</Link></> : ''}<em className="meta-dim"> {f.detail}</em></span>
+                <button className="btn ghost small" onClick={async () => { await api.clearFlag(f.id); load() }}>Looked at it</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {!list.length && <p className="meta-dim empty-note">No job disputes.</p>}
       {list.map((d) => (
         <div key={d.id} className="card admin-dispute">
           <b><Link to={`/jobs?job=${d.jobId}`}>{d.jobTitle}</Link></b>
-          <p>“{d.reason}”</p>
-          <em className="meta-dim">Raised by {d.by?.name} · {new Date(d.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · {d.status}</em>
-          {d.status === 'open' && (
-            <span className="composer-foot">
-              <button className="btn ghost small" onClick={() => resolve(d.id, 'cancelled')}>Close as cancelled</button>
-              <button className="btn primary small" onClick={() => resolve(d.id, 'completed')}>Close as completed</button>
-            </span>
-          )}
+          <p>{KIND[d.category] || 'Other'}: “{d.reason}”</p>
+          <em className="meta-dim">Raised by {d.by?.name} · {day(d.at)} · {d.status === 'open' ? (d.answered ? 'answered' : `answer due ${day(d.respondBy)}`) : `decided: ${d.outcome || 'closed'}`}</em>
+          <span className="composer-foot"><button className="btn ghost small" onClick={() => setOpenId(openId === d.id ? '' : d.id)}>{openId === d.id ? 'Close' : d.status === 'open' ? 'Look at it' : 'Details'}</button></span>
+          {openId === d.id && <DisputeDetail id={d.id} onDone={() => { setOpenId(''); load() }} />}
         </div>
       ))}
     </div>
