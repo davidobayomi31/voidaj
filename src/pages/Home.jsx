@@ -208,12 +208,20 @@ function Hero({ user, first, city: homeCity, counts, me }) {
   const place = user && homeCity ? findCity(homeCity, user.country) : null
   const [clear, setClear] = useState(false)
   const mode = useMode()
+  const navigate = useNavigate()
+  // Events with a place, pinned on the map: members' events (placed by the
+  // server) and the demo city calendar.
+  const [mapEvents, setMapEvents] = useState(() => EVENTS.filter((e) => e.lat != null))
+  useEffect(() => {
+    if (!place) return
+    api.eventsMap().then((evs) => setMapEvents([...evs, ...EVENTS.filter((e) => e.lat != null)])).catch(() => {})
+  }, [place?.name]) // eslint-disable-line react-hooks/exhaustive-deps
   const hour = new Date().getHours()
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   return (
     <section className={`hero-x hero-x-clear${place ? ' hero-x-mapped' : ''}${place && clear ? ' hero-x-see' : ''}`}>
       {place
-        ? <Suspense fallback={<HeroSlides photos={photos} />}><HeroMap lon={place.lon} lat={place.lat} mode={mode} label={`Map of ${city}`} /></Suspense>
+        ? <Suspense fallback={<HeroSlides photos={photos} />}><HeroMap lon={place.lon} lat={place.lat} mode={mode} label={`Map of ${city}`} events={mapEvents} onOpenEvent={(e) => navigate(`/event/${e.id}`)} /></Suspense>
         : <HeroSlides key={photos.map((p) => p.src).join()} photos={photos} />}
       <div className="hero-x-shade" aria-hidden="true" />
       {place && (

@@ -378,3 +378,16 @@
 .bd-art.has-img::after { z-index: 1; }
 .bd-img-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .job-results { scroll-margin-top: 80px; }
+
+/* Events on the Home map: a white pill with a pink calendar dot, on a stalk. */
+.hm-ev { display: flex; flex-direction: column; align-items: center; border: 0; padding: 0; background: none; cursor: pointer; font: inherit; }
+.hm-ev-pill { display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; border-radius: 999px; background: #fff; color: #111; box-shadow: 0 2px 10px rgba(0,0,0,.28); white-space: nowrap; }
+.hm-ev-pill i { width: 18px; height: 18px; border-radius: 50%; background: #E11D74 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'%3E%3Crect x='4' y='5' width='16' height='15' rx='2'/%3E%3Cpath d='M4 10h16M9 3v4M15 3v4'/%3E%3C/svg%3E") center / 11px no-repeat; flex: none; }
+.hm-ev-pill b { font-size: 12px; font-weight: 650; }
+.hm-ev-dot { width: 2px; height: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.hm-ev:hover .hm-ev-pill, .hm-ev:focus-visible .hm-ev-pill { background: #111; color: #fff; }
+:root[data-mode="dark"] .hm-ev-pill { background: #1E1B2E; color: #F4F2FF; }
+:root[data-mode="dark"] .hm-ev-dot { background: #1E1B2E; }
+/* Behind the panel the pins are scenery; "See map" makes them tappable. */
+.hero-x:not(.hero-x-see) .hm-ev { pointer-events: none; }
+.hero-x:not(.hero-x-see) .hm-ev-pill b { display: none; }
