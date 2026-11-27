@@ -83,7 +83,7 @@ const MOBILE = [
   { to: '/explore', icon: 'compass', short: 'Explore' },
   { to: '/add', icon: 'plus', short: 'Hub', center: true },
   { to: '/chats', icon: 'message-circle', short: 'Chat', unread: true },
-  { to: '/profile/me', icon: 'user', short: 'Profile' },
+  { to: '/profile/me', icon: 'user', short: 'You', menu: true },
 ]
 
 // A way back from every page (Nuel, Nov 11, on the Events back button: "I
@@ -147,7 +147,7 @@ function useAttentionCount() {
 
 // `inSide` is the side nav version: the avatar sits beside the member's
 // name and the menu opens upward from the foot of the nav.
-function ProfileMenu({ inSide = false }) {
+function ProfileMenu({ inSide = false, inBar = false }) {
   const { user, logout } = useApp()
   const attention = useAttentionCount()
   const [open, setOpen] = useState(false)
@@ -164,9 +164,10 @@ function ProfileMenu({ inSide = false }) {
   }, [open])
 
   return (
-    <div className={`profile-menu ${inSide ? 'in-side' : ''}`} ref={ref}>
+    <div className={`profile-menu ${inSide ? 'in-side' : ''} ${inBar ? 'in-bar' : ''}`} ref={ref}>
       <button className="me-chip" aria-label="Profile menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} title={user.name}>
-        <Avatar user={user} size={32} />
+        <Avatar user={user} size={inBar ? 24 : 32} />
+        {inBar && <span className="me-chip-label">You</span>}
         {inSide && <span className="me-chip-name"><strong>{user.name}</strong><em>{user.handle}</em></span>}
       </button>
       {open && (
@@ -255,7 +256,7 @@ function Header() {
               <Icon name="bell" size={19} />
               {attention > 0 && <span className="bar-badge">{attention > 9 ? '9+' : attention}</span>}
             </NavLink>
-            <ProfileMenu />
+            <span className="top-me"><ProfileMenu /></span>
           </>
         ) : (
           <Link to="/auth" className="btn primary small">Step into VOIDAJ</Link>
@@ -331,7 +332,10 @@ function MobileNav() {
   if (IMMERSIVE.includes(location.pathname)) return null
   return (
     <nav className="mobile-nav" aria-label="Primary (mobile)">
-      {(user ? MOBILE : VISITOR_MOBILE).map((n) => n.center ? (
+      {(user ? MOBILE : VISITOR_MOBILE).map((n) => n.menu ? (
+        // Your avatar and its menu live here on phones, not twice (Nuel, Nov 28).
+        <ProfileMenu key="me" inBar />
+      ) : n.center ? (
         <NavLink key={n.to} to={n.to} className="mobile-nav-add" aria-label={n.short}>
           <span className="mobile-nav-plus"><Icon name="plus" size={24} /></span><span>{n.short}</span>
         </NavLink>

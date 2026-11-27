@@ -316,3 +316,17 @@
 .dm-origin.compact b { font-size: 12.5px; }
 .dm-origin.compact em { font-size: 11px; }
 .dm-origin.compact img { width: 26px; height: 26px; }
+/* Phones: your avatar menu sits in the bottom bar, not the top (Nuel, Nov 28). */
+.profile-menu.in-bar { display: flex; flex: 1; justify-content: center; }
+.profile-menu.in-bar .me-chip { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0; padding: 4px 0; color: inherit; font-size: 11px; }
+.profile-menu.in-bar .profile-menu-list { top: auto; bottom: calc(100% + 10px); right: 6px; left: auto; }
+@media (max-width: 680px) { .top-me { display: none; } }
+.ef-missing { font-size: 12.5px; margin-right: auto; }
+.event-form .job-form-row.two > * { min-width: 0; width: 100%; }
+.event-form textarea { font: inherit; font-size: 14.5px; line-height: 1.5; }
+/* Menu items keep their usual one-line look inside the phone bar. */
+.mobile-nav .profile-menu-list a, .mobile-nav .profile-menu-list button {
+  flex: none; flex-direction: row; justify-content: flex-start; gap: 10px; width: 100%;
+  padding: 9px 12px; font-size: 14px; font-weight: 500; color: var(--text); text-align: left;
+}
+.profile-menu.in-bar .profile-menu-list { width: min(260px, calc(100vw - 24px)); max-height: calc(100vh - 160px); overflow-y: auto; }
