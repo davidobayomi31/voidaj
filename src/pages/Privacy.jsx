@@ -11,7 +11,7 @@ import { LegalPage, Section } from '../components/LegalPage.jsx'
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy policy" updated="19 November 2026">
+    <LegalPage title="Privacy policy" updated="21 November 2026">
       <p>
         This explains what VOIDAJ collects, who can see it, who else it reaches, and
         what you can do about it. It describes how the service actually behaves today,
@@ -45,6 +45,22 @@ export default function Privacy() {
           kind of ID, the date, and whether it passed (or why not). We never ask for your
           ID number. Verification is optional, and you can ask us to remove the badge.
         </p>
+        <p>
+          <strong>On a Quick Job paid through VOIDAJ</strong>, we keep a record of what
+          happens on it: who hired, accepted, marked it done, confirmed, changed the price,
+          reported a problem or cancelled, when, and the internet address and browser it
+          came from. The team uses it to decide disputes and to answer a bank if a payment
+          is disputed. It is kept for one year, then deleted. Photos you add to a job (of
+          the finished work, or as evidence on a problem report) can be seen only by the
+          two people on the job and the VOIDAJ team.
+        </p>
+        <p>
+          To stop fraud, we also keep a fingerprint of a saved card (from Paystack, not the
+          card number) and a scrambled code made from a payout account number, so we can
+          tell when the same card or bank account is used on more than one VOIDAJ account.
+          When something looks wrong, such as the same person on both sides of a job, the
+          VOIDAJ team is shown a note to look at.
+        </p>
       </Section>
 
       <Section title="Who can see what">
@@ -53,6 +69,12 @@ export default function Privacy() {
           account — can read the feed, profiles, posts and their comments, communities,
           events, jobs and the directory of people offering work. Treat anything you post
           as readable by anyone.
+        </p>
+        <p>
+          <strong>Your job record is public too</strong>, as counts only: how many paid jobs
+          you’ve done, no-shows, and as someone who hires, how many jobs you paid and how
+          many on time, payments still owed, late cancellations and payments disputed with a
+          bank. Reviews from a job show only once both people have left one, or after a week.
         </p>
         <p><strong>Only you and the people involved</strong> can see private messages, group chats, your notifications, your job applications and the offers you make, and your own data export.</p>
         <p><strong>Only you</strong> can see your email address, phone number, date of birth and sign-in history. Administrators of VOIDAJ can also see your email, phone and city in order to run the service.</p>
@@ -84,6 +106,7 @@ export default function Privacy() {
           <li><strong>Vercel</strong> — hosts the site and runs Vercel Web Analytics, a simple visitor counter (see below). Sees the usual request information, including your IP address.</li>
           <li><strong>Supabase</strong> — hosts the database, so everything above is stored there, and holds uploaded images.</li>
           <li><strong>Resend</strong> — sends confirmation emails. Receives your email address, your first name and the code. We send no marketing email of any kind.</li>
+          <li><strong>Paystack</strong> — only if you pay for or get paid for a Quick Job through VOIDAJ. Paystack takes your card details directly; we never see or store your card number, only a token Paystack gives us to charge the card when a job you hired for is done, plus its type, last four digits, expiry and the fingerprint described above. If you get paid, we send Paystack your name, bank and account number so it can pay you, and keep the bank name, the name on the account and its last four digits.</li>
           <li><strong>Google or Apple</strong> — only if you choose to sign in with them. They tell us an account identifier, your email and your name (and Google, a profile photo). We don't send them anything about what you do on VOIDAJ.</li>
           <li><strong>Google Fonts</strong> and <strong>OpenFreeMap</strong> — serve the typeface and the map tiles on My City. Like anything your browser loads, they see your IP address.</li>
         </ul>
@@ -136,7 +159,8 @@ export default function Privacy() {
         <p>We'd rather tell you precisely than say “we delete everything”, because we don't.</p>
         <p><strong>Removed completely:</strong> your email, password, any linked Google or Apple account, your name, handle, biography, phone number, date of birth, location, photos, interests, skills, settings, and your private messages — including the copy held by the person you were talking to. Your memberships, connections, votes and sign-in history go too.</p>
         <p><strong>Kept:</strong> your posts and comments, which stay in the threads they belong to, credited to “Former member” and no longer linked to you. This is so other people's conversations don't fall apart. Communities you owned pass to another member rather than closing.</p>
-        <p><strong>Also kept:</strong> images you uploaded remain in storage and reachable by their direct link, as described above.</p>
+        <p><strong>Also kept:</strong> images you uploaded remain in storage and reachable by their direct link, as described above. The record of paid jobs you were on is kept for a year, as described above, and a note the team made about possible fraud stays with them.</p>
+        <p>While you’re on a paid job that isn’t finished or paid, you can’t delete your account: finish it, cancel it, or wait for the team to decide a problem report first. Photos you added to jobs are deleted with your account.</p>
         <p>If you want a post or comment removed as well, delete it before you delete your account, or write to us and we'll do it.</p>
       </Section>
 

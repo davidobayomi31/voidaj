@@ -388,6 +388,9 @@ ALTER TABLE jobs ADD COLUMN IF NOT EXISTS verified INTEGER DEFAULT 0;
 -- server/storage.js), or a bundled /images/ path. Empty means none.
 ALTER TABLE communities ADD COLUMN IF NOT EXISTS cover TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS cover TEXT DEFAULT '';
+-- How long a community or event stays up before it comes down (Nuel, Nov 21). NULL means no end.
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS expires_at BIGINT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS expires_at BIGINT;
 
 -- Social links on a profile: a JSON list of { kind, value }, where value
 -- is a handle (instagram, x, …) or a full https link (website, other).
@@ -798,6 +801,50 @@ UPDATE ads SET tagline = 'Spices, ground fresh' WHERE business_name = 'Kano Spic
 UPDATE businesses b SET country = COALESCE((SELECT u.country FROM users u WHERE u.id = b.owner_id), 'NG') WHERE b.country IS NULL;
 -- What kind of profile someone chose in onboarding (Nuel, Oct 14 + Nov 18).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_type TEXT DEFAULT 'individual';
+-- Collecting funds for an event (Nuel, Nov 21: "we can collect funds for events").
+-- The host turns it on; people pay through Paystack straight to the host's bank
+-- account (the same subaccount job payments use). VOIDAJ never holds the money.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS fund_open INTEGER DEFAULT 0;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS fund_goal BIGINT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS fund_note TEXT DEFAULT '';
+CREATE TABLE IF NOT EXISTS event_contributions (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL,
+  payer_id TEXT NOT NULL,
+  payee_id TEXT NOT NULL,
+  amount BIGINT NOT NULL,
+  fee BIGINT NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'NGN',
+  reference TEXT UNIQUE,
+  status TEXT DEFAULT 'pending',
+  created_at BIGINT,
+  paid_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS event_contributions_event ON event_contributions (event_id, status);
+-- A sign-up waiting for its emailed code. The account is only made once the
+-- code is confirmed (Nuel, Nov 21: "email confirmation before any account creation").
+CREATE TABLE IF NOT EXISTS pending_signups (
+  email TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  birth_date TEXT,
+  country TEXT,
+  ref TEXT,
+  code_hash TEXT,
+  code_expires BIGINT,
+  tries INTEGER DEFAULT 0,
+  created_at BIGINT
+);
+-- Posts a member has chosen not to see (Nuel, Nov 22: post actions like hide and delete).
+CREATE TABLE IF NOT EXISTS hidden_posts (
+  user_id TEXT NOT NULL,
+  post_id TEXT NOT NULL,
+  created_at BIGINT,
+  PRIMARY KEY (user_id, post_id)
+);
+-- Gender, optional, and whether it shows on the profile (Nuel, Nov 21).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender_public INTEGER DEFAULT 0;
 CREATE TABLE IF NOT EXISTS service_photos (
   id TEXT PRIMARY KEY,
   job_id TEXT NOT NULL,
@@ -809,6 +856,171 @@ CREATE INDEX IF NOT EXISTS service_photos_job ON service_photos (job_id, positio
 -- Until now the badge was self-assigned. Accounts that already have it keep
 -- it (David, Nov 19: the ten live members stay verified). New badges only come
 -- from an approved ID check; an admin can still remove one in Admin > ID checks.
+-- Quick Job payments with Paystack (server/payments.js). VOIDAJ takes no cut
+-- and never holds the money: the worker has a Paystack subaccount, and the
+-- poster's saved card is charged straight to it when the job is done.
+CREATE TABLE IF NOT EXISTS payout_accounts (
+  user_id TEXT PRIMARY KEY,
+  subaccount_code TEXT NOT NULL,
+  bank_code TEXT,
+  bank_name TEXT,
+  account_name TEXT,
+  last4 TEXT,
+  created_at BIGINT
+);
+CREATE TABLE IF NOT EXISTS payment_cards (
+  user_id TEXT PRIMARY KEY,
+  authorization_code TEXT NOT NULL,
+  email TEXT NOT NULL,
+  brand TEXT,
+  last4 TEXT,
+  exp TEXT,
+  bank TEXT,
+  created_at BIGINT
+);
+CREATE TABLE IF NOT EXISTS job_payments (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  payer_id TEXT NOT NULL,
+  payee_id TEXT NOT NULL,
+  amount BIGINT NOT NULL,
+  fee BIGINT NOT NULL,
+  currency TEXT NOT NULL,
+  reference TEXT UNIQUE,
+  status TEXT DEFAULT 'awaiting',
+  failure TEXT DEFAULT '',
+  created_at BIGINT,
+  paid_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS job_payments_job ON job_payments (job_id, created_at);
+-- Card checks (a small charge that is refunded) the server has started,
+-- so a returning reference can be tied to the person who started it.
+CREATE TABLE IF NOT EXISTS payment_setups (
+  reference TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  job_id TEXT,
+  created_at BIGINT,
+  done_at BIGINT
+);
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS amount BIGINT;
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS currency TEXT;
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS fee BIGINT;
+-- Keeping both sides honest on paid jobs (server/job-safety.js).
+-- A payment row is one charge: the job itself, a part paid up front, or a
+-- cancellation fee. Failed charges are retried by themselves (Uber-style),
+-- and the poster is reminded before an automatic charge.
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS kind TEXT DEFAULT 'job';
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 0;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS next_try_at BIGINT;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS reminded INTEGER DEFAULT 0;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS was_due INTEGER DEFAULT 0;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS how TEXT DEFAULT '';
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS evidence TEXT;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS chargeback_at BIGINT;
+ALTER TABLE job_payments ADD COLUMN IF NOT EXISTS chargeback_status TEXT;
+-- An agreement can include a part paid when the work starts, and a count
+-- of "please fix this" rounds the poster has asked for.
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS upfront BIGINT;
+ALTER TABLE job_agreements ADD COLUMN IF NOT EXISTS change_rounds INTEGER DEFAULT 0;
+-- A fingerprint of the card (Paystack's signature), to spot one card on
+-- several accounts, and a keyed hash of the payout account number.
+ALTER TABLE payment_cards ADD COLUMN IF NOT EXISTS signature TEXT;
+ALTER TABLE payout_accounts ADD COLUMN IF NOT EXISTS account_hash TEXT;
+-- Changing where you get paid needs a code from your email and only takes
+-- effect 24 hours later; until then payments go to the old account and
+-- the change can be cancelled.
+CREATE TABLE IF NOT EXISTS payout_changes (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  bank_code TEXT NOT NULL,
+  bank_name TEXT,
+  account_name TEXT,
+  last4 TEXT,
+  account_number TEXT,
+  account_hash TEXT,
+  subaccount_code TEXT,
+  code_hash TEXT,
+  code_expires BIGINT,
+  tries INTEGER DEFAULT 0,
+  confirmed_at BIGINT,
+  effective_at BIGINT,
+  applied_at BIGINT,
+  cancelled_at BIGINT,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS payout_changes_user ON payout_changes (user_id, created_at);
+-- Everything that happens on a job, with who did it and from where: the
+-- record the team uses for disputes and to answer a bank chargeback.
+CREATE TABLE IF NOT EXISTS job_events (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  user_id TEXT,
+  action TEXT NOT NULL,
+  detail TEXT DEFAULT '',
+  ip TEXT DEFAULT '',
+  user_agent TEXT DEFAULT '',
+  at BIGINT
+);
+CREATE INDEX IF NOT EXISTS job_events_job ON job_events (job_id, at);
+-- Photos of the finished work, and evidence attached to a problem report.
+-- Kept in the database and shown only to the two people and the team.
+CREATE TABLE IF NOT EXISTS job_photos (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  dispute_id TEXT,
+  src TEXT NOT NULL,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS job_photos_job ON job_photos (job_id, created_at);
+-- A new price either side proposes once work is agreed; the other accepts.
+CREATE TABLE IF NOT EXISTS job_price_changes (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  by_id TEXT NOT NULL,
+  price TEXT,
+  amount BIGINT NOT NULL,
+  note TEXT DEFAULT '',
+  status TEXT DEFAULT 'pending',
+  created_at BIGINT,
+  answered_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS job_price_changes_job ON job_price_changes (job_id, created_at);
+-- No-shows: the poster says the worker never came. Counts on the worker's
+-- record unless the team overturns it.
+CREATE TABLE IF NOT EXISTS job_no_shows (
+  job_id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  reported_by TEXT NOT NULL,
+  overturned INTEGER DEFAULT 0,
+  created_at BIGINT
+);
+-- Problem reports: what kind, the other side's answer, and how it ended.
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'other';
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS response TEXT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS responded_at BIGINT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS outcome TEXT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS paid_amount BIGINT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS unfounded INTEGER DEFAULT 0;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS resolved_at BIGINT;
+ALTER TABLE job_disputes ADD COLUMN IF NOT EXISTS resolver_id TEXT;
+-- Things the team should look at: the same card or bank on two accounts,
+-- two accounts on one connection, a chargeback.
+CREATE TABLE IF NOT EXISTS risk_flags (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  other_id TEXT,
+  job_id TEXT,
+  kind TEXT NOT NULL,
+  detail TEXT DEFAULT '',
+  created_at BIGINT,
+  cleared_at BIGINT,
+  cleared_by TEXT
+);
+CREATE INDEX IF NOT EXISTS risk_flags_open ON risk_flags (cleared_at, created_at);
 `
 
 // ── Roles ────────────────────────────────────────────────────────────
@@ -975,7 +1187,7 @@ export function ladderFor(points) {
 // What each kind of taking part is worth. `verified` is deliberately absent
 // while the badge is self-assigned — it was worth 20 points, which anyone
 // could help themselves to (see server/verification.js).
-const POINTS = { referrals: 15, posts: 5, takes: 2, sparksGiven: 1, sparksGot: 1, looms: 3, communities: 3, communitiesBuilt: 25, eventsHosted: 12, jobsDone: 10, jobsPosted: 4, followers: 1,
+const POINTS = { referrals: 10, posts: 5, takes: 2, sparksGiven: 1, sparksGot: 1, looms: 3, communities: 3, communitiesBuilt: 25, eventsHosted: 12, jobsDone: 10, jobsPosted: 4, followers: 1,
   ...(VERIFICATION_IS_REAL ? { verified: 20 } : {}) }
 
 // Badges anyone can earn, and how.
@@ -1049,6 +1261,8 @@ export function publicUser(row) {
     portfolio: json(row.portfolio),
     socials: json(row.socials),
     photo: row.photo || '', cover: row.cover || '',
+    // Only shown when the owner chose to show it.
+    gender: row.gender_public ? (row.gender || '') : '',
     idVerified: !!row.id_verified,
     // Country follows the same "hidden" location setting as city.
     country: row.privacy === 'hidden' ? null : (row.country || 'NG'),
@@ -1072,6 +1286,9 @@ export function readSettings(row) {
   const s = json(row?.settings, {})
   return { ...DEFAULT_SETTINGS, ...s, notify: { ...DEFAULT_SETTINGS.notify, ...(s.notify || {}) } }
 }
+
+const AGE_ASKED_FROM = Date.UTC(2026, 10, 19, 16, 0, 0)
+const num = (v) => Number(v) || 0
 
 // The full "me" object the frontend keeps as the current user.
 export async function selfUser(row) {
@@ -1097,11 +1314,15 @@ export async function selfUser(row) {
     email: row.email, phone: row.phone || '',
     settings: readSettings(row),
     createdAt: row.created_at, profileType: row.profile_type || 'individual',
+    gender: row.gender || '', genderPublic: !!row.gender_public,
     isAdmin: !!row.is_admin,
     hasPassword: !!row.password_hash,
     linked: { google: !!row.google_sub, apple: !!row.apple_sub },
-    // Asked before anything else; sample accounts are never asked.
-    needsAge: !row.birth_date && !row.is_seed,
+    // Asked once, when an account is made (Google and Apple sign-ups don't
+    // give a date of birth up front). Accounts that existed before this
+    // went live on 19 Nov 2026 are never asked at sign-in, and neither are
+    // sample accounts.
+    needsAge: !row.birth_date && !row.is_seed && num(row.created_at) >= AGE_ASKED_FROM,
     country: row.country || 'NG',
     features: featuresFor(row.country || 'NG'),
     emailConfirmed: !!row.email_confirmed_at || !!row.is_seed,
@@ -1209,6 +1430,7 @@ export async function serializeCommunity(row, viewerId) {
       : Promise.resolve(null),
   ])
   return {
+    expiresAt: row.expires_at == null ? null : Number(row.expires_at), ended: row.expires_at != null && Number(row.expires_at) <= Date.now(),
     id: row.id, name: row.name, tagline: row.tagline, description: row.description,
     scope: row.scope, city: row.city, accent: row.accent, icon: row.icon, cover: row.cover || '',
     tags: json(row.tags), rules: json(row.rules), modRules: json(row.mod_rules), memberCount: row.member_count,
@@ -1304,6 +1526,7 @@ export function serializeEvent(row) {
     category: row.category || null, format: row.format || 'in-person', capacity: row.capacity ?? null,
     country: row.country || 'NG', timezone: row.timezone || 'Africa/Lagos', inviteOnly: !!row.invite_only,
     updatedAt: row.updated_at || null,
+    expiresAt: row.expires_at == null ? null : Number(row.expires_at), ended: row.expires_at != null && Number(row.expires_at) <= Date.now(),
   }
 }
 
@@ -1333,3 +1556,14 @@ export async function serializeLive(row) {
 
 export const parseJson = json
 export default q
+
+// ── How long something stays up ──────────────────────────────────────
+// Nuel, Nov 21: "People can choose how long they want a community or event
+// before it goes down." Communities run from the day they start; an event
+// stays up for the chosen time after its date. No choice means no end.
+const DAY = 24 * 60 * 60 * 1000
+export const KEEP_UP = { '1w': 7, '1m': 30, '3m': 90, '6m': 180, '1y': 365 }
+export function expiryFor(choice, fromMs = Date.now()) {
+  const days = KEEP_UP[choice]
+  return days ? fromMs + days * DAY : null
+}

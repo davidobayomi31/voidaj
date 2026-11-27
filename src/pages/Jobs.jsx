@@ -7,6 +7,7 @@
 // ID verification is a simulated demo badge (no real KYC provider wired up).
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ShareLinkButton } from '../components/ShareLinkButton.jsx'
 import { useApp } from '../state.jsx'
 import { JOB_CATEGORIES } from '../data/seed.js'
 import * as api from '../api.js'
@@ -75,6 +76,19 @@ const whereLabel = (job) => {
 }
 // Payments stay between the two people at launch, and VOIDAJ says so.
 export const PAYMENT_NOTE = 'Payments are arranged directly between you. VOIDAJ doesn’t collect, hold, verify or guarantee payment. Never pay in advance to someone you haven’t met, and report anything suspicious.'
+// Once Paystack is switched on (server/payments.js), paid jobs in a currency
+// it takes are paid through VOIDAJ instead.
+export const PAYSTACK_NOTE = 'Paid through VOIDAJ with Paystack. The poster’s card is charged when the job is done, and the worker gets the full agreed price. VOIDAJ takes no cut and never holds the money.'
+let paymentsCfg = null
+function usePaymentsConfig() {
+  const [cfg, setCfg] = useState(paymentsCfg)
+  useEffect(() => {
+    if (paymentsCfg) return
+    api.paymentsConfig().then((c) => { paymentsCfg = c; setCfg(c) }).catch(() => {})
+  }, [])
+  return cfg
+}
+const payNote = (cfg, currency) => (cfg?.enabled && cfg.currencies.includes(String(currency || 'NGN').toUpperCase()) ? PAYSTACK_NOTE : PAYMENT_NOTE)
 
 export function JobPhoto({ category, size = 64 }) {
   const info = catInfo(category)
@@ -135,6 +149,7 @@ function VisitorSide() {
 // Opened by the "Post a quick job" button beside Find work / Find people.
 function PostJobForm({ onCreated, onClose, startCategory, startKind }) {
   const { profile } = useApp()
+  const payCfg = usePaymentsConfig()
   // Prices are in the poster's own currency unless they pick another.
   const blank = { kind: 'job', opportunity: 'paid', arrangement: 'local', exchange: '', title: '', category: JOB_CATEGORIES[0].id, area: '', budget: '', currency: currencyOf(profile.country), description: '', verifiedOnly: false, timing: 'Flexible', openToOffers: true }
   const [form, setForm] = useState({ ...blank, kind: startKind === 'service' ? 'service' : 'job', category: JOB_CATEGORIES.some((c) => c.id === startCategory) ? startCategory : JOB_CATEGORIES[0].id })
@@ -208,7 +223,7 @@ function PostJobForm({ onCreated, onClose, startCategory, startKind }) {
           <span><Icon name="badge-check" size={13} /> Only show to ID-verified pros</span>
         </label>
       )}
-      {paid && <p className="job-pay-note"><Icon name="shield" size={13} /> {PAYMENT_NOTE}</p>}
+      {paid && <p className="job-pay-note"><Icon name="shield" size={13} /> {payNote(payCfg, form.currency)}</p>}
       {!paid && <p className="job-pay-note"><Icon name="info" size={13} /> This listing will clearly say it’s {oppInfo(form.opportunity).label.toLowerCase()}{form.opportunity === 'volunteer' || form.opportunity === 'free' ? ' — unpaid' : ''}.</p>}
       <div className="composer-foot">
         <button type="button" className="btn ghost small" onClick={onClose}>Cancel</button>
@@ -283,6 +298,7 @@ export function JobCard({ job }) {
 // A job, opened. This is where someone offers to do it.
 function JobSheet({ job, onInterest, onOffer, onClose, onChange }) {
   const { user } = useApp()
+  const payCfg = usePaymentsConfig()
   const navigate = useNavigate()
   const info = catInfo(job.category)
   const [offering, setOffering] = useState(false)
@@ -319,6 +335,7 @@ function JobSheet({ job, onInterest, onOffer, onClose, onChange }) {
               {VERIFICATION_IS_REAL && job.verifiedOnly && <span className="scope-badge local"><Icon name="badge-check" size={11} /> Verified pros only</span>}
             </div>
           </div>
+          <ShareLinkButton path={`/jobs?job=${job.id}`} title={job.title} text={`${job.title} on VOIDAJ`} label="" className="icon-btn subtle" />
           <button className="icon-btn subtle" onClick={onClose} aria-label="Close"><Icon name="x" size={16} /></button>
         </div>
         <ul className="job-facts">
@@ -330,7 +347,7 @@ function JobSheet({ job, onInterest, onOffer, onClose, onChange }) {
           <li><Icon name="clock" size={14} /> Posted {job.ago} ago</li>
         </ul>
         {job.description && <p className="card-desc">{job.description}</p>}
-        {job.opportunity === 'paid' && <p className="job-pay-note"><Icon name="shield" size={13} /> {PAYMENT_NOTE}</p>}
+        {job.opportunity === 'paid' && <p className="job-pay-note"><Icon name="shield" size={13} /> {payNote(payCfg, job.currency)}</p>}
         <div className="post-head">
           <Avatar user={job.poster} size={30} />
           <div className="meta-dim">

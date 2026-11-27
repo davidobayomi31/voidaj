@@ -4,6 +4,7 @@
 // kind "service" (server/services.js), so hiring and reviews work the same.
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { ShareLinkButton } from '../components/ShareLinkButton.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { JOB_CATEGORIES } from '../data/seed.js'
@@ -103,6 +104,7 @@ function ServiceSheet({ id, onClose, onEdit }) {
             </ul>
           )}
           <div className="composer-foot">
+            <ShareLinkButton path={`/services?s=${s.id}`} title={s.title} text={`${s.title} by ${s.provider.name} on VOIDAJ`} />
             {s.isMine
               ? <button className="btn primary small" onClick={() => onEdit(s)}><Icon name="edit" size={14} /> Edit service</button>
               : user

@@ -1,0 +1,167 @@
+{
+  "ad": "lp-2-ada-shop",
+  "dur": 24.5,
+  "clips": [
+    {
+      "t": 0.4,
+      "file": "0-ada.mp3",
+      "kind": "voice",
+      "who": "ada",
+      "text": "I run a cake shop in Yaba.",
+      "len": 1.69,
+      "vol": 1
+    },
+    {
+      "t": 2.3,
+      "file": "1-ada.mp3",
+      "kind": "voice",
+      "who": "ada",
+      "text": "Before I left, I posted one delivery job.",
+      "len": 2.77,
+      "vol": 1
+    },
+    {
+      "t": 5.5,
+      "file": "2-ada.mp3",
+      "kind": "voice",
+      "who": "ada",
+      "text": "By the bus stop, my phone already had three riders.",
+      "len": 3.13,
+      "vol": 1
+    },
+    {
+      "t": 8.7,
+      "file": "3-ada.mp3",
+      "kind": "voice",
+      "who": "ada",
+      "text": "I picked Musa. Verified, four point nine stars.",
+      "len": 2.95,
+      "vol": 1
+    },
+    {
+      "t": 11.7,
+      "file": "4-chidi.mp3",
+      "kind": "voice",
+      "who": "chidi",
+      "text": "Picked up. On my way!",
+      "len": 2.06,
+      "vol": 1
+    },
+    {
+      "t": 13.9,
+      "file": "5-ada.mp3",
+      "kind": "voice",
+      "who": "ada",
+      "text": "And at home, my laptop showed the same job.",
+      "len": 3,
+      "vol": 1
+    },
+    {
+      "t": 16.95,
+      "file": "6-ada.mp3",
+      "kind": "voice",
+      "who": "ada",
+      "text": "Delivered. I paid when it was done.",
+      "len": 2.11,
+      "vol": 1
+    },
+    {
+      "t": 19.3,
+      "file": "7-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "Start on one screen. Finish on any.",
+      "len": 2.4,
+      "vol": 1
+    },
+    {
+      "t": 21.7,
+      "file": "8-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Comment Voidaj for early access.",
+      "len": 2.45,
+      "vol": 1
+    },
+    {
+      "t": 0.2,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.35
+    },
+    {
+      "t": 4.5,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 5.6,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 9.6,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 11.7,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.35
+    },
+    {
+      "t": 12.6,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.35
+    },
+    {
+      "t": 13.6,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 17.7,
+      "file": "sfx-chime.mp3",
+      "kind": "sfx",
+      "name": "chime",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 19.1,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 22.9,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    }
+  ]
+}

@@ -14,3 +14,6 @@ dist/
 
 # Test coverage reports (npm run test:coverage)
 coverage/
+
+# Ad studio: ElevenLabs clips are kept per ad in ads/voice/<ad>/; the cache is local
+ads/voice/_cache/

@@ -52,7 +52,7 @@ export function LevelCard({ j, compact = false }) {
 // other people to join and that increases their status… the more people
 // they refer the bar increases to a new status"). Each friend who joins
 // from your link is worth points towards your next citizen level.
-export const REFERRAL_POINTS = 15
+export const REFERRAL_POINTS = 10
 export function InviteCard({ user, count }) {
   const [copied, setCopied] = useState(false)
   const link = `${location.origin}/auth?ref=${encodeURIComponent(user.id)}`

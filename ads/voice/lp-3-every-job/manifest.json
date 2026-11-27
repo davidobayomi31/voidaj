@@ -1,0 +1,166 @@
+{
+  "ad": "lp-3-every-job",
+  "dur": 19.5,
+  "clips": [
+    {
+      "t": 0.3,
+      "file": "0-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Plumber? Posted.",
+      "len": 1.75,
+      "vol": 1
+    },
+    {
+      "t": 2.3,
+      "file": "1-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Emeka's on it.",
+      "len": 1.09,
+      "vol": 1
+    },
+    {
+      "t": 4,
+      "file": "2-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Generator? Posted.",
+      "len": 1.8,
+      "vol": 1
+    },
+    {
+      "t": 6,
+      "file": "3-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Sani's on it.",
+      "len": 1.09,
+      "vol": 1
+    },
+    {
+      "t": 7.6,
+      "file": "4-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "A logo for your brand? Posted.",
+      "len": 2.22,
+      "vol": 1
+    },
+    {
+      "t": 9.8,
+      "file": "5-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Zainab's on it.",
+      "len": 1.09,
+      "vol": 1
+    },
+    {
+      "t": 11.3,
+      "file": "6-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "Every job, on every screen. Laptop, phone, anywhere.",
+      "len": 3.78,
+      "vol": 1
+    },
+    {
+      "t": 15.4,
+      "file": "7-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Comment Voidaj for early access.",
+      "len": 2.45,
+      "vol": 1
+    },
+    {
+      "t": 1.6,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 2.2,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 3.9,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.3
+    },
+    {
+      "t": 5.3,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 5.9,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 7.5,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.3
+    },
+    {
+      "t": 9.1,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 9.7,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 11.2,
+      "file": "sfx-chime.mp3",
+      "kind": "sfx",
+      "name": "chime",
+      "len": 1.17,
+      "vol": 0.45
+    },
+    {
+      "t": 15,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 18,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    }
+  ]
+}

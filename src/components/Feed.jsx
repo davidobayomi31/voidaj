@@ -14,6 +14,7 @@ import { Avatar } from './bits.jsx'
 import { EngageBar, RichText } from './Engage.jsx'
 import { MediaButtons, MediaTray, MediaView } from './Media.jsx'
 import { ReportButton } from './ReportButton.jsx'
+import { PostActions } from './PostActions.jsx'
 import { findCommunity } from '../communities.js'
 import { showVerifiedTick } from '../verification.js'
 
@@ -43,9 +44,20 @@ function LoomedPost({ post }) {
 }
 
 export function FeedPost({ post, onLoomed }) {
+  // 'hidden' is the member's own hide (with Undo); 'deleted' is the author's delete.
+  const [gone, setGone] = useState('')
   const c = post.community ?? findCommunity(post.communityId)
   const loomed = !!post.loomOf
   const stashItem = { kind: 'post', id: post.id, title: post.title || post.body?.slice(0, 60) || post.loomOf?.title || post.loomOf?.body?.slice(0, 60) || 'Post', subtitle: c ? `in ${c.name}` : post.audience === 'city' ? post.city : 'Public', href: `/post/${post.id}` }
+  if (gone === 'deleted') return null
+  if (gone === 'hidden') {
+    return (
+      <article className="card feed-post post-hidden-note">
+        <span>Post hidden. You won’t see it again.</span>
+        <button type="button" className="link-btn" onClick={() => api.unhidePost(post.id).then(() => setGone('')).catch(() => {})}>Undo</button>
+      </article>
+    )
+  }
   return (
     <article className="card feed-post">
       {loomed && <div className="fp-loom-tag"><Icon name="shuffle" size={13} /> {post.author.name.split(' ')[0]} loomed this</div>}
@@ -58,6 +70,7 @@ export function FeedPost({ post, onLoomed }) {
           </span>
         </Link>
         <ReportButton targetType="post" targetId={post.id} />
+        <PostActions post={post} onDeleted={() => setGone('deleted')} onHidden={() => setGone('hidden')} />
       </header>
       {(post.body || (post.title && !loomed)) && (
         <div className="fp-text">

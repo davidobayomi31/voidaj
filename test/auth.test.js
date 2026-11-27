@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { app, request, signUp } from './helpers.js'
+import q from '../server/db.js'
 
 describe('auth', () => {
   it('registers a user and sets an httpOnly session cookie', async () => {
@@ -50,6 +51,16 @@ describe('auth', () => {
     expect(ok.body.user.needsAge).toBe(false)
   })
 
+  it('asks for a date of birth only when an account is made, not every time an older one signs in', async () => {
+    const { agent, user } = await signUp('Age Asked')
+    // A new account with no date of birth (like a fresh Google sign-up) is asked once…
+    await q.run('UPDATE users SET birth_date = NULL, created_at = ? WHERE id = ?', Date.now(), user.id)
+    expect((await agent.get('/api/auth/me')).body.user.needsAge).toBe(true)
+    // …an account that existed before the question was added never is.
+    await q.run('UPDATE users SET created_at = ? WHERE id = ?', Date.UTC(2026, 9, 1), user.id)
+    expect((await agent.get('/api/auth/me')).body.user.needsAge).toBe(false)
+  })
+
   // Nuel, Nov 12: referring people raises your citizen level.
   it('credits the inviter when someone joins from their link', async () => {
     const { agent: inviter, user } = await signUp('Inviter')
@@ -60,7 +71,7 @@ describe('auth', () => {
     const mine = (await inviter.get('/api/me/referrals')).body
     expect(mine.count).toBe(1)
     const after = (await inviter.get(`/api/users/${user.id}/journey`)).body
-    expect(after.points - before.points).toBe(15)
+    expect(after.points - before.points).toBe(10)
     expect(after.badges.map((b) => b.id)).toContain('recruiter')
   })
 

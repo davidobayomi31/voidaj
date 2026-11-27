@@ -9,6 +9,7 @@ import { findCommunity } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
+import { EventFunds } from '../components/EventFunds.jsx'
 import { Avatar } from '../components/bits.jsx'
 import { categoryOf } from '../categories.js'
 import { CategoryTag } from '../components/Categories.jsx'
@@ -114,6 +115,7 @@ export default function EventDetail() {
         <div className="evd-main">
           <span className="ev-tags"><CategoryTag id={categoryOf(event)} short={false} />{event.format && event.format !== 'in-person' && <span className="cat-tag plain">{event.format === 'online' ? 'Online' : 'Hybrid'}</span>}</span>
           <h1>{event.title}</h1>
+          {event.ended && <p className="ended-note"><Icon name="clock" size={13} /> This event has ended. It no longer shows in lists.</p>}
           <ul className="evd-facts">
             <li><Icon name="calendar" size={16} /> {d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}{when.local ? ` · ${when.local}` : ''}{when.yours && <em className="evd-yours"> ({when.yours})</em>}</li>
             {event.venue && <li><Icon name={event.format === 'online' ? 'monitor' : 'map-pin'} size={16} /> {event.venue}</li>}
@@ -158,6 +160,8 @@ export default function EventDetail() {
           ) : <p className="meta-dim">The hosts have posted {news.total} update{news.total > 1 ? 's' : ''} for people going.</p>}
         </section>
       )}
+
+      <EventFunds event={event} />
 
       {event.description && (
         <section className="card evd-section">

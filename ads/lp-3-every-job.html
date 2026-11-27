@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laptop → Phone — every job (9:16)</title>
+<link rel="stylesheet" href="ad.css">
+<link rel="stylesheet" href="devices.css">
+<style>
+  .kind { position: absolute; left: 0; right: 0; top: 200px; text-align: center; font-size: 150px; font-weight: 900; letter-spacing: -6px; color: #fff; z-index: 6; }
+  .kind small { display: block; font-size: 56px; letter-spacing: -1px; font-weight: 800; color: var(--sky); margin-top: 6px; }
+  .pg.lap { position: absolute; left: 34px; right: 34px; top: 90px; opacity: 0; transition: opacity .3s; }
+  .pg.lap.in { opacity: 1; }
+  .list .row3 { margin-top: 12px; padding: 14px 18px; font-size: 22px; }
+  .list .row3 .a { width: 48px; height: 48px; font-size: 22px; }
+  .list .row3 small { font-size: 17px; }
+  .lscr .list .row3 { padding: 10px 16px; margin-top: 10px; font-size: 22px; box-shadow: 0 0 0 2px rgba(10,10,12,.07); }
+  .stamp { position: absolute; left: 50%; top: 1500px; transform: translateX(-50%) rotate(-6deg) scale(.6); padding: 14px 40px; border: 8px solid var(--green); border-radius: 22px; color: var(--green); font-size: 80px; font-weight: 900; letter-spacing: 2px; opacity: 0; z-index: 8; transition: all .35s var(--spring); background: rgba(5,10,20,.6); }
+  .stamp.in { opacity: 1; transform: translateX(-50%) rotate(-6deg); }
+</style>
+</head>
+<body>
+<!-- Laptop → Phone as a fast montage: three different jobs posted on the
+     laptop, each picked up on the phone seconds later, then all of them
+     side by side on both screens. -->
+<div class="frame" data-w="1080" data-h="1920" data-dur="19.5">
+  <div class="fill bg"></div>
+  <div class="grp out" data-t="15.0" style="position:absolute;inset:0">
+
+  <div class="kind r-pop" data-t="0.2" data-until="3.8">🔧 Plumber?<small>Fix leaking tap · ₦8,000</small></div>
+  <div class="kind r-pop" data-t="3.9" data-until="7.4">⚡ Generator?<small>Won’t start · ₦15,000</small></div>
+  <div class="kind r-pop" data-t="7.5" data-until="11.1">🎨 A logo?<small>For my brand · ₦30,000</small></div>
+  <div class="kind r-pop" data-t="11.2" data-until="15.0" style="font-size:110px">Every job.<small>Every screen.</small></div>
+
+  <div class="stamp" data-t="1.7" data-until="3.8">POSTED</div>
+  <div class="stamp" data-t="5.4" data-until="7.4">POSTED</div>
+  <div class="stamp" data-t="9.2" data-until="11.1">POSTED</div>
+
+  <!-- laptop -->
+  <div class="laptop r-up" data-t="0.1" style="top:560px">
+    <div class="lid"><div class="lscr">
+      <h5>Quick Jobs</h5><div class="nav">Post a job</div>
+      <div class="pg lap" data-t="0.3" data-until="3.9">
+        <div class="ll">What do you need?</div><div class="lf"><span data-type data-t="0.4" data-cps="18">Fix leaking tap</span></div>
+        <div class="ll">Budget</div><div class="lf"><span data-type data-t="1.0" data-cps="14">₦8,000</span></div>
+        <div class="lb" data-t="1.6">Post quick job</div>
+      </div>
+      <div class="pg lap" data-t="3.9" data-until="7.5">
+        <div class="ll">What do you need?</div><div class="lf"><span data-type data-t="4.0" data-cps="18">Generator won’t start</span></div>
+        <div class="ll">Budget</div><div class="lf"><span data-type data-t="4.8" data-cps="14">₦15,000</span></div>
+        <div class="lb" data-t="5.3">Post quick job</div>
+      </div>
+      <div class="pg lap" data-t="7.5" data-until="11.2">
+        <div class="ll">What do you need?</div><div class="lf"><span data-type data-t="7.6" data-cps="18">Logo for my brand</span></div>
+        <div class="ll">Budget</div><div class="lf"><span data-type data-t="8.4" data-cps="14">₦30,000</span></div>
+        <div class="lb" data-t="9.1">Post quick job</div>
+      </div>
+      <div class="pg lap list" data-t="11.2">
+        <div class="row3"><div class="a">E</div><div>Fix leaking tap<small>₦8,000 · Emeka · On the way</small></div></div>
+        <div class="row3"><div class="a" style="background:#e8643a">S</div><div>Generator won’t start<small>₦15,000 · Sani · In progress</small></div></div>
+        <div class="row3"><div class="a" style="background:#a8306a">Z</div><div>Logo for my brand<small>₦30,000 · Zainab · First draft in</small></div></div>
+      </div>
+    </div></div>
+    <div class="base"></div>
+  </div>
+
+  <svg class="beam" viewBox="0 0 1080 1920"><defs><linearGradient id="bg" x1="0" x2="1"><stop offset="0" stop-color="#6a9bff"/><stop offset="1" stop-color="#9b7bff"/></linearGradient></defs>
+    <path d="M800 710 C 950 710, 980 800, 900 872" data-t="1.7"/></svg>
+  <div class="pulse" style="left:900px;top:872px" data-t="2.2"></div>
+  <div class="pulse" style="left:900px;top:872px" data-t="5.9"></div>
+  <div class="pulse" style="left:900px;top:872px" data-t="9.7"></div>
+
+  <!-- phone -->
+  <div class="phone r-up" data-t="0.2" style="top:860px"><div class="pscr">
+    <div class="pg home" data-t="11.2">
+      <div class="app"><img src="../public/voidaj-logo.svg" alt="">Voidaj</div>
+      <div class="skel"><i></i><i></i></div><div class="skel"><i></i><i></i></div><div class="skel"><i></i><i></i></div>
+    </div>
+    <div class="note" data-t="2.2" data-until="3.9"><div class="ic"><img src="../public/voidaj-logo.svg" alt=""></div><div><small>Voidaj · now</small>Emeka accepted “Fix leaking tap”</div></div>
+    <div class="note" data-t="5.9" data-until="7.5"><div class="ic"><img src="../public/voidaj-logo.svg" alt=""></div><div><small>Voidaj · now</small>Sani accepted “Generator won’t start”</div></div>
+    <div class="note" data-t="9.7" data-until="11.2"><div class="ic"><img src="../public/voidaj-logo.svg" alt=""></div><div><small>Voidaj · now</small>Zainab accepted “Logo for my brand”</div></div>
+    <div class="pg list" data-t="11.2">
+      <div class="ptitle">My jobs</div><div class="psub">3 active</div>
+      <div class="row3"><div class="a">E</div><div>Leaking tap<small>On the way</small></div></div>
+      <div class="row3"><div class="a" style="background:#e8643a">S</div><div>Generator<small>In progress</small></div></div>
+      <div class="row3"><div class="a" style="background:#a8306a">Z</div><div>Logo<small>Draft in ✓</small></div></div>
+    </div>
+  </div></div>
+  </div>
+
+  <section class="scene cta" data-s="15.1" data-e="19.6">
+    <div class="logo-tile r-pop" data-t="15.2"><img src="../public/voidaj-logo.svg" alt=""></div>
+    <h2 class="r-up" data-t="15.3">Quick Jobs.<br><em>Laptop. Phone. Anywhere.</em></h2>
+    <div class="cmt r-up" data-t="16.6"><div class="d"></div><span data-type data-t="17.0" data-cps="7">VOIDAJ</span><div class="send" data-t="18.0"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></div></div>
+    <p class="r-up" data-t="18.1" style="margin-top:60px;font-size:48px;font-weight:700;opacity:.8">Comment for early access · voidaj.com</p>
+  </section>
+</div>
+
+<script type="application/json" id="voice">
+{
+  "lines": [
+    { "t": 0.3,  "who": "hype",     "text": "Plumber? Posted." },
+    { "t": 2.3,  "who": "hype",     "text": "Emeka's on it." },
+    { "t": 4.0,  "who": "hype",     "text": "Generator? Posted." },
+    { "t": 6.0,  "who": "hype",     "text": "Sani's on it." },
+    { "t": 7.6,  "who": "hype",     "text": "A logo for your brand? Posted." },
+    { "t": 9.8,  "who": "hype",     "text": "Zainab's on it." },
+    { "t": 11.3, "who": "narrator", "text": "Every job, on every screen. Laptop, phone, anywhere." },
+    { "t": 15.4, "who": "hype",     "text": "Comment Voidaj for early access." }
+  ],
+  "sfx": [
+    { "t": 1.6,  "name": "pop", "vol": 0.5 },
+    { "t": 2.2,  "name": "ping", "vol": 0.5 },
+    { "t": 3.9,  "name": "whoosh", "vol": 0.3 },
+    { "t": 5.3,  "name": "pop", "vol": 0.5 },
+    { "t": 5.9,  "name": "ping", "vol": 0.5 },
+    { "t": 7.5,  "name": "whoosh", "vol": 0.3 },
+    { "t": 9.1,  "name": "pop", "vol": 0.5 },
+    { "t": 9.7,  "name": "ping", "vol": 0.5 },
+    { "t": 11.2, "name": "chime", "vol": 0.45 },
+    { "t": 15.0, "name": "whoosh", "vol": 0.4 },
+    { "t": 18.0, "name": "pop", "vol": 0.5 }
+  ]
+}
+</script>
+<script src="ad.js"></script>
+</body>
+</html>

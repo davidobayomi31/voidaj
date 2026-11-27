@@ -37,12 +37,13 @@ import AddHub from './pages/AddHub.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
-import MyCity from './pages/MyCity.jsx'
 import Admin from './pages/Admin.jsx'
 import Services from './pages/Services.jsx'
+import Suggestions from './pages/Suggestions.jsx'
 import IdCard from './pages/IdCard.jsx'
 import Privacy from './pages/Privacy.jsx'
 import Terms from './pages/Terms.jsx'
+import LoadingScreen from './components/LoadingScreen.jsx'
 import * as api from './api.js'
 import { FEATURES } from './features.js'
 
@@ -55,7 +56,7 @@ const IMMERSIVE = ['/welcome', '/auth']
 const PRIMARY = [
   { to: '/home', icon: 'home', tone: 'blue', label: 'Home' },
   { to: '/explore', icon: 'compass', tone: 'violet', label: 'Explore' },
-  { to: '/city', icon: 'map-pin', tone: 'teal', label: 'My City' },
+  { to: '/suggestions', icon: 'sparkle', tone: 'pink', label: 'For you' },
   { to: '/events', icon: 'calendar', tone: 'pink', label: 'Events' },
   { to: '/jobs', icon: 'briefcase', tone: 'orange', label: 'Quick Jobs' },
   { to: '/communities', icon: 'users', tone: 'indigo', label: 'Communities' },
@@ -72,12 +73,13 @@ const VISITOR_MOBILE = [
   { to: '/communities', icon: 'users', short: 'Communities' },
 ]
 
-// The phone's bottom bar (Nuel, Nov 11): Home · My City · (+) · Chat ·
-// Profile, with Add Hub as the raised centre button. Explore, Events,
-// Quick Jobs and Communities are one tap away from Home.
+// The phone's bottom bar (Nuel, Nov 11): Home · Explore · (+) · Chat ·
+// Profile, with Add Hub as the raised centre button. Events, Quick Jobs
+// and Communities are one tap away from Home. My City was removed (David,
+// Nov 26); Explore took its place.
 const MOBILE = [
   { to: '/home', icon: 'home', short: 'Home' },
-  { to: '/city', icon: 'map-pin', short: 'My City' },
+  { to: '/explore', icon: 'compass', short: 'Explore' },
   { to: '/add', icon: 'plus', short: 'Hub', center: true },
   { to: '/chats', icon: 'message-circle', short: 'Chat', unread: true },
   { to: '/profile/me', icon: 'user', short: 'Profile' },
@@ -146,6 +148,7 @@ function useAttentionCount() {
 // name and the menu opens upward from the foot of the nav.
 function ProfileMenu({ inSide = false }) {
   const { user, logout } = useApp()
+  const attention = useAttentionCount()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const location = useLocation()
@@ -181,6 +184,7 @@ function ProfileMenu({ inSide = false }) {
           <Link role="menuitem" to="/badges"><Icon name="award" size={15} /> My Badges</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
           {user.isAdmin && <Link role="menuitem" to="/admin"><Icon name="lock" size={15} /> Admin</Link>}
+          <Link role="menuitem" to="/notifications"><Icon name="bell" size={15} /> Notifications{attention > 0 && <b className="bar-badge menu-badge">{attention > 9 ? '9+' : attention}</b>}</Link>
           <Link role="menuitem" to="/settings"><Icon name="edit" size={15} /> Settings</Link>
           <button role="menuitem" onClick={logout}><Icon name="log-out" size={15} /> Sign out</button>
         </div>
@@ -308,11 +312,7 @@ function SideNav() {
         )}
         {user ? (
           <>
-            <NavLink to="/notifications" title="Notifications" aria-label={attention ? `Notifications, ${attention} new` : 'Notifications'}>
-              <span className="sidenav-icon"><Icon name="bell" size={18} />{attention > 0 && <b className="bar-badge">{attention > 9 ? '9+' : attention}</b>}</span>
-              <span>Notifications</span>
-            </NavLink>
-            <NavLink to="/settings" title="Settings"><Icon name="settings" size={18} /> <span>Settings</span></NavLink>
+            {/* Notifications and Settings live in the profile menu (Nuel, Nov 19: "This should go away"). */}
             <ProfileMenu inSide />
           </>
         ) : (
@@ -371,9 +371,15 @@ function Footer() {
   )
 }
 
+function StartScreen() {
+  const { loading } = useApp()
+  return <LoadingScreen ready={!loading} />
+}
+
 export default function App() {
   return (
     <AppProvider>
+      <StartScreen />
       <BrowserRouter>
         <div className="app-shell">
           <SideNav />
@@ -389,6 +395,7 @@ export default function App() {
               <Route path="/home" element={<Home />} />
               <Route path="/space" element={<Navigate to="/home" replace />} />
               <Route path="/explore" element={<Explore />} />
+              <Route path="/suggestions" element={<Suggestions />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/events" element={<Events />} />
               <Route path="/event/:id" element={<EventDetail />} />
@@ -406,7 +413,7 @@ export default function App() {
               <Route path="/settings/:section" element={<Settings />} />
               <Route path="/saved" element={<Favorites />} />
               <Route path="/favorites" element={<Navigate to="/saved" replace />} />
-              <Route path="/city" element={<MyCity />} />
+              <Route path="/city" element={<Navigate to="/home" replace />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/communities/new" element={<NewCommunity />} />
               <Route path="/community/:id" element={<Community />} />

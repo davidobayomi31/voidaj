@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voidaj — ad studio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600;800&family=Instrument+Serif:ital@1&display=swap');
+  :root { --bg: #0a0a0b; --card: #141417; --line: rgba(255,255,255,.09); --dim: #9a9aa3; --blue: #6a9bff; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: #f4f4f5; font: 16px/1.5 'Inter Tight', system-ui, sans-serif; padding: 56px 24px 80px; }
+  main { max-width: 1040px; margin: 0 auto; }
+  h1 { font-size: clamp(36px, 6vw, 56px); letter-spacing: -2px; font-weight: 800; }
+  h1 em { font-family: 'Instrument Serif', serif; font-weight: 400; color: var(--blue); }
+  .lede { margin-top: 12px; color: var(--dim); max-width: 60ch; }
+  h2 { margin: 48px 0 16px; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .c { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .c .meta { font-size: 13px; color: var(--dim); display: flex; gap: 8px; flex-wrap: wrap; }
+  .c .meta span { padding: 3px 10px; border-radius: 99px; background: rgba(255,255,255,.06); }
+  .c h3 { font-size: 22px; letter-spacing: -.5px; }
+  .c p { color: #c4c4cc; font-size: 15px; }
+  .c blockquote { font-size: 14px; color: var(--dim); border-left: 2px solid var(--line); padding-left: 12px; margin-top: 4px; }
+  .row { margin-top: auto; padding-top: 10px; display: flex; gap: 10px; }
+  a.b { text-decoration: none; padding: 10px 18px; border-radius: 99px; font-weight: 600; font-size: 14px; }
+  a.p { background: #fff; color: #000; } a.s { background: rgba(255,255,255,.08); color: #fff; }
+  .note { margin-top: 48px; padding: 20px 22px; border-radius: 16px; border: 1px solid var(--line); color: var(--dim); font-size: 14px; }
+  .note b { color: #f4f4f5; } code { background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Voidaj <em>ad studio</em></h1>
+  <p class="lede">Short animated ads, built in HTML so you can tweak the words and re-record. Press <b>space</b> to pause, <b>R</b> to restart, arrows to step.</p>
+
+  <h2>Quick Jobs</h2>
+  <div class="grid">
+    <div class="c"><div class="meta"><span>9:16</span><span>20s</span><span>Text message → map UI</span></div>
+      <h3>“Burst pipe”</h3>
+      <p>A panicked group-chat text turns into posting a job, then a verified plumber appears on the map and is on the way.</p>
+      <blockquote>Hook: “bro my pipe just burst 😭” → “Voidaj. Quick Jobs. Two minutes.”</blockquote>
+      <div class="row"><a class="b p" href="qj-1-text-to-map.html">Play</a><a class="b s" href="qj-1-text-to-map.html?clean">Clean</a></div></div>
+    <div class="c"><div class="meta"><span>9:16</span><span>24s</span><span>Stylised 3D comedy</span></div>
+      <h3>“Tomorrow”</h3>
+      <p>Tunde’s tap leaks for three weeks while his cousin’s plumber is always coming “tomorrow”. Voidaj fixes it the same day. Twist: the cousin texts again.</p>
+      <blockquote>Punchline: “Tomorrow never comes. Quick Jobs does.”</blockquote>
+      <div class="row"><a class="b p" href="qj-2-3d-tomorrow.html">Play</a><a class="b s" href="qj-2-3d-tomorrow.html?clean">Clean</a></div></div>
+    <div class="c"><div class="meta"><span>16:9</span><span>17s</span><span>Minimalist screen states</span></div>
+      <h3>“Request. Match. Pay.”</h3>
+      <p>One floating card morphs through requesting, matched, job stages and payment, with a smooth cursor and loading bar.</p>
+      <blockquote>Close: “Pay when it’s done.”</blockquote>
+      <div class="row"><a class="b p" href="qj-3-screen-states.html">Play</a><a class="b s" href="qj-3-screen-states.html?clean">Clean</a></div></div>
+  </div>
+
+  <h2>Voidaj itself</h2>
+  <div class="grid">
+    <div class="c"><div class="meta"><span>9:16</span><span>22s</span><span>Voice-over + device mockups</span></div>
+      <h3>“Laptop → Phone”</h3>
+      <p>Post a job on a laptop and the phone already knows. Same job on every screen, then a comment-to-get-access call to action.</p>
+      <blockquote>VO: “Post a job on your laptop… and your phone already knows.”</blockquote>
+      <div class="row"><a class="b p" href="v-1-cross-device.html">Play</a><a class="b s" href="v-1-cross-device.html?clean">Clean</a></div></div>
+    <div class="c"><div class="meta"><span>9:16</span><span>18s</span><span>Rhythm text + glass over Lagos</span></div>
+      <h3>“Your city”</h3>
+      <p>People. Communities. Events. Jobs. Hubs. on the beat, then glass widget cards and a photo collage over the Lagos skyline.</p>
+      <blockquote>Close: “Starting in Lagos. Built to grow.”</blockquote>
+      <div class="row"><a class="b p" href="v-2-your-city.html">Play</a><a class="b s" href="v-2-your-city.html?clean">Clean</a></div></div>
+    <div class="c"><div class="meta"><span>9:16</span><span>15s</span><span>Minimal motion design</span></div>
+      <h3>“Your VOIDAJ ID”</h3>
+      <p>A digital ID card flips to a QR code, then a share sheet and trust chips: verified, real reviews, one card everywhere.</p>
+      <blockquote>Hook: “Your name. Your work. Your reputation.”</blockquote>
+      <div class="row"><a class="b p" href="v-3-id-card.html">Play</a><a class="b s" href="v-3-id-card.html?clean">Clean</a></div></div>
+  </div>
+
+  <h2>Voiced versions (Nov 26) · from the two Nuel liked</h2>
+  <div class="grid">
+    <div class="c"><div class="meta"><span>9:16</span><span>28s</span><span>Tomorrow · fully voiced</span></div>
+      <h3>“Tomorrow”, narrated</h3>
+      <p>The original story with a narrator, Femi’s excuses in his own voice, Chidi on the phone and a new ending: “Tell him to rest.”</p>
+      <div class="row"><a class="b p" href="tm-1-narrated.html">Play</a><a class="b s" href="tm-1-narrated.html?clean">Clean</a></div></div>
+    <div class="c"><div class="meta"><span>9:16</span><span>30s</span><span>Tomorrow · voice notes</span></div>
+      <h3>“Tomorrow”, voice notes</h3>
+      <p>Femi’s WhatsApp voice notes, a new excuse every few days (“his mum is sick”, “network was bad”) while the puddle grows.</p>
+      <div class="row"><a class="b p" href="tm-2-voice-notes.html">Play</a><a class="b s" href="tm-2-voice-notes.html?clean">Clean</a></div></div>
+    <div class="c"><div class="meta"><span>9:16</span><span>15s</span><span>Tomorrow · Reels / paid cut</span></div>
+      <h3>“Tomorrow”, 15 seconds</h3>
+      <p>The same joke at twice the speed: hook in the first second, Voidaj by second five.</p>
+      <div class="row"><a class="b p" href="tm-3-15s.html">Play</a><a class="b s" href="tm-3-15s.html?clean">Clean</a></div></div>
+    <div class="c"><div class="meta"><span>9:16</span><span>22s</span><span>Laptop → Phone · voiced</span></div>
+      <h3>“Laptop → Phone”, narrated</h3>
+      <p>Nuel’s favourite as it was, now with the voice-over, sounds and voidaj.com on the end card.</p>
+      <div class="row"><a class="b p" href="lp-1-narrated.html">Play</a><a class="b s" href="lp-1-narrated.html?clean">Clean</a></div></div>
+    <div class="c"><div class="meta"><span>9:16</span><span>24s</span><span>Laptop → Phone · first person</span></div>
+      <h3>“Ada’s shop”</h3>
+      <p>Ada posts a delivery job from her cake shop laptop, hires Musa on her phone at the bus stop, pays when the cake arrives.</p>
+      <div class="row"><a class="b p" href="lp-2-ada-shop.html">Play</a><a class="b s" href="lp-2-ada-shop.html?clean">Clean</a></div></div>
+    <div class="c"><div class="meta"><span>9:16</span><span>19s</span><span>Laptop → Phone · montage</span></div>
+      <h3>“Every job”</h3>
+      <p>Plumber, generator, logo: posted on the laptop, picked up on the phone seconds later, then all three on both screens.</p>
+      <div class="row"><a class="b p" href="lp-3-every-job.html">Play</a><a class="b s" href="lp-3-every-job.html?clean">Clean</a></div></div>
+  </div>
+
+  <div class="note"><b>Voices:</b> put <code>ELEVENLABS_API_KEY</code> in the project <code>.env</code>, then <code>cd ads/tools && node voice.mjs</code>. Pick the voices in <code>voice/voices.json</code> (<code>node voice.mjs --list</code> shows yours). Serve this folder over http to hear them while previewing.<br><br><b>To make a video:</b> open a <b>Clean</b> link, then record the window with QuickTime (File → New Screen Recording) or <code>Cmd+Shift+5</code>. Add your voice-over or a trending sound in CapCut. These pages are not part of the website build and are not deployed.</div>
+</main>
+</body>
+</html>

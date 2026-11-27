@@ -20,7 +20,7 @@ export const EVENT_FORMATS = [
   { id: 'hybrid', label: 'Hybrid', icon: 'globe' },
 ]
 
-const blank = { title: '', date: '', time: '', venue: '', description: '', cover: '', category: '', format: 'in-person', capacity: '', inviteOnly: false }
+const blank = { title: '', date: '', time: '', venue: '', description: '', cover: '', category: '', format: 'in-person', capacity: '', inviteOnly: false, keepFor: '' }
 
 // An unfinished event is kept on this device as a draft (Events note:
 // "save drafts"), one per place the form is opened from.
@@ -116,6 +116,17 @@ export function EventForm({ community, onCreated, onCancel, heading, editing }) 
       <input className="job-input" value={form.venue} onChange={set('venue')} placeholder={form.format === 'online' ? 'Link or platform (e.g. Zoom, Google Meet)' : 'Where? (venue or area)'} maxLength={100} aria-label="Venue" />
       <textarea className="composer-body" value={form.description} onChange={set('description')} placeholder="Tell people what to expect (optional)" rows={3} maxLength={600} />
       <CoverPicker kind="event" label="Event photo (optional)" value={form.cover} onChange={(cover) => setForm((f) => ({ ...f, cover }))} onBusy={setUploading} />
+      {!editing && (
+        <label className="field">
+          <span>Keep this event up for <em>after the day it happens</em></span>
+          <select value={form.keepFor} onChange={set('keepFor')}>
+            <option value="">No end. Keep it up</option>
+            <option value="1w">1 week</option>
+            <option value="1m">1 month</option>
+            <option value="3m">3 months</option>
+          </select>
+        </label>
+      )}
       <label className="evd-visible ev-invite-only">
         <input type="checkbox" checked={!!form.inviteOnly} onChange={(e) => setForm((f) => ({ ...f, inviteOnly: e.target.checked }))} />
         <span>Invite only <em>People ask to join and you approve them, or you invite them yourself.</em></span>

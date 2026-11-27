@@ -16,6 +16,7 @@ import { VoidajLockup } from '../components/VoidajMark.jsx'
 import { CommunityCard, PersonCard, EventCard } from '../components/bits.jsx'
 import { CITIES } from '../components/NigeriaMap.jsx'
 import { COUNTRIES, flagOf } from '../countries.js'
+import { GENDER_OPTIONS } from '../gender.js'
 import * as api from '../api.js'
 
 const INTENTS = [
@@ -85,7 +86,7 @@ export default function Onboarding() {
   const [done, setDone] = useState(false)
   const [busy, setBusy] = useState(false)
   const [a, setA] = useState({
-    intents: [], type: 'individual', country: '', city: '', area: '', privacy: 'city-only',
+    intents: [], type: 'individual', gender: '', country: '', city: '', area: '', privacy: 'city-only',
     interests: [], said: '', part: [], skills: [], messages: 'everyone', username: '',
   })
   // Whether the username typed is free: null = not checked, true/false = answer.
@@ -121,6 +122,7 @@ export default function Onboarding() {
     try {
       await saveProfile({
         city: a.city.trim(), country: a.country, area: a.area.trim(), privacy: a.privacy, profileType: a.type,
+        ...(a.gender ? { gender: a.gender, genderPublic: false } : {}),
         ...(a.username.trim() && uname.ok === true && a.username.trim().toLowerCase() !== current.toLowerCase() ? { handle: a.username.trim().toLowerCase() } : {}),
         interests: tags,
         goals: INTENTS.filter((x) => a.intents.includes(x.id)).map((x) => x.label),
@@ -173,11 +175,17 @@ export default function Onboarding() {
               </div>
             )}
 
-            {step.id === 'type' && (
+            {step.id === 'type' && (<>
               <div className="ob-grid">
                 {TYPES.map((x) => <Choice key={x.id} {...x} on={a.type === x.id} onClick={() => set('type', x.id)} />)}
               </div>
-            )}
+              <label className="field ob-gender"><span>Gender <em>optional. It stays private until you choose to show it.</em></span>
+                <select value={a.gender} onChange={(e) => set('gender', e.target.value)}>
+                  <option value="">Skip for now</option>
+                  {GENDER_OPTIONS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+                </select>
+              </label>
+            </>)}
 
             {step.id === 'username' && (
               <div className="ob-place">

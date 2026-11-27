@@ -1,0 +1,48 @@
+# Payments cron for production, every hour (and on demand: Actions tab →
+# Payments cron → Run workflow). It calls /api/cron/payments
+# (server/payments.js), which:
+#   - charges paid Quick Jobs the worker marked done that the poster didn't
+#     confirm, send back or report within 48 hours;
+#   - reminds the poster 24 hours and 4 hours before that;
+#   - tries failed cards again when their retry time comes.
+# Vercel's own cron (vercel.json) runs it once a day as a backup; on the
+# Hobby plan Vercel can't run it more often, which is why this exists.
+#
+# Setup: Settings → Secrets and variables → Actions →
+#   Secrets:   CRON_SECRET = the same value as CRON_SECRET in Vercel
+#   Variables: PAYMENTS_CRON_URL = https://voidaj.com/api/cron/payments
+# Until both are set, the run is skipped (payments aren't live yet).
+#
+# Caveats: GitHub can start scheduled runs several minutes late, and runs
+# them only from the default branch.
+name: Payments cron
+
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: payments-cron
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: Run the payments cron
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      URL: ${{ vars.PAYMENTS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Call the cron endpoint
+        run: |
+          if [ -z "$URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "PAYMENTS_CRON_URL or CRON_SECRET isn't set yet; skipping."
+            exit 0
+          fi
+          code=$(curl -sS -o body.txt -w '%{http_code}' --max-time 120 -H "Authorization: Bearer $CRON_SECRET" "$URL")
+          cat body.txt; echo
+          if [ "$code" != "200" ]; then echo "Got HTTP $code"; exit 1; fi

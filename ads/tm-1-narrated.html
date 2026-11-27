@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tomorrow — narrated (9:16)</title>
+<link rel="stylesheet" href="ad.css">
+<link rel="stylesheet" href="tomorrow.css">
+</head>
+<body>
+<!-- "Tomorrow", fully voiced: the original story with a narrator, Femi's
+     excuses in his own voice, Chidi on the phone and a new last line. -->
+<div class="frame" data-w="1080" data-h="1920" data-dur="28.5">
+  <div class="fill room"></div>
+  <div class="window"></div>
+  <div class="floor"></div>
+  <div class="shade"></div>
+
+  <div class="stage" id="stage" data-t="20.5">
+    <div class="tap"><div class="pipe"></div><div class="spout"></div><div class="noz"></div><div class="knob"></div></div>
+    <div class="basin"></div>
+    <div class="drop"></div><div class="drop d2"></div><div class="drop d3"></div>
+    <div class="puddle" id="puddle"></div>
+    <div class="persp" id="tundeWrap" style="left:30px;top:780px;transform:scale(1.3);transform-origin:0 0"></div>
+    <div class="persp plumber-wrap" id="chidiWrap" data-t="16.6" style="left:560px;top:900px;transform-origin:0 0"></div>
+  </div>
+
+  <div class="day r-pop" data-t="6.8" data-until="7.9">DAY 2</div>
+  <div class="day r-pop" data-t="7.9" data-until="9.0">DAY 7</div>
+  <div class="day r-pop" data-t="9.0" data-until="10.5">DAY 14</div>
+  <div class="day r-pop" data-t="10.5" data-until="11.7">DAY 21</div>
+
+  <div class="cap r-pop" data-t="0.2" data-until="1.3">This is <em>Tunde.</em></div>
+  <div class="cap r-pop" data-t="1.3" data-until="3.7">His tap has been leaking for <em>3 weeks.</em></div>
+  <div class="cap r-pop" data-t="3.9" data-until="6.6">His cousin <em>knows a plumber.</em></div>
+  <div class="cap big r-pop" data-t="6.8" data-until="7.9">Tomorrow.</div>
+  <div class="cap big r-pop" data-t="7.9" data-until="9.0">Tomorrow!</div>
+  <div class="cap big r-pop" data-t="9.0" data-until="10.5"><em>TOMORROW.</em></div>
+  <div class="cap big r-pop" data-t="10.5" data-until="11.7" style="font-size:110px">…tomorrow.</div>
+
+  <div class="ban r-down" data-t="3.8" data-until="6.6"><div class="ic">F</div><div><small>Femi</small>Bro I know a plumber 🔥</div></div>
+  <div class="ban b2 r-down" data-t="5.0" data-until="6.6"><div class="ic">F</div><div><small>Femi</small>He’s coming tomorrow 🙏</div></div>
+
+  <div class="phone" data-t="11.8" data-until="16.5">
+    <h4>Post a quick job</h4>
+    <div class="l">What do you need?</div>
+    <div class="f fa"><span data-type data-t="12.4" data-cps="14">Leaking tap</span></div>
+    <div class="l">Budget</div>
+    <div class="f"><span data-type data-t="13.4" data-cps="9">₦8,000</span></div>
+    <div class="go" data-t="14.2">Post quick job</div>
+    <div class="acc" data-t="14.9"><i>C</i><span>Chidi accepted · 10 min away</span></div>
+  </div>
+  <div class="cap r-pop" data-t="11.9" data-until="14.2" style="top:230px">So he tried <em>Voidaj.</em></div>
+  <div class="cap r-pop" data-t="14.9" data-until="16.5" style="top:1740px;font-size:76px">Plumber. <em>10 minutes</em> away.</div>
+
+  <div class="cap r-pop" data-t="16.9" data-until="19.1" style="top:1560px">Chidi. <em>Verified.</em></div>
+  <div class="cap r-pop" data-t="19.2" data-until="20.5" style="top:1560px">Tap fixed. <em>Same day.</em></div>
+
+  <div class="ban r-down" data-t="20.6" data-until="24.0"><div class="ic">F</div><div><small>Femi</small>Bro he’s coming tomorrow o 🙏</div></div>
+  <div class="cap r-pop" data-t="22.6" data-until="24.0" style="top:1090px">“Tell him to <em>rest.</em>”</div>
+
+  <section class="scene s9" data-s="24.0" data-e="28.6">
+    <div class="logo-tile r-pop" data-t="24.1"><img src="../public/voidaj-logo.svg" alt=""></div>
+    <h2 class="serif r-up" data-t="24.2">Tomorrow never comes.</h2>
+    <h3 class="r-up" data-t="25.6">Quick Jobs does.</h3>
+    <p class="r-up" data-t="26.4">voidaj.com</p>
+  </section>
+</div>
+
+<script type="application/json" id="voice">
+{
+  "lines": [
+    { "t": 0.2,  "who": "narrator", "text": "This is Tunde." },
+    { "t": 1.4,  "who": "narrator", "text": "His tap has been leaking for three weeks." },
+    { "t": 3.9,  "who": "femi",     "text": "Bro! I know a plumber. He's coming tomorrow!" },
+    { "t": 6.85, "who": "femi",     "text": "Tomorrow." },
+    { "t": 7.95, "who": "femi",     "text": "Tomorrow!" },
+    { "t": 9.05, "who": "femi",     "text": "Tomorrow, I promise." },
+    { "t": 10.55,"who": "tunde",    "text": "...tomorrow." },
+    { "t": 11.9, "who": "narrator", "text": "So he tried Voidaj. Quick Jobs." },
+    { "t": 15.0, "who": "chidi",    "text": "I'm ten minutes away." },
+    { "t": 16.9, "who": "narrator", "text": "Chidi. Verified." },
+    { "t": 19.2, "who": "tunde",    "text": "Ah! Same day?!" },
+    { "t": 20.7, "who": "femi",     "text": "Bro, he's coming tomorrow o!" },
+    { "t": 22.6, "who": "tunde",    "text": "Tell him to rest." },
+    { "t": 24.2, "who": "narrator", "text": "Tomorrow never comes." },
+    { "t": 25.6, "who": "hype",     "text": "Quick Jobs does. On Voidaj." }
+  ],
+  "sfx": [
+    { "t": 0.0,  "name": "drip", "vol": 0.5 },
+    { "t": 3.8,  "name": "ping", "vol": 0.5 },
+    { "t": 11.8, "name": "whoosh", "vol": 0.4 },
+    { "t": 14.2, "name": "pop", "vol": 0.5 },
+    { "t": 14.9, "name": "ping", "vol": 0.5 },
+    { "t": 16.5, "name": "knock", "vol": 0.6 },
+    { "t": 19.1, "name": "chime", "vol": 0.5 },
+    { "t": 20.6, "name": "ping", "vol": 0.5 },
+    { "t": 24.0, "name": "whoosh", "vol": 0.4 }
+  ]
+}
+</script>
+<script src="ad.js"></script>
+<script src="tomorrow.js"></script>
+<script>
+  const tunde = TM.tunde(document.getElementById('tundeWrap'))
+  TM.chidi(document.getElementById('chidiWrap'))
+  TM.tag(document.getElementById('chidiWrap'), 'Chidi · <b>✓ Verified</b>', 16.9)
+  TM.faces(tunde, [[0, 'sad'], [3.8, ''], [6.8, 'mad'], [10.5, 'dead'], [11.8, ''], [14.9, 'happy'], [20.6, 'dead'], [22.6, 'happy']])
+  TM.puddle(document.getElementById('puddle'), [[0, 0.3], [6.8, 0.6], [11.0, 2.3], [19.2, 2.3], [21.4, 0.15]], 19.2, document.getElementById('stage'))
+</script>
+</body>
+</html>

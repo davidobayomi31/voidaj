@@ -12,15 +12,17 @@ import q, {
   serializeJob, serializeChat, serializeChatMessage, serializeDm,
   serializeAd, serializeLive, serializeEvent, SPARK_KINDS, journey, parseJson, mediaLabel, timeAgo,
   ROLE_RANK, STAFF_SQL, isStaff, readSettings, DEFAULT_SETTINGS, transaction,
-  pool,
+  pool, expiryFor,
 } from './db.js'
 import { cleanCategory } from './categories.js'
 import { cleanCountry, cleanCurrency, currencyOf, normalisePhone, isTimeZone, findCountry, DEFAULT_COUNTRY, featureOn } from './countries.js'
 import * as guard from './guard.js'
 import { eventRoutes, eventRole, joinEventCircle } from './events-extra.js'
 import { jobFlowRoutes } from './jobs-flow.js'
+import { paymentRoutes } from './payments.js'
 import { idCheckRoutes, deleteChecksFor } from './id-checks.js'
 import { serviceRoutes } from './services.js'
+import { suggestionRoutes } from './suggestions.js'
 import { uniqueHandle, isHandleClash, usernameTaken, USERNAME_RE, tidyCity } from './handles.js'
 import { adRoutes } from './ads.js'
 import { buildAnalytics } from './analytics.js'
@@ -39,7 +41,11 @@ const app = express()
 app.use(requestLogger)
 // Photos, voice notes and short videos travel inline in JSON for now, so
 // the body limit sits above the default (see cleanMedia below).
-app.use(express.json({ limit: '25mb' }))
+app.use(express.json({
+  limit: '25mb',
+  // Paystack signs the exact bytes it sent, so the webhook needs them as-is.
+  verify: (req, _res, buf) => { if (req.originalUrl?.startsWith('/api/paystack/webhook')) req.rawBody = buf },
+}))
 app.use(cookieParser())
 
 // Creating the schema and seeding used to happen once at startup, when the
@@ -156,6 +162,21 @@ app.post('/api/auth/register', async (req, res) => {
   if (await getUserByEmail(email)) return err(res, 409, 'An account with that email already exists.')
   const country = cleanCountry(req.body?.country) || DEFAULT_COUNTRY
 
+  // With email set up, nothing is made until the emailed code comes back:
+  // the first call keeps the sign-up and sends the code, the second (with
+  // the code) makes the account.
+  let confirmedNow = false
+  if (guard.signupCodeFirst()) {
+    const emailKey = String(email).toLowerCase()
+    if (!req.body?.code) {
+      const { sent, code } = await guard.stageSignup({ email: emailKey, name: name.trim(), passwordHash: hashPassword(password), birthDate: String(req.body.birthDate), country, ref: req.body?.ref })
+      return res.json({ needsCode: true, email: emailKey, sent, ...(sent || process.env.NODE_ENV === 'production' ? {} : { devCode: code }) })
+    }
+    const checked = await guard.checkSignupCode(emailKey, req.body.code)
+    if (checked.error) return err(res, 400, checked.error)
+    confirmedNow = true
+  }
+
   const id = uid('u')
   const color = NEW_USER_COLORS[Math.floor(Math.random() * NEW_USER_COLORS.length)]
   for (let attempt = 0; ; attempt++) {
@@ -167,11 +188,25 @@ app.post('/api/auth/register', async (req, res) => {
   }
   // The city starts empty: it's asked in onboarding rather than assumed.
   await q.run("UPDATE users SET birth_date = ?, referred_by = ?, country = ?, city = '' WHERE id = ?", String(req.body.birthDate), await referrerId(req.body?.ref, id), country, id)
-  // A code to confirm the email address (server/guard.js).
-  await guard.sendEmailCode(await getUserById(id))
+  if (confirmedNow) {
+    await q.run('UPDATE users SET email_confirmed_at = ? WHERE id = ?', now(), id)
+    await guard.clearSignup(String(email).toLowerCase())
+  } else {
+    // A code to confirm the email address (server/guard.js).
+    await guard.sendEmailCode(await getUserById(id))
+  }
   issueSession(res, id)
   await recordLogin(req, id)
   res.json({ user: await selfUser(await getUserById(id)) })
+})
+
+app.post('/api/auth/register/resend', async (req, res) => {
+  const email = String(req.body?.email || '').toLowerCase()
+  if (!guard.signupCodeFirst()) return err(res, 400, 'Nothing to resend.')
+  if (await guard.over(`signupcode:${email}`, guard.LIMITS.emailCode)) return err(res, 429, 'We’ve sent a few codes already. Please wait a while before asking for another.')
+  const r = await guard.resendSignupCode(email)
+  if (r.error) return err(res, 400, r.error)
+  res.json({ ok: true, sent: r.sent, ...(r.sent || process.env.NODE_ENV === 'production' ? {} : { devCode: r.code }) })
 })
 
 // Age comes before anything else, and the minimum is 16 for now (Nuel,
@@ -441,9 +476,24 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
       b.onboarded != null ? (b.onboarded ? 1 : 0) : cur.onboarded,
       cur.id,)
   if (PROFILE_TYPES.includes(b.profileType)) await q.run('UPDATE users SET profile_type = ? WHERE id = ?', b.profileType, cur.id)
+  if (b.gender != null) {
+    const g = cleanGender(b.gender)
+    if (g === null) return err(res, 400, 'Gender can be up to 30 letters.')
+    await q.run('UPDATE users SET gender = ? WHERE id = ?', g, cur.id)
+  }
+  if (b.genderPublic != null) await q.run('UPDATE users SET gender_public = ? WHERE id = ?', b.genderPublic ? 1 : 0, cur.id)
   res.json({ user: await selfUser(await getUserById(cur.id)) })
 })
 const PROFILE_TYPES = ['individual', 'creator', 'business', 'organisation']
+const GENDER_CODES = ['woman', 'man', 'non-binary', 'prefer-not']
+// A gender is one of the listed codes, or the person's own words (letters,
+// spaces and hyphens, up to 30). Blank clears it. Returns null if invalid.
+export function cleanGender(v) {
+  const t = String(v ?? '').trim()
+  if (!t) return ''
+  if (GENDER_CODES.includes(t)) return t
+  return /^[\p{L}][\p{L} '-]{0,29}$/u.test(t) ? t : null
+}
 
 // ── Settings: account, security, data (VOIDAJ-Blueprint.md §10) ─────
 // Changing how you sign in always asks for the current password.
@@ -515,6 +565,13 @@ app.delete('/api/auth/me', requireAuth, async (req, res) => {
   const { password } = req.body || {}
   if (req.userRow.password_hash && !checkPassword(password || '', req.userRow.password_hash)) return err(res, 401, 'That password isn’t right.')
   const id = req.userId
+  // Deleting the account isn't a way out of a paid job: not while someone is
+  // waiting to be paid by you, you're waiting to be paid, or a job you're on
+  // is still going or being looked at by the team (server/job-safety.js).
+  const owes = await q.get(`SELECT 1 FROM job_payments WHERE (payer_id = ? OR payee_id = ?) AND status IN ('awaiting', 'pending', 'charging', 'due') LIMIT 1`, id, id)
+    || await q.get(`SELECT 1 FROM jobs j JOIN job_agreements a ON a.job_id = j.id WHERE (j.poster_id = ? OR j.worker_id = ?) AND a.amount IS NOT NULL
+      AND j.status IN ('selected', 'in_progress', 'disputed') LIMIT 1`, id, id)
+  if (owes) return err(res, 400, 'You have a paid job that isn’t finished or paid yet. Finish it, cancel it, or wait for the VOIDAJ team to decide it, then you can delete your account.')
   const owned = await q.all("SELECT community_id FROM memberships WHERE user_id = ? AND role = 'owner'", id)
   await transaction(async (t) => {
     // A community shouldn't lose its owner: hand it to the most senior,
@@ -538,6 +595,12 @@ app.delete('/api/auth/me', requireAuth, async (req, res) => {
       'DELETE FROM votes WHERE user_id = ?',
       'DELETE FROM ratings WHERE user_id = ?',
       'DELETE FROM login_events WHERE user_id = ?',
+      // The saved card token and payout details (server/payments.js).
+      'DELETE FROM payment_cards WHERE user_id = ?',
+      'DELETE FROM payout_accounts WHERE user_id = ?',
+      'DELETE FROM payout_changes WHERE user_id = ?',
+      // Photos of work and evidence they added to jobs (server/job-safety.js).
+      'DELETE FROM job_photos WHERE user_id = ?',
     ]) await t.run(sql, ...Array((sql.match(/\?/g) || []).length).fill(id))
     await t.run("UPDATE jobs SET status = 'closed' WHERE poster_id = ?", id)
     await t.run('DELETE FROM service_photos WHERE job_id IN (SELECT id FROM jobs WHERE poster_id = ?)', id)
@@ -658,7 +721,7 @@ app.post('/api/auth/verify-id', requireAuth, (_req, res) =>
 
 // ── Communities ──────────────────────────────────────────────────────
 app.get('/api/communities', async (req, res) => {
-  const rows = await q.all('SELECT * FROM communities')
+  const rows = await q.all('SELECT * FROM communities WHERE expires_at IS NULL OR expires_at > ?', now())
   res.json({ communities: await Promise.all(rows.map((c) => serializeCommunity(c, req.userId))) })
 })
 
@@ -694,7 +757,7 @@ app.post('/api/communities', requireAuth, guard.requireConfirmed, async (req, re
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)`,
     id, name, String(b.tagline || '').trim().slice(0, 120), String(b.description || '').trim().slice(0, 1000),
     scope, city, accent, icon, JSON.stringify(tags), JSON.stringify(rules), req.userId, now(), cover)
-  await q.run('UPDATE communities SET category = ?, country = ? WHERE id = ?', cleanCategory(b.category), req.userRow.country || DEFAULT_COUNTRY, id)
+  await q.run('UPDATE communities SET category = ?, country = ?, expires_at = ? WHERE id = ?', cleanCategory(b.category), req.userRow.country || DEFAULT_COUNTRY, expiryFor(b.keepFor), id)
   await q.run("INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, 'owner', ?)", req.userId, id, now())
   await logAction(id, req.userId, 'community.created', { summary: name })
   const row = await q.get('SELECT * FROM communities WHERE id = ?', id)
@@ -745,9 +808,10 @@ app.post('/api/uploads', requireAuth, async (req, res) => {
 // ── Events ───────────────────────────────────────────────────────────
 app.get('/api/events', async (req, res) => {
   const { community } = req.query
+  // Events past their "keep up" time are taken down from the lists.
   const rows = community
-    ? await q.all('SELECT * FROM events WHERE community_id = ? ORDER BY date, created_at', community)
-    : await q.all('SELECT * FROM events ORDER BY date, created_at LIMIT 50')
+    ? await q.all('SELECT * FROM events WHERE community_id = ? AND (expires_at IS NULL OR expires_at > ?) ORDER BY date, created_at', community, now())
+    : await q.all('SELECT * FROM events WHERE expires_at IS NULL OR expires_at > ? ORDER BY date, created_at LIMIT 50', now())
   res.json({ events: rows.map(serializeEvent) })
 })
 
@@ -798,6 +862,8 @@ async function createEvent(req, res, audience, communityId) {
   const timezone = isTimeZone(b.timezone) ? b.timezone : (findCountry(country)?.tz || 'Africa/Lagos')
   await q.run('UPDATE events SET category = ?, format = ?, capacity = ?, country = ?, timezone = ?, invite_only = ? WHERE id = ?',
     cleanCategory(b.category), format, capacity, country, timezone, b.inviteOnly ? 1 : 0, id)
+  // Up for the chosen time after the event's own date (the day itself counts).
+  await q.run('UPDATE events SET expires_at = ? WHERE id = ?', expiryFor(b.keepFor, Date.parse(date) + 24 * 60 * 60 * 1000), id)
   await createEventCircle(id, title, req.userId)
   res.json({ event: serializeEvent(await q.get('SELECT * FROM events WHERE id = ?', id)) })
 }
@@ -952,8 +1018,44 @@ app.get('/api/posts', async (req, res) => {
   sql += ' ORDER BY pinned DESC, created_at DESC'
   if (limit) { sql += ' LIMIT ?'; args.push(Number(limit)) }
   const blocked = new Set(await guard.blockedIds(req.userId))
-  const rows = (await q.all(sql, ...args)).filter((p) => !blocked.has(p.author_id))
+  const skipped = await hiddenPostIds(req.userId)
+  const rows = (await q.all(sql, ...args)).filter((p) => !blocked.has(p.author_id) && !skipped.has(p.id))
   res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
+})
+
+// Posts this member chose to hide from their own view.
+async function hiddenPostIds(userId) {
+  if (!userId) return new Set()
+  return new Set((await q.all('SELECT post_id FROM hidden_posts WHERE user_id = ?', userId)).map((r) => r.post_id))
+}
+
+// Post actions (Nuel, Nov 22): the author can delete their own post or
+// comment; anyone can hide a post from their own view, and undo it.
+// Deleting uses the same switch moderators use, so it leaves every list.
+app.delete('/api/posts/:id', requireAuth, async (req, res) => {
+  const row = await q.get('SELECT id, author_id FROM posts WHERE id = ?', req.params.id)
+  if (!row) return err(res, 404, 'Post not found.')
+  if (row.author_id !== req.userId) return err(res, 403, 'You can only delete your own posts.')
+  await q.run('UPDATE posts SET hidden = 1 WHERE id = ?', row.id)
+  res.json({ ok: true })
+})
+app.delete('/api/comments/:id', requireAuth, async (req, res) => {
+  const row = await q.get('SELECT id, author_id FROM comments WHERE id = ?', req.params.id)
+  if (!row) return err(res, 404, 'Comment not found.')
+  if (row.author_id !== req.userId) return err(res, 403, 'You can only delete your own comments.')
+  await q.run('UPDATE comments SET hidden = 1 WHERE id = ?', row.id)
+  res.json({ ok: true })
+})
+app.post('/api/posts/:id/hide', requireAuth, async (req, res) => {
+  const row = await q.get('SELECT id, author_id FROM posts WHERE id = ?', req.params.id)
+  if (!row) return err(res, 404, 'Post not found.')
+  if (row.author_id === req.userId) return err(res, 400, 'That’s your post. You can delete it instead.')
+  await q.run('INSERT INTO hidden_posts (user_id, post_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', req.userId, row.id, now())
+  res.json({ ok: true })
+})
+app.delete('/api/posts/:id/hide', requireAuth, async (req, res) => {
+  await q.run('DELETE FROM hidden_posts WHERE user_id = ? AND post_id = ?', req.userId, req.params.id)
+  res.json({ ok: true })
 })
 
 // A post goes to a community, to the author's city, or to everyone.
@@ -1020,7 +1122,8 @@ app.get('/api/feed', async (req, res) => {
   }
   // People you've blocked don't show up in your feed.
   const blocked = new Set(await guard.blockedIds(req.userId))
-  rows = rows.filter((p) => !blocked.has(p.author_id))
+  const skipped = await hiddenPostIds(req.userId)
+  rows = rows.filter((p) => !blocked.has(p.author_id) && !skipped.has(p.id))
   res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
 })
 
@@ -2025,8 +2128,10 @@ app.post('/api/live/:id/stop', requireAuth, async (req, res) => {
 businessRoutes(app)
 eventRoutes(app)
 jobFlowRoutes(app)
+paymentRoutes(app)
 idCheckRoutes(app)
 serviceRoutes(app)
+suggestionRoutes(app)
 adRoutes(app)
 
 // ── Companion ────────────────────────────────────────────────────────

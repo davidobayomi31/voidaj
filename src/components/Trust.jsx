@@ -26,13 +26,45 @@ export function StarPicker({ value, onChange }) {
   )
 }
 
-// Someone's reviews from Quick Jobs, for the Reviews tab on a profile.
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+
+// Someone's record on paid Quick Jobs (server/job-safety.js recordFor): as
+// a worker, jobs done and no-shows; as a poster, whether they pay, and on
+// time. Counts only. Shown next to applicants, on the agreement and on
+// profiles.
+export function RecordLine({ record, as, empty = null }) {
+  if (!record) return null
+  const parts = []
+  if (as === 'worker') {
+    const { done, noShows } = record.asWorker
+    if (done) parts.push([plural(done, 'job') + ' done', ''])
+    if (noShows) parts.push([plural(noShows, 'no-show'), 'warn'])
+  } else {
+    const { paid, onTime, owed, chargebacks, lateCancels } = record.asPoster
+    if (paid) parts.push([`Paid ${onTime} of ${plural(paid, 'job')} on time`, onTime < paid ? 'warn' : ''])
+    if (owed) parts.push([plural(owed, 'payment') + ' owed', 'bad'])
+    if (chargebacks) parts.push([`${plural(chargebacks, 'payment')} disputed with their bank`, 'bad'])
+    if (lateCancels) parts.push([plural(lateCancels, 'late cancellation'), 'warn'])
+  }
+  if (!parts.length) return empty ? <span className="record-line">{empty}</span> : null
+  return <span className="record-line">{parts.map(([t, tone], i) => <span key={i} className={tone}>{t}</span>)}</span>
+}
+
+// Someone's reviews from Quick Jobs, for the Reviews tab on a profile,
+// with their payment and reliability record.
 export function ReviewsPanel({ userId }) {
   const [data, setData] = useState(null)
   useEffect(() => { api.userReviews(userId).then(setData).catch(() => setData({ count: 0, reviews: [] })) }, [userId])
   if (!data) return <p className="meta-dim">Loading reviews…</p>
-  if (!data.count) return <p className="meta-dim empty-note">No reviews yet. Reviews come from Quick Jobs: after a job is done, both people review each other.</p>
+  const record = data.record && (
+    <div className="card reviews-record">
+      <span><b>As a worker</b><RecordLine record={data.record} as="worker" empty="No paid jobs yet" /></span>
+      <span><b>As a poster</b><RecordLine record={data.record} as="poster" empty="No paid jobs yet" /></span>
+    </div>
+  )
+  if (!data.count) return <>{record}<p className="meta-dim empty-note">No reviews yet. Reviews come from Quick Jobs: after a job is done, both people review each other.</p></>
   return (
+    <>{record}
     <section className="card reviews-card">
       <div className="reviews-summary">
         <b>{data.average}</b><Stars value={data.average} size={16} /><span className="meta-dim">{data.count} review{data.count > 1 ? 's' : ''}</span>
@@ -50,6 +82,7 @@ export function ReviewsPanel({ userId }) {
         ))}
       </ul>
     </section>
+    </>
   )
 }
 

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laptop → Phone — Ada's shop (9:16)</title>
+<link rel="stylesheet" href="ad.css">
+<link rel="stylesheet" href="devices.css">
+<style>
+  .vo span { font-size: 84px; }
+  .phone { top: 820px; }
+  .trk { margin-top: 26px; padding: 22px; border-radius: 26px; background: #fff; box-shadow: 0 10px 30px -18px rgba(10,10,12,.4); font-size: 24px; font-weight: 700; }
+  .trk .bar { margin-top: 14px; height: 14px; border-radius: 7px; background: #e8eaf0; overflow: hidden; }
+  .trk .bar i { display: block; height: 100%; width: var(--p, 0%); background: var(--grad); border-radius: 7px; }
+</style>
+</head>
+<body>
+<!-- Laptop → Phone, as one person's story: Ada posts a delivery job from
+     her shop laptop, hires on her phone at the bus stop, pays when it's done. -->
+<div class="frame" data-w="1080" data-h="1920" data-dur="24.5">
+  <div class="fill bg"></div>
+  <div class="grp out" data-t="19.0" style="position:absolute;inset:0">
+  <div class="pill r-down" data-t="0.2"><i></i>Ada · Ada’s Cakes, Yaba</div>
+
+  <div class="vo">
+    <span class="r-up" data-t="0.4" data-until="2.2">I run a cake shop in <em>Yaba.</em></span>
+    <span class="r-up" data-t="2.3" data-until="5.3">Before I left, I posted <em>one job.</em></span>
+    <span class="r-up" data-t="5.4" data-until="8.5">At the bus stop: <em>3 riders</em> already.</span>
+    <span class="r-up" data-t="8.6" data-until="11.4">I picked Musa. <em>Verified.</em></span>
+    <span class="r-up" data-t="11.5" data-until="16.8">Same job. <em>Every screen.</em></span>
+    <span class="r-up" data-t="16.9" data-until="19.0">Delivered. Paid <em>when it’s done.</em></span>
+  </div>
+
+  <div class="where r-pop" data-t="0.6" data-until="5.3" style="left:60px">🏪 At the shop</div>
+  <div class="where r-pop" data-t="5.4" data-until="13.4" style="left:60px">🚌 At the bus stop</div>
+  <div class="where r-pop" data-t="13.5" data-until="19.0" style="left:60px">🏠 Home</div>
+
+  <!-- laptop -->
+  <div class="laptop r-up" data-t="0.3" style="top:520px">
+    <div class="lid"><div class="lscr">
+      <h5>Quick Jobs</h5><div class="nav">Ada’s Cakes</div>
+      <div class="form out" data-t="5.0">
+        <div class="ll" style="margin-top:14px">What do you need?</div>
+        <div class="lf"><span data-type data-t="2.6" data-cps="16">Delivery rider, today</span></div>
+        <div class="ll">Budget</div>
+        <div class="lf"><span data-type data-t="3.9" data-cps="9">₦5,000</span></div>
+        <div class="lb" data-t="4.5">Post quick job</div>
+      </div>
+      <div class="jobcard r-up" data-t="5.1">
+        <div class="t">Delivery rider, today</div>
+        <div class="m">₦5,000 · Yaba → Lekki</div>
+        <span class="chip" id="chip">Open</span>
+        <div class="stp">
+          <div data-t="5.1"><b></b>Open</div>
+          <div data-t="9.6"><b></b>Rider picked</div>
+          <div data-t="11.6"><b></b>On the way</div>
+          <div class="fin" data-t="16.6"><b></b>Delivered</div>
+        </div>
+      </div>
+    </div></div>
+    <div class="base"></div>
+  </div>
+
+  <svg class="beam" viewBox="0 0 1080 1920"><defs><linearGradient id="bg" x1="0" x2="1"><stop offset="0" stop-color="#6a9bff"/><stop offset="1" stop-color="#9b7bff"/></linearGradient></defs>
+    <path d="M800 670 C 950 670, 980 760, 900 832" data-t="5.0"/></svg>
+  <div class="pulse" style="left:900px;top:832px" data-t="5.6"></div>
+  <div class="pulse" style="left:760px;top:570px" data-t="13.6"></div>
+
+  <!-- phone -->
+  <div class="phone r-up" data-t="0.5"><div class="pscr">
+    <div class="pg home" data-t="8.6">
+      <div class="app"><img src="../public/voidaj-logo.svg" alt="">Voidaj</div>
+      <div class="skel"><i></i><i></i></div><div class="skel"><i></i><i></i></div><div class="skel"><i></i><i></i></div>
+    </div>
+    <div class="note" data-t="5.6" data-until="8.6"><div class="ic"><img src="../public/voidaj-logo.svg" alt=""></div><div><small>Voidaj · now</small>3 riders applied to “Delivery rider”</div></div>
+    <div class="pg" data-t="8.6" data-until="11.5">
+      <div class="ptitle">3 riders</div><div class="psub">Delivery rider, today</div>
+      <div class="row3" id="musa"><div class="a">M</div><div>Musa<small>✓ Verified · 4.9★ · 0.6 km</small></div><span class="go2">Hire</span></div>
+      <div class="row3"><div class="a" style="background:#e8643a">K</div><div>Kemi<small>4.7★ · 1.8 km</small></div><span class="go2">Hire</span></div>
+      <div class="row3"><div class="a" style="background:#17a2a2">T</div><div>Tobi<small>4.6★ · 2.4 km</small></div><span class="go2">Hire</span></div>
+    </div>
+    <div class="pg" data-t="11.5" data-until="16.4">
+      <div class="ch"><div class="a">M</div>Musa</div>
+      <div class="bub o r-up" data-t="11.7">Picked up the cake ✓</div>
+      <div class="bub me r-up" data-t="12.6">Thank you! Careful o 😅</div>
+      <div class="trk r-up" data-t="13.4">On the way to Lekki<div class="bar"><i id="trk"></i></div></div>
+    </div>
+    <div class="pg" data-t="16.4" data-until="25">
+      <div class="psub" style="margin-top:20px">Musa delivered your cake 🎂</div>
+      <div class="big">₦5,000</div>
+      <div class="pbtn" data-t="17.4">Confirm and pay</div>
+      <div class="okay r-pop" data-t="17.7">Paid ✓ Musa got the full ₦5,000</div>
+    </div>
+  </div></div>
+  </div>
+
+  <section class="scene cta" data-s="19.1" data-e="24.6">
+    <div class="logo-tile r-pop" data-t="19.2"><img src="../public/voidaj-logo.svg" alt=""></div>
+    <h2 class="r-up" data-t="19.3">Start on one screen.<br><em>Finish on any.</em></h2>
+    <div class="cmt r-up" data-t="21.4"><div class="d"></div><span data-type data-t="21.9" data-cps="7">VOIDAJ</span><div class="send" data-t="22.9"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></div></div>
+    <p class="r-up" data-t="23.0" style="margin-top:60px;font-size:48px;font-weight:700;opacity:.8">Comment for early access · voidaj.com</p>
+  </section>
+</div>
+
+<script type="application/json" id="voice">
+{
+  "lines": [
+    { "t": 0.4,  "who": "ada",      "text": "I run a cake shop in Yaba." },
+    { "t": 2.3,  "who": "ada",      "text": "Before I left, I posted one delivery job." },
+    { "t": 5.5,  "who": "ada",      "text": "By the bus stop, my phone already had three riders." },
+    { "t": 8.7,  "who": "ada",      "text": "I picked Musa. Verified, four point nine stars." },
+    { "t": 11.7, "who": "chidi",    "text": "Picked up. On my way!" },
+    { "t": 13.9, "who": "ada",      "text": "And at home, my laptop showed the same job." },
+    { "t": 16.95, "who": "ada",     "text": "Delivered. I paid when it was done." },
+    { "t": 19.3, "who": "narrator", "text": "Start on one screen. Finish on any." },
+    { "t": 21.7, "who": "hype",     "text": "Comment Voidaj for early access." }
+  ],
+  "sfx": [
+    { "t": 0.2,  "name": "whoosh", "vol": 0.35 },
+    { "t": 4.5,  "name": "pop", "vol": 0.5 },
+    { "t": 5.6,  "name": "ping", "vol": 0.5 },
+    { "t": 9.6,  "name": "pop", "vol": 0.5 },
+    { "t": 11.7, "name": "pop", "vol": 0.35 },
+    { "t": 12.6, "name": "pop", "vol": 0.35 },
+    { "t": 13.6, "name": "ping", "vol": 0.4 },
+    { "t": 17.7, "name": "chime", "vol": 0.5 },
+    { "t": 19.1, "name": "whoosh", "vol": 0.4 },
+    { "t": 22.9, "name": "pop", "vol": 0.5 }
+  ]
+}
+</script>
+<script src="ad.js"></script>
+<script>
+  const chip = document.getElementById('chip'), musa = document.getElementById('musa'), trk = document.getElementById('trk')
+  const labels = [[5.1, 'Open', ''], [9.6, 'Rider picked', ''], [11.6, 'On the way', ''], [16.6, 'Delivered', 'g']]
+  Ad.hook((t) => {
+    let l = labels[0]
+    for (const x of labels) if (t >= x[0]) l = x
+    chip.textContent = l[1]; chip.className = 'chip ' + l[2]
+    musa.classList.toggle('pick', t >= 9.6)
+    trk.style.setProperty('--p', (Ad.clamp((t - 13.4) / 3, 0, 1) * 100) + '%')
+  })
+</script>
+</body>
+</html>

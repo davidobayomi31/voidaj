@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voidaj — ID card (9:16)</title>
+<link rel="stylesheet" href="ad.css">
+<style>
+  .bg { background: radial-gradient(900px 800px at 85% 10%, #e9edff 0%, rgba(233,237,255,0) 60%), radial-gradient(900px 700px at 0% 95%, #efe9ff 0%, rgba(239,233,255,0) 60%), #fff; }
+  .lines { position: absolute; left: 80px; top: 360px; }
+  .ln { display: block; font-size: 150px; line-height: 1.12; letter-spacing: -5px; font-weight: 800; color: var(--ink); transition: opacity .5s var(--ease), transform .7s var(--ease), color .5s; opacity: 0; transform: translateY(70px); }
+  .ln.in { opacity: 1; transform: none; }
+  .ln.serif { font-weight: 400; letter-spacing: -3px; color: var(--blue); }
+  .lines.gone .ln { }
+  .head { position: absolute; left: 80px; right: 80px; top: 200px; font-size: 104px; line-height: 1.02; letter-spacing: -4px; font-weight: 800; }
+  .head em { font-family: var(--serif); font-weight: 400; color: var(--blue); }
+
+  /* the card */
+  .stage { position: absolute; left: 100px; top: 560px; width: 880px; height: 560px; perspective: 2400px; }
+  .enter { position: absolute; inset: 0; opacity: 0; transform: translateY(160px) rotateX(35deg) scale(.8); transition: opacity .6s var(--ease), transform 1s var(--spring); }
+  .enter.in { opacity: 1; transform: none; }
+  .flip { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .9s var(--ease); animation: bob 5s ease-in-out infinite; }
+  @keyframes bob { 50% { translate: 0 -12px; } }
+  .flip.in { transform: rotateY(180deg); }
+  .face2 { position: absolute; inset: 0; border-radius: 56px; backface-visibility: hidden; padding: 56px; }
+  .front { background: linear-gradient(150deg, #0b1f3b 0%, #12265a 60%, #2a1d6b 100%); color: #fff; box-shadow: inset 0 0 0 3px rgba(106,155,255,.7), 0 70px 120px -40px rgba(30,40,120,.55); }
+  .back { background: #fff; transform: rotateY(180deg); box-shadow: 0 0 0 2px rgba(10,10,12,.06), 0 70px 120px -40px rgba(10,10,12,.35); display: flex; align-items: center; gap: 50px; }
+  .front .top { display: flex; justify-content: space-between; align-items: center; }
+  .front .top img { width: 84px; border-radius: 22px; }
+  .front .ver { padding: 10px 26px; border-radius: 99px; background: rgba(34,197,94,.18); color: #7ee2a0; font-size: 32px; font-weight: 800; }
+  .front .av { position: absolute; left: 56px; bottom: 56px; width: 170px; height: 170px; border-radius: 50%; background: var(--grad); display: grid; place-items: center; font-size: 76px; font-weight: 800; }
+  .front .info { position: absolute; left: 260px; bottom: 62px; }
+  .front .nm { font-size: 70px; font-weight: 800; letter-spacing: -2px; }
+  .front .un { margin-top: 6px; font-size: 38px; color: #9db8ff; font-weight: 600; }
+  .front .lo { margin-top: 4px; font-size: 32px; color: #8d93aa; }
+  .qr { width: 400px; height: 400px; flex: none; }
+  .back .t { font-size: 60px; font-weight: 800; letter-spacing: -2px; line-height: 1.05; }
+  .back .s { margin-top: 18px; font-size: 34px; color: var(--dim); font-weight: 600; }
+
+  .cap { position: absolute; left: 80px; right: 80px; top: 1180px; font-size: 72px; line-height: 1.05; letter-spacing: -2px; font-weight: 800; text-align: center; }
+  .cap em { font-family: var(--serif); font-weight: 400; color: var(--blue); letter-spacing: -1px; }
+  .share { position: absolute; left: 240px; right: 240px; top: 1290px; height: 130px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 52px; font-weight: 700; display: grid; place-items: center; }
+
+  /* share sheet */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 760px; border-radius: 80px 80px 0 0; padding: 70px 70px; background: rgba(255,255,255,.86); backdrop-filter: blur(30px) saturate(170%); box-shadow: 0 -40px 120px -30px rgba(10,10,12,.35), 0 0 0 2px rgba(10,10,12,.05); transform: translateY(800px); transition: transform .8s var(--ease); z-index: 8; }
+  .sheet.in { transform: none; }
+  .sheet h4 { font-size: 64px; font-weight: 800; letter-spacing: -2px; }
+  .opts { display: flex; gap: 40px; margin-top: 60px; }
+  .opt { flex: 1; text-align: center; font-size: 36px; font-weight: 700; }
+  .opt i { display: grid; place-items: center; width: 190px; height: 190px; margin: 0 auto 22px; border-radius: 56px; background: var(--grey); font-style: normal; font-size: 84px; transition: all .3s var(--spring); }
+  .opt.pick i { background: var(--blue); transform: scale(1.1); }
+  .toast { position: absolute; left: 50%; bottom: 120px; transform: translate(-50%, 500px); padding: 28px 56px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 46px; font-weight: 700; white-space: nowrap; transition: transform .6s var(--spring); z-index: 9; }
+  .toast.in { transform: translate(-50%, 0); }
+
+  .chips { position: absolute; left: 0; right: 0; top: 1330px; display: flex; flex-direction: column; align-items: center; gap: 26px; }
+  .chip { padding: 24px 56px; border-radius: 99px; background: #fff; box-shadow: 0 0 0 2px rgba(10,10,12,.07), 0 30px 60px -30px rgba(10,10,12,.4); font-size: 60px; font-weight: 800; letter-spacing: -1px; }
+  .chip.g { color: #15803d; background: #ecfdf3; }
+
+  .end { background: radial-gradient(900px 700px at 50% 38%, #1d2f6b 0%, #0b1f3b 45%, #050a14 100%); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .end .logo-tile { width: 220px; height: 220px; margin-bottom: 64px; box-shadow: inset 0 0 0 5px #4f6bf5, 0 0 120px rgba(79,107,245,.6); }
+  .end h2 { font-size: 130px; line-height: 1.02; letter-spacing: -3px; font-weight: 400; color: #fff; }
+  .end h2 b { display: block; font-family: var(--sans); font-style: normal; font-weight: 800; font-size: 160px; letter-spacing: -7px; margin-top: 10px; }
+  .end p { margin-top: 60px; font-size: 52px; font-weight: 700; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="frame" data-w="1080" data-h="1920" data-dur="15">
+  <div class="fill bg"></div>
+
+  <!-- intro lines -->
+  <div class="lines">
+    <span class="ln" data-t="0.3" data-until="3.0">Your name.</span>
+    <span class="ln" data-t="0.9" data-until="3.0">Your work.</span>
+    <span class="ln serif" data-t="1.5" data-until="3.0">Your reputation.</span>
+  </div>
+  <div class="head r-up" data-t="3.1" data-until="12.6">Meet your <em>VOIDAJ ID.</em></div>
+
+  <!-- card -->
+  <div class="stage">
+    <div class="enter" data-t="2.8" data-until="12.6">
+      <div class="flip" data-t="5.3" data-until="7.5">
+        <div class="face2 front">
+          <div class="top"><img src="../public/voidaj-logo.svg" alt=""><span class="ver">✓ Verified</span></div>
+          <div class="av">AO</div>
+          <div class="info"><div class="nm">Ada Okafor</div><div class="un">@ada.okafor</div><div class="lo">Lagos, Nigeria</div></div>
+        </div>
+        <div class="face2 back">
+          <svg class="qr" id="qr" viewBox="0 0 25 25" shape-rendering="crispEdges"></svg>
+          <div><div class="t">Scan to open <br>my profile</div><div class="s">voidaj.com</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap r-up" data-t="5.5" data-until="7.5">Scan it. <em>Land on their profile.</em></div>
+  <div class="share r-up" data-t="7.7" data-until="10.4">Share my ID</div>
+
+  <div class="sheet" data-t="8.5" data-until="10.4">
+    <h4>Share my ID</h4>
+    <div class="opts">
+      <div class="opt"><i>💬</i>Chat</div>
+      <div class="opt" id="copy"><i>🔗</i>Copy link</div>
+      <div class="opt"><i>⬇️</i>Save QR</div>
+    </div>
+  </div>
+  <div class="toast" data-t="9.5" data-until="10.4">Link copied ✓</div>
+
+  <div class="chips">
+    <div class="chip g r-up" data-t="10.5">✓ Verified</div>
+    <div class="chip r-up" data-t="10.9">Reviews from real jobs</div>
+    <div class="chip r-up" data-t="11.3">One card. Everywhere.</div>
+  </div>
+
+  <section class="scene end" data-s="12.6" data-e="15.1">
+    <div class="logo-tile r-pop" data-t="12.9"><img src="../public/voidaj-logo.svg" alt=""></div>
+    <h2 class="serif r-up" data-t="13.2">Your<b>VOIDAJ ID</b></h2>
+    <p class="r-up" data-t="13.9">voidaj.com</p>
+  </section>
+
+  <div class="ptr" id="ptr"><svg viewBox="0 0 24 24"><path d="M3 2l17 8-7 2-3 7z" fill="#111" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+</div>
+<script src="ad.js"></script>
+<script>
+  // A stylised QR: three finder squares plus a seeded scatter. Looks the part, but isn't a scannable code.
+  const qr = document.getElementById('qr')
+  let seed = 7
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  const finder = (x, y) => `<rect x="${x}" y="${y}" width="7" height="7" fill="#0a0a0b"/><rect x="${x + 1}" y="${y + 1}" width="5" height="5" fill="#fff"/><rect x="${x + 2}" y="${y + 2}" width="3" height="3" fill="#0a0a0b"/>`
+  let out = ''
+  for (let y = 0; y < 25; y++) for (let x = 0; x < 25; x++) {
+    const inF = (x < 8 && y < 8) || (x > 16 && y < 8) || (x < 8 && y > 16)
+    if (!inF && rnd() > 0.5) out += `<rect x="${x}" y="${y}" width="1" height="1" fill="#0a0a0b"/>`
+  }
+  qr.innerHTML = out + finder(0, 0) + finder(18, 0) + finder(0, 18)
+
+  Ad.cursor(document.getElementById('ptr'), [
+    { t: 4.6, x: 900, y: 1500 }, { t: 5.3, x: 700, y: 900, click: true }, { t: 6.4, x: 760, y: 980 },
+    { t: 7.9, x: 800, y: 1500 }, { t: 8.4, x: 540, y: 1340, click: true }, { t: 8.9, x: 540, y: 1340 },
+    { t: 9.2, x: 540, y: 1450 }, { t: 9.5, x: 540, y: 1450, click: true }, { t: 9.9, x: 540, y: 1450 },
+  ])
+  Ad.hook((t) => document.getElementById('copy').classList.toggle('pick', t >= 9.5 && t < 10.4))
+</script>
+</body>
+</html>

@@ -67,7 +67,7 @@ export function AppProvider({ children }) {
     if (user) { const u = await api.patchMe({ settings: { theme: t } }); setUser(u) }
   }
 
-  const register = async (data) => { const u = await api.register(data); setUser(u); return u }
+  const register = async (data) => { const u = await api.register(data); if (u?.needsCode) return u; setUser(u); return u }
   const login = async (data) => { const u = await api.login(data); setUser(u); return u }
   const logout = async () => { await api.logout(); setUser(null) }
   const refreshMe = async () => { const u = await api.me(); setUser(u); return u }

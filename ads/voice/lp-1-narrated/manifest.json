@@ -1,0 +1,140 @@
+{
+  "ad": "lp-1-narrated",
+  "dur": 22.5,
+  "clips": [
+    {
+      "t": 0.45,
+      "file": "0-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "Post a job on your laptop...",
+      "len": 1.8,
+      "vol": 1
+    },
+    {
+      "t": 3.95,
+      "file": "1-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "...and your phone already knows.",
+      "len": 1.88,
+      "vol": 1
+    },
+    {
+      "t": 7.45,
+      "file": "2-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "Chat. Hire. Track it from anywhere.",
+      "len": 2.35,
+      "vol": 1
+    },
+    {
+      "t": 10.95,
+      "file": "3-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "Same job. Every screen.",
+      "len": 1.85,
+      "vol": 1
+    },
+    {
+      "t": 14.55,
+      "file": "4-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "Pay when it's done.",
+      "len": 1.33,
+      "vol": 1
+    },
+    {
+      "t": 18.8,
+      "file": "5-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Comment Voidaj for early access.",
+      "len": 2.45,
+      "vol": 1
+    },
+    {
+      "t": 0.2,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.35
+    },
+    {
+      "t": 3.5,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 4.7,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 8,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.35
+    },
+    {
+      "t": 9,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.35
+    },
+    {
+      "t": 9.9,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.35
+    },
+    {
+      "t": 11.3,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 16.1,
+      "file": "sfx-chime.mp3",
+      "kind": "sfx",
+      "name": "chime",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 18.2,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 21,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    }
+  ]
+}

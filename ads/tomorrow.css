@@ -1,0 +1,96 @@
+/* Shared look for the "Tomorrow" ads: Tunde's room, the 3D people,
+   captions, banners, the Voidaj phone and the end card (from qj-2). */
+  .room { background: linear-gradient(#f0e4cf 0%, #e6d4b6 100%); }
+  .floor { position: absolute; left: 0; right: 0; top: 1320px; bottom: 0; background: linear-gradient(#b98e5f, #8f6a42); }
+  .floor::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 14px; background: rgba(0,0,0,.18); }
+  .window { position: absolute; left: 90px; top: 130px; width: 300px; height: 420px; background: linear-gradient(#bfe3ff, #eaf6ff); border: 18px solid #fff; border-radius: 8px; box-shadow: 0 0 0 4px rgba(0,0,0,.08), 0 40px 80px -30px rgba(0,0,0,.3); }
+  .window::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 14px; background: #fff; transform: translateX(-50%); }
+  .shade { position: absolute; left: 0; top: 0; width: 1080px; height: 1320px; background: linear-gradient(100deg, rgba(255,255,255,.35), rgba(255,255,255,0) 55%); }
+
+  /* tap + sink */
+  .tap { position: absolute; left: 800px; top: 440px; }
+  .tap .pipe { position: absolute; left: 70px; top: 0; width: 46px; height: 170px; background: linear-gradient(90deg, #b9c0cc, #eef1f6, #aab2bf); border-radius: 10px; }
+  .tap .spout { position: absolute; left: -50px; top: 0; width: 190px; height: 46px; background: linear-gradient(#eef1f6, #aab2bf); border-radius: 24px 10px 10px 24px; }
+  .tap .noz { position: absolute; left: -50px; top: 30px; width: 36px; height: 46px; background: linear-gradient(90deg, #aab2bf, #eef1f6); border-radius: 0 0 12px 12px; }
+  .tap .knob { position: absolute; left: 62px; top: -26px; width: 62px; height: 34px; background: #4f6bf5; border-radius: 12px; }
+  .basin { position: absolute; left: 720px; top: 720px; width: 330px; height: 90px; border-radius: 20px 20px 50px 50px; background: linear-gradient(#fff, #dde3ee); box-shadow: 0 30px 40px -20px rgba(0,0,0,.35); }
+  .drop { position: absolute; left: 764px; top: 530px; width: 20px; height: 30px; border-radius: 50% 50% 55% 55%; background: #5aa9ff; opacity: 0; animation: drip .9s ease-in infinite; }
+  .drop.d2 { animation-delay: .3s; } .drop.d3 { animation-delay: .6s; }
+  .fixed .drop { display: none; }
+  @keyframes drip { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(190px); opacity: .9; } }
+  .puddle { position: absolute; left: 540px; top: 1560px; width: 340px; height: 90px; margin: -45px -170px; border-radius: 50%; background: radial-gradient(#8cc4ff, #5aa9ff); opacity: .9; box-shadow: inset 0 0 30px rgba(255,255,255,.5); transform: scale(.3, .3); }
+
+  /* characters */
+  .persp { position: absolute; width: 480px; height: 700px; perspective: 1800px; perspective-origin: 50% 35%; }
+  .char { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(-16deg) rotateX(4deg); animation: sway 3.6s ease-in-out infinite; }
+  @keyframes sway { 50% { transform: rotateY(-6deg) rotateX(2deg) translateY(-8px); } }
+  .char.chidi { animation-name: sway2; }
+  @keyframes sway2 { 0%, 100% { transform: rotateY(14deg) rotateX(3deg); } 50% { transform: rotateY(22deg) rotateX(2deg) translateY(-8px); } }
+  .eye { position: absolute; top: 150px; width: 44px; height: 64px; border-radius: 14px; background: #111; transition: all .25s; animation: blink 4.5s infinite; }
+  .eye.lf { left: 84px; } .eye.rt { right: 84px; }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+  .brow { position: absolute; top: 100px; width: 112px; height: 22px; border-radius: 8px; background: #1d1d20; transition: transform .3s var(--ease); }
+  .brow.lf { left: 56px; } .brow.rt { right: 56px; }
+  .mouth { position: absolute; left: 118px; top: 266px; width: 104px; height: 18px; border-radius: 9px; background: #3a1d12; transition: all .3s var(--ease); }
+  .mad .brow.lf { transform: rotate(17deg) translateY(10px); } .mad .brow.rt { transform: rotate(-17deg) translateY(10px); }
+  .sad .brow.lf { transform: rotate(-15deg); } .sad .brow.rt { transform: rotate(15deg); }
+  .sad .mouth { height: 12px; width: 70px; left: 135px; }
+  .happy .mouth { top: 250px; height: 62px; width: 130px; left: 105px; border-radius: 0 0 70px 70px; }
+  .happy .brow { transform: translateY(-8px); }
+  .dead .eye { height: 22px; margin-top: 26px; animation: none; }
+  .dead .brow.lf, .dead .brow.rt { transform: translateY(18px); }
+  .dead .mouth { width: 60px; left: 140px; }
+  .tag { position: absolute; left: 30px; top: -70px; white-space: nowrap; padding: 14px 28px; border-radius: 999px; background: rgba(255,255,255,.88); backdrop-filter: blur(14px); font-size: 40px; font-weight: 700; box-shadow: 0 16px 40px -14px rgba(0,0,0,.4); z-index: 9; }
+  .tag b { color: #16a34a; }
+  .plumber-wrap { transform: translateX(900px); transition: transform .9s var(--spring); }
+  .plumber-wrap.in { transform: none; }
+
+  /* notification banners + captions */
+  .ban { position: absolute; left: 60px; right: 60px; top: 70px; padding: 30px 40px; border-radius: 44px; background: rgba(255,255,255,.94); box-shadow: 0 24px 60px -22px rgba(0,0,0,.45); font-size: 46px; font-weight: 600; display: flex; gap: 28px; align-items: center; z-index: 20; }
+  .ban .ic { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(#8a8d99, #5b5e6b); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 40px; flex: none; }
+  .ban small { display: block; font-size: 30px; color: var(--dim); font-weight: 600; margin-bottom: 4px; }
+  .ban.b2 { top: 240px; }
+  .ban.vo .ic { background: var(--navy); }
+  .cap { position: absolute; left: 40px; right: 40px; top: 1180px; text-align: center; font-size: 92px; line-height: 1.08; font-weight: 800; color: #fff; -webkit-text-stroke: 14px #111; paint-order: stroke fill; letter-spacing: -1px; z-index: 30; }
+  .cap em { font-style: normal; color: #ffd84a; }
+  .cap.big { font-size: 150px; top: 1130px; }
+  .day { position: absolute; left: 64px; top: 90px; padding: 20px 44px; border-radius: 28px; background: #111; color: #fff; font-size: 84px; font-weight: 900; letter-spacing: 2px; z-index: 25; }
+
+  /* phone overlay */
+  .phone { position: absolute; left: 190px; top: 380px; width: 700px; height: 1320px; border-radius: 90px; background: #fff; border: 16px solid #111; box-shadow: 0 60px 120px -30px rgba(0,0,0,.6); z-index: 22; padding: 190px 54px 110px; transform: translateY(1700px); transition: transform .8s var(--ease); }
+  .phone.in { transform: none; }
+  .phone h4 { font-size: 66px; font-weight: 800; letter-spacing: -2px; }
+  .phone .f { margin-top: 40px; height: 100px; border-radius: 24px; border: 3px solid rgba(10,10,12,.12); padding: 0 32px; display: flex; align-items: center; font-size: 44px; font-weight: 600; }
+  .phone .f.fa::after { content: ''; width: 4px; height: 50px; background: var(--blue); margin-left: 6px; animation: blink2 1s steps(1) infinite; }
+  @keyframes blink2 { 50% { opacity: 0; } }
+  .phone .l { margin-top: 36px; font-size: 30px; font-weight: 700; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+  .phone .go { margin-top: 70px; height: 120px; border-radius: 32px; background: #111; color: #fff; display: grid; place-items: center; font-size: 48px; font-weight: 700; transition: background .3s; }
+  .phone .go.in { background: var(--green); }
+  .phone .acc { position: absolute; left: 24px; right: 24px; top: 24px; padding: 26px 32px; border-radius: 36px; background: #111; color: #fff; font-size: 40px; font-weight: 600; display: flex; gap: 22px; align-items: center; transform: translateY(-200px); transition: transform .6s var(--spring); }
+  .phone .acc.in { transform: none; }
+  .phone .acc i { width: 56px; height: 56px; border-radius: 50%; background: var(--grad); display: grid; place-items: center; font-style: normal; font-weight: 800; flex: none; }
+
+  .stage { position: absolute; inset: 0; transform-origin: 50% 70%; transition: transform 3s var(--ease); }
+  .stage.in { transform: scale(1.14); }
+
+  /* end card */
+  .s9 { background: radial-gradient(900px 700px at 50% 38%, #1d2f6b 0%, #0b1f3b 45%, #050a14 100%); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .s9 .logo-tile { width: 200px; height: 200px; margin-bottom: 60px; box-shadow: inset 0 0 0 5px #4f6bf5, 0 0 120px rgba(79,107,245,.6); }
+  .s9 h2 { font-size: 116px; line-height: 1.02; letter-spacing: -3px; font-weight: 400; }
+  .s9 h3 { font-size: 150px; font-weight: 800; letter-spacing: -6px; margin-top: 30px; line-height: .95; }
+  .s9 p { margin-top: 64px; font-size: 52px; font-weight: 700; letter-spacing: 1px; }
+
+/* ── added for the voiced versions ── */
+/* a voice-note bubble, WhatsApp style */
+.vn { position: absolute; left: 60px; right: 140px; padding: 26px 32px; border-radius: 40px 40px 40px 12px; background: #fff; box-shadow: 0 24px 60px -22px rgba(0,0,0,.45); display: flex; gap: 24px; align-items: center; z-index: 20; }
+.vn.me { left: 140px; right: 60px; border-radius: 40px 40px 12px 40px; background: #dcf8c6; }
+.vn .av { width: 92px; height: 92px; border-radius: 50%; background: linear-gradient(#8a8d99, #5b5e6b); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 42px; flex: none; position: relative; }
+.vn .av::after { content: ''; position: absolute; right: -4px; bottom: -4px; width: 34px; height: 34px; border-radius: 50%; background: #25d366 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12z"/></svg>') center/22px no-repeat; border: 4px solid #fff; }
+.vn .play { width: 0; height: 0; border-left: 30px solid #54656f; border-top: 18px solid transparent; border-bottom: 18px solid transparent; flex: none; }
+.vn .wave { flex: 1; height: 70px; display: flex; align-items: center; gap: 6px; }
+.vn .wave i { flex: 1; border-radius: 4px; background: #a5b0b8; height: var(--h, 30%); transition: background .1s; }
+.vn .wave i.on { background: #34b7f1; }
+.vn .len { font-size: 30px; font-weight: 700; color: #667781; flex: none; }
+.vn .who { position: absolute; left: 150px; top: -58px; font-size: 44px; font-weight: 800; color: #fff; -webkit-text-stroke: 8px #111; paint-order: stroke fill; }
+.sub { position: absolute; left: 60px; right: 60px; top: 1700px; text-align: center; font-size: 52px; font-weight: 700; line-height: 1.15; color: #fff; -webkit-text-stroke: 10px #111; paint-order: stroke fill; z-index: 30; }
+.sub em { font-style: normal; color: #ffd84a; }
