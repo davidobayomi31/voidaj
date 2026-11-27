@@ -100,7 +100,7 @@ async function serializeBusiness(row, viewerId, { full = false } = {}) {
   const promoted = await liveListingIds([row.id])
   const cat = CATEGORIES.find((c) => c.id === row.category) ?? CATEGORIES.at(-1)
   const out = {
-    id: row.id, name: row.name, category: cat.id, categoryLabel: cat.label, listingKinds: cat.listings,
+    id: row.id, name: row.name, category: cat.id, categoryLabel: (cat.id === 'other' && row.category_other) || cat.label, categoryOther: row.category_other || '', listingKinds: cat.listings,
     description: row.description || '', city: row.city || '', country: row.country || 'NG', area: row.area || '',
     logo: full ? row.logo || '' : listImage(row.logo), cover: full ? row.cover || '' : listImage(row.cover),
     verified: !!row.verified, ownerId: row.owner_id, isOwner: viewerId === row.owner_id,
@@ -133,6 +133,8 @@ function cleanBusiness(b, { partial = false } = {}) {
     out.category = CATEGORY_IDS.includes(b.category) ? b.category : null
     if (!out.category) throw new Error('Pick a category.')
   }
+  if (b.categoryOther != null) out.category_other = clip(b.categoryOther, 40)
+  if (out.category && out.category !== 'other') out.category_other = ''
   text('description', 600); text('city', 40); text('area', 60); text('phone', 30); text('hours', 120)
   if (b.website != null) {
     const w = clip(b.website, 200)
@@ -197,7 +199,7 @@ export function businessRoutes(app) {
 
   // Promoted listings for the Home feed and My City, newest promotion first.
   app.get('/api/businesses/promoted', async (req, res) => {
-    const rows = await q.all(`SELECT l.*, b.name AS biz_name, b.logo AS biz_logo, b.city AS biz_city, b.verified AS biz_verified, b.category AS biz_category
+    const rows = await q.all(`SELECT l.*, b.name AS biz_name, b.logo AS biz_logo, b.city AS biz_city, b.verified AS biz_verified, b.category AS biz_category, b.category_other AS biz_category_other
       FROM business_promotions p JOIN business_listings l ON l.id = p.listing_id JOIN businesses b ON b.id = p.business_id
       WHERE p.ends_at > ? ${req.query.city ? 'AND (p.audience = \'nigeria\' OR LOWER(b.city) = LOWER(?))' : ''}
       ORDER BY p.starts_at DESC LIMIT 8`, now(), ...(req.query.city ? [clip(req.query.city, 40)] : []))
@@ -205,7 +207,7 @@ export function businessRoutes(app) {
     res.json({
       listings: rows.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({
         ...serializeListing(r, new Set([r.id]), { inline: false }),
-        business: { id: r.business_id, name: r.biz_name, logo: listImage(r.biz_logo), city: r.biz_city, verified: !!r.biz_verified, categoryLabel: CATEGORIES.find((c) => c.id === r.biz_category)?.label },
+        business: { id: r.business_id, name: r.biz_name, logo: listImage(r.biz_logo), city: r.biz_city, verified: !!r.biz_verified, categoryLabel: (r.biz_category === 'other' && r.biz_category_other) || CATEGORIES.find((c) => c.id === r.biz_category)?.label },
       })),
     })
   })
@@ -216,8 +218,8 @@ export function businessRoutes(app) {
     const count = await q.get('SELECT COUNT(*) AS n FROM businesses WHERE owner_id = ?', req.userId)
     if ((count?.n || 0) >= 5) return err(res, 400, 'You can run up to five businesses on one account.')
     const id = uid('biz')
-    await q.run(`INSERT INTO businesses (id, owner_id, name, category, description, city, country, area, logo, cover, phone, website, hours, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, b.name, b.category, b.description || '',
+    await q.run(`INSERT INTO businesses (id, owner_id, name, category, category_other, description, city, country, area, logo, cover, phone, website, hours, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, b.name, b.category, b.category_other || '', b.description || '',
       b.city || req.userRow.city || '', req.userRow.country || 'NG', b.area || '', b.logo || '', b.cover || '', b.phone || '', b.website || '', b.hours || '', now())
     res.json({ business: await serializeBusiness(await q.get('SELECT * FROM businesses WHERE id = ?', id), req.userId, { full: true }) })
   })

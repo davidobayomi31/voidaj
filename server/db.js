@@ -793,6 +793,8 @@ ALTER TABLE jobs ADD COLUMN IF NOT EXISTS availability TEXT DEFAULT '';
 -- A business belongs to a country, not just a city, so its page doesn't say
 -- "Nigeria" for everyone. Existing ones are the owner's country.
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS country TEXT;
+-- "Other" businesses can name their own category (Nuel, Nov 28).
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS category_other TEXT;
 -- The example adverts named Nigerian districts; they now read the same anywhere.
 UPDATE ads SET tagline = 'Northern fabrics, tailored to order' WHERE business_name = 'Arewa Threads' AND tagline = 'Northern fabrics, tailored in Abuja';
 UPDATE ads SET tagline = 'Gyms, classes and coaching' WHERE business_name = 'Capital Fitness' AND tagline = 'Gyms in Wuse and Garki';

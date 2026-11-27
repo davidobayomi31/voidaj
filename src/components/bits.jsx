@@ -128,10 +128,6 @@ export function CommunityCard({ community, shared = [], source, because, compact
 }
 
 export function PersonCard({ user: person, shared = [], source, because }) {
-  const { user, profile, connect } = useApp()
-  const navigate = useNavigate()
-  const connected = profile.connections.includes(person.id)
-  const onConnect = () => (user ? connect(person.id) : navigate('/auth'))
   return (
     <div className="card person-card card-link">
       <div className="person-head">
@@ -143,12 +139,10 @@ export function PersonCard({ user: person, shared = [], source, because }) {
       </div>
       <TagPills tags={person.interests} max={3} />
       <Trace shared={shared} source={source} because={because} />
+      {/* Just Profile and Badges here (Nuel, Nov 28: Connect and save "don't belong on that card"). */}
       <div className="card-actions">
-        <button className={connected ? 'btn ghost small' : 'btn primary small'} onClick={onConnect} disabled={connected}>
-          {connected ? <><Icon name="check" size={14} /> Connected</> : 'Connect'}
-        </button>
-        <Link to={`/profile/${person.id}`} className="btn ghost small">Profile</Link>
-        <FavoriteButton item={{ kind: 'person', id: person.id, title: person.name, subtitle: person.title, href: `/profile/${person.id}` }} />
+        <Link to={`/profile/${person.id}`} className="btn primary small">Profile</Link>
+        <Link to={`/profile/${person.id}?tab=badges`} className="btn ghost small"><Icon name="award" size={14} /> Badges</Link>
       </div>
     </div>
   )

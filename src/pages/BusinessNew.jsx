@@ -41,7 +41,7 @@ function LogoPicker({ value, name, onChange, onBusy }) {
   )
 }
 
-const blank = { name: '', category: '', description: '', city: '', area: '', logo: '', cover: '', phone: '', website: '', hours: '' }
+const blank = { name: '', category: '', categoryOther: '', description: '', city: '', area: '', logo: '', cover: '', phone: '', website: '', hours: '' }
 
 export default function BusinessNew() {
   const { id } = useParams()
@@ -98,7 +98,7 @@ export default function BusinessNew() {
         <div className="biz-preview" style={form.cover ? { '--img': `url(${form.cover})` } : undefined}>
           <span className="biz-preview-name">
             <b>{form.name || 'Your business name'}</b>
-            <em>{meta?.categories.find((c) => c.id === form.category)?.label || 'Category'}{form.city ? ` · ${form.area ? `${form.area}, ` : ''}${form.city}` : ''}</em>
+            <em>{(form.category === 'other' && form.categoryOther.trim()) || meta?.categories.find((c) => c.id === form.category)?.label || 'Category'}{form.city ? ` · ${form.area ? `${form.area}, ` : ''}${form.city}` : ''}</em>
           </span>
         </div>
 
@@ -114,8 +114,14 @@ export default function BusinessNew() {
               {meta?.categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </label>
+          {/* Not on the list? Pick Other and type it (Nuel, Nov 28). */}
+          {form.category === 'other' && (
+            <label className="field"><span>Your category</span>
+              <input value={form.categoryOther} onChange={set('categoryOther')} maxLength={40} placeholder="e.g. Photography, Logistics, Printing" autoFocus />
+            </label>
+          )}
           <label className="field"><span>Description</span>
-            <textarea rows={3} value={form.description} onChange={set('description')} maxLength={600} placeholder="What you do, e.g. Real estate · Property management · Sales & rentals" />
+            <textarea rows={4} className="biz-desc" value={form.description} onChange={set('description')} maxLength={600} placeholder="What you do, e.g. Real estate · Property management · Sales & rentals" />
           </label>
         </fieldset>
 

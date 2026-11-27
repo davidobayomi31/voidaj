@@ -309,3 +309,10 @@
 /* Businesses sits in the side panel now (Nuel, Nov 27); only phones, which have no side panel, keep the button. */
 @media (min-width: 681px) { .xp-biz-phone { display: none; } }
 .hero-x-mapped:not(.hero-x-see) .maplibregl-ctrl-top-right { display: none; }
+/* Business description: room for a few lines (Nuel, Nov 28: it was squashed to one). */
+.biz-sec textarea.biz-desc { width: 100%; min-height: 104px; resize: vertical; padding: 12px 14px; font: inherit; font-size: 14.5px; line-height: 1.5; }
+/* The "Re:" card on a chat message: slimmer (Nuel, Nov 28). */
+.dm-origin.compact { padding: 6px 10px; gap: 8px; border-radius: 12px; }
+.dm-origin.compact b { font-size: 12.5px; }
+.dm-origin.compact em { font-size: 11px; }
+.dm-origin.compact img { width: 26px; height: 26px; }

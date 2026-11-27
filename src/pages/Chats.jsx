@@ -49,12 +49,17 @@ const ORIGIN = {
   business: { icon: 'store', tone: 'green', label: 'Business', re: 'An enquiry about this business' },
 }
 
+// Only these say something useful; a chat started from someone's profile
+// doesn't need a card (Nuel, Nov 28: "reduced… or to only certain activities").
+const SHOWN = ['job', 'post', 'event', 'community', 'business']
+
 // The "Re:" card: what this conversation is about, with a way back to it.
 function OriginCard({ context, compact = false }) {
+  if (!SHOWN.includes(context?.kind)) return null
   const o = ORIGIN[context.kind] ?? ORIGIN.post
   return (
     <Link to={context.link || '#'} className={`dm-origin ${compact ? 'compact' : ''}`}>
-      {context.image ? <img src={context.image} alt="" /> : <IconTile name={o.icon} tone={o.tone} size={compact ? 32 : 40} />}
+      {context.image ? <img src={context.image} alt="" /> : <IconTile name={o.icon} tone={o.tone} size={compact ? 26 : 40} />}
       <span>
         <b>Re: {context.title}</b>
         <em>{compact ? [o.label, context.sub].filter(Boolean).join(' · ') : o.re}</em>
@@ -472,7 +477,7 @@ export default function Chats() {
                 </Link>
                 <Link to={`/profile/${dmUser.id}`} className="dm-icon-btn" aria-label="Profile details"><Icon name="info" size={24} /></Link>
               </header>
-              {(threadContext || pending) && <div className="dm-origin-bar"><OriginCard context={threadContext && !pending ? threadContext : { ...pending, link: pendingLink(pending) }} /></div>}
+              {(threadContext || pending) && SHOWN.includes((threadContext && !pending ? threadContext : pending)?.kind) && <div className="dm-origin-bar"><OriginCard context={threadContext && !pending ? threadContext : { ...pending, link: pendingLink(pending) }} /></div>}
               {(threadContext || pending)?.kind === 'job' && <MoneyNote />}
               <Thread
                 messages={messages} meId={user.id} other={dmUser}
