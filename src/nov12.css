@@ -330,3 +330,6 @@
   padding: 9px 12px; font-size: 14px; font-weight: 500; color: var(--text); text-align: left;
 }
 .profile-menu.in-bar .profile-menu-list { width: min(260px, calc(100vw - 24px)); max-height: calc(100vh - 160px); overflow-y: auto; }
+/* A person's badges on their card. */
+.pc-badges { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.pc-badges em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-left: 2px; }
