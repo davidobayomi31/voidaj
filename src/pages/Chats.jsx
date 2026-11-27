@@ -48,11 +48,12 @@ const ORIGIN = {
   profile: { icon: 'user', tone: 'blue', label: 'Profile', re: 'Started from their profile' },
   map: { icon: 'map-pin', tone: 'green', label: 'My City', re: 'Started from My City' },
   business: { icon: 'store', tone: 'green', label: 'Business', re: 'An enquiry about this business' },
+  person: { icon: 'user', tone: 'blue', label: 'Shared profile', re: 'Shared profile · tap to view' },
 }
 
 // Only these say something useful; a chat started from someone's profile
 // doesn't need a card (Nuel, Nov 28: "reduced… or to only certain activities").
-const SHOWN = ['job', 'post', 'event', 'community', 'business']
+const SHOWN = ['job', 'post', 'event', 'community', 'business', 'person']
 
 // The "Re:" card: what this conversation is about, with a way back to it.
 function OriginCard({ context, compact = false }) {
@@ -62,7 +63,7 @@ function OriginCard({ context, compact = false }) {
     <Link to={context.link || '#'} className={`dm-origin ${compact ? 'compact' : ''}`}>
       {context.image ? <img src={context.image} alt="" /> : <IconTile name={o.icon} tone={o.tone} size={compact ? 26 : 40} />}
       <span>
-        <b>Re: {context.title}</b>
+        <b>{context.kind === 'person' ? context.title : `Re: ${context.title}`}</b>
         <em>{compact ? [o.label, context.sub].filter(Boolean).join(' · ') : o.re}</em>
       </span>
       <Icon name="chevron-right" size={18} />
@@ -272,7 +273,8 @@ export default function Chats() {
     const t = setTimeout(() => api.searchPeople(needle).then(setPeopleHits).catch(() => setPeopleHits([])), 250)
     return () => clearTimeout(t)
   }, [search])
-  const [composing, setComposing] = useState(false)
+  // Sending someone's profile: pick who gets it first.
+  const [composing, setComposing] = useState(() => !!params.get('share') && !params.get('dm'))
   const [newGroup, setNewGroup] = useState(false)
   const [groupName, setGroupName] = useState('')
   const [filter, setFilter] = useState('all')
@@ -284,6 +286,7 @@ export default function Chats() {
     if (params.get('event')) return { kind: 'event', id: params.get('event'), title: ev?.title || '', sub: ev ? `${ev.date} · ${ev.time}` : '', image: ev?.cover || '' }
     if (params.get('community')) return { kind: 'community', id: params.get('community'), title: '' }
     if (params.get('business')) return { kind: 'business', id: params.get('business'), listing: params.get('listing') || undefined, title: '' }
+    if (params.get('share')) return { kind: 'person', id: params.get('share'), title: '' }
     if (params.get('from') === 'profile') return { kind: 'profile', id: params.get('dm'), title: '' }
     return null
   })
@@ -336,6 +339,7 @@ export default function Chats() {
     if (pending.kind === 'post') api.getPost(pending.id).then((d) => name((d.post.title || d.post.body || 'a post').slice(0, 60))).catch(() => {})
     if (pending.kind === 'community') api.getCommunity(pending.id).then((c) => name(c.name)).catch(() => {})
     if (pending.kind === 'profile') name('their profile')
+    if (pending.kind === 'person') api.getUser(pending.id).then((u) => setPending((p) => (p ? { ...p, title: u.name, sub: [u.handle, u.title].filter(Boolean).join(' · '), image: u.photo || '' } : p))).catch(() => name('a profile'))
   }, [pending?.kind, pending?.id]) // eslint-disable-line
 
   // Open a group thread.
@@ -353,7 +357,7 @@ export default function Chats() {
     setTab(t); setMessages([]); setSearch('')
     setParams(t === 'groups' ? { tab: 'groups' } : {}, { replace: true })
   }
-  const openDm = (id) => { if (id !== activeDm) setPending(null); setTab('direct'); setActiveDm(id); setComposing(false); setParams({ dm: id }, { replace: true }) }
+  const openDm = (id) => { if (id !== activeDm && pending?.kind !== 'person') setPending(null); setTab('direct'); setActiveDm(id); setComposing(false); setParams({ dm: id }, { replace: true }) }
   const openGroup = async (chat) => {
     if (!chat.joined) {
       const updated = await api.joinChat(chat.id)

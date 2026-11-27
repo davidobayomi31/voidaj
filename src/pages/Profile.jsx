@@ -573,6 +573,9 @@ export default function Profile() {
                 <Link role="menuitem" to={me ? `/chats?dm=${user.id}&from=profile` : '/auth'}>
                   <Icon name="message-circle" size={14} /> Message
                 </Link>
+                <Link role="menuitem" to={me ? `/chats?share=${user.id}` : '/auth'}>
+                  <Icon name="send" size={14} /> Send profile to…
+                </Link>
                 <FavoriteButton item={{ kind: 'person', id: user.id, title: user.name, subtitle: user.title, href: `/profile/${user.id}` }} label />
               </ProfileMore>
             </>

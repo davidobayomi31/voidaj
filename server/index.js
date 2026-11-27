@@ -1927,7 +1927,7 @@ app.get('/api/v/:handle', async (req, res) => {
 // What a message is about. The client says which job, post, event,
 // community or profile; the title, picture and link come from the
 // database where they can, so nobody can label a chat with a fake job.
-const CONTEXT_KINDS = ['job', 'post', 'event', 'community', 'profile', 'map', 'business']
+const CONTEXT_KINDS = ['job', 'post', 'event', 'community', 'profile', 'person', 'map', 'business']
 async function messageContext(raw, other) {
   const kind = raw?.kind
   if (!CONTEXT_KINDS.includes(kind)) return null
@@ -1954,6 +1954,11 @@ async function messageContext(raw, other) {
     return null
   }
   if (kind === 'profile') return { kind, id: other.id, title: other.name, sub: 'From their profile', link: `/profile/${other.id}` }
+  // Someone's profile, sent to a third person (Nuel, Nov 28).
+  if (kind === 'person') {
+    const u = await q.get('SELECT id, name, handle, title, photo FROM users WHERE id = ? AND deleted_at IS NULL', id)
+    return u && { kind, id: u.id, title: u.name, sub: [u.handle, u.title].filter(Boolean).join(' · '), image: String(u.photo || '').startsWith('data:') ? '' : u.photo || '', link: `/profile/${u.id}` }
+  }
   if (kind === 'map') return { kind, id: clip(raw.id, 40), title: clip(raw.title || raw.id, 40), sub: 'From My City', link: '/city' }
   if (kind === 'business') return businessContext(raw, other)
   return null
