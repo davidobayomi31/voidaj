@@ -1,6 +1,6 @@
 // Thread — a full post with vote-ranked, threaded comments. The Reddit
 // structure the CEO wants to keep: communities + comment threads + voting.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { findCommunity } from '../communities.js'
 import { useApp } from '../state.jsx'
@@ -58,7 +58,7 @@ function CommentNode({ comment, depth, onReplied, onRefresh }) {
               </div>
               {replying && (
                 <form className="reply-box" onSubmit={submit}>
-                  <input value={text} onChange={(e) => setText(e.target.value)} placeholder={`Reply to ${comment.author.name.split(' ')[0]}…`} autoFocus />
+                  <TakeBox value={text} onChange={(e) => setText(e.target.value)} placeholder={`Reply to ${comment.author.name.split(' ')[0]}…`} aria-label="Your reply" autoFocus />
                   <button className="btn primary small" disabled={!text.trim() || busy}>Reply</button>
                 </form>
               )}
@@ -72,6 +72,21 @@ function CommentNode({ comment, depth, onReplied, onRefresh }) {
         </div>
       </div>
     </div>
+  )
+}
+
+// A one-line box for takes and replies. A lone <input> in a form looks like a
+// login form to iOS, which then offers the saved VOIDAJ password over the
+// keyboard (Nuel, Nov 27); a textarea with autocomplete off never gets that.
+// Enter posts, Shift+Enter starts a new line, and it grows as you type.
+function TakeBox({ value, onChange, ...rest }) {
+  const ref = useRef(null)
+  useEffect(() => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` } }, [value])
+  return (
+    <textarea ref={ref} rows={1} value={value} onChange={onChange} autoComplete="off" autoCorrect="on" spellCheck enterKeyHint="send"
+      data-1p-ignore data-lpignore="true" className="take-box"
+      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }}
+      {...rest} />
   )
 }
 
@@ -153,7 +168,7 @@ export default function Thread() {
 
         {user ? (
           <form className="card composer thread-composer" onSubmit={addTopComment}>
-            <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Share your take…" aria-label="Share your take" />
+            <TakeBox value={text} onChange={(e) => setText(e.target.value)} placeholder="Share your take…" aria-label="Share your take" />
             <button className="btn primary small" disabled={!text.trim() || busy}>Post take</button>
           </form>
         ) : (
