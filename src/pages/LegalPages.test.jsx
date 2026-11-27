@@ -15,7 +15,9 @@ const show = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>)
 describe('Terms', () => {
   it('renders for a signed-out visitor', () => {
     show(<Terms />)
-    expect(screen.getByRole('heading', { name: 'Terms of use', level: 1 })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Terms and Conditions of Use', level: 1 })).toBeTruthy()
+    // All of Nuel's 18 sections, plus User Acceptance.
+    for (let n = 1; n <= 18; n++) expect(screen.getByRole('heading', { name: new RegExp(`^${n}\\. `), level: 2 })).toBeTruthy()
   })
 
   it('shows every line of the Charter, from the one source', () => {
@@ -30,7 +32,7 @@ describe('Terms', () => {
 
   it('gives a contact address', () => {
     show(<Terms />)
-    expect(screen.getByText(CONTACT_EMAIL)).toBeTruthy()
+    expect(screen.getAllByText(CONTACT_EMAIL).length).toBeGreaterThan(0)
   })
 })
 

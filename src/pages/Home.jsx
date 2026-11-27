@@ -14,7 +14,7 @@ import { StoriesRow } from '../components/Stories.jsx'
 import { FeedPost, FeedComposer } from '../components/Feed.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
-import { useAds, pickSearchAd, SearchAd } from '../components/AdsRail.jsx'
+import { useAds, pickSearchAd, SearchAd, HomeAds } from '../components/AdsRail.jsx'
 import { JobCard } from './Jobs.jsx'
 
 const day = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric' })
@@ -383,6 +383,11 @@ export default function Home() {
       <div className="home-body">
         <div className="home-main">
           <StoriesRow />
+
+          {/* Phones have no room for the adverts rail, so the adverts (and
+              Advertise) sit in the page here (Nuel, Nov 28: "I can't seem to
+              have a way to put this on mobile"). */}
+          <div className="home-ads-phone"><HomeAds max={3} /></div>
 
           <div className="feed-tabs" role="tablist" aria-label="Feed">
             {TABS.map((t) => (

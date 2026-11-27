@@ -345,3 +345,16 @@
 .msg-alert-body b { font-size: 14px; }
 .msg-alert-body em { font-style: normal; font-size: 13px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .msg-alert-x { background: none; border: 0; color: var(--text-dim); padding: 6px; cursor: pointer; }
+/* Sign-up acceptance line and the Terms header block (Nuel's Terms, Nov 28). */
+.auth-accept { margin: 10px 2px 0; font-size: 12.5px; line-height: 1.5; color: var(--text-dim); text-align: center; }
+.auth-accept a { color: var(--text); text-decoration: underline; }
+.legal-meta { line-height: 1.7; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
+/* Adverts inside Home on phones and small tablets, where the rail is hidden. */
+.home-ads-phone { display: none; }
+@media (max-width: 1080px) {
+  .home-ads-phone { display: block; margin: 4px 0 14px; }
+  .home-ads-phone .partners-list { display: flex; flex-direction: row; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+  .home-ads-phone .partners-list > * { flex: 0 0 min(220px, 64vw); width: min(220px, 64vw); scroll-snap-align: start; }
+  .home-ads-phone .ad2 img, .home-ads-phone .ad2 .ad2-photo { height: 120px; object-fit: cover; }
+  .home-ads-phone .partners-list::-webkit-scrollbar { display: none; }
+}
