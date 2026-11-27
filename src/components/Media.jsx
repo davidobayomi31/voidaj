@@ -4,6 +4,7 @@
 // upload), short camera videos and voice messages capped at a few minutes.
 // Everything is previewed, and can be removed, before it is sent.
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from './Icons.jsx'
 
 export const MEDIA_MAX = 10
@@ -137,7 +138,7 @@ function CameraCapture({ onAdd, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop camera-backdrop" onClick={onClose}>
       <div className="card modal-card camera-card" role="dialog" aria-label="Camera" onClick={(e) => e.stopPropagation()}>
         <div className="side-card-head"><Icon name="camera" size={16} /> {shot ? 'Preview' : 'Camera'}</div>
         {error ? <p className="meta-dim">{error}</p> : shot ? (
@@ -286,8 +287,10 @@ export function MediaButtons({ media, setMedia, className = '' }) {
         aria-label="Record a voice message" title="Voice message"><Icon name="mic" size={18} /></button>
       {busy && <span className="media-note">Preparing photos…</span>}
       {error && <span className="media-note error" role="alert">{error}</span>}
-      {open === 'camera' && <CameraCapture onAdd={add} onClose={() => setOpen(null)} />}
-      {open === 'voice' && <VoiceRecorder onAdd={add} onClose={() => setOpen(null)} />}
+      {/* On the page itself, not inside the composer: a sheet that slides in
+          (a CSS transform) would otherwise shrink these to its own size. */}
+      {open === 'camera' && createPortal(<CameraCapture onAdd={add} onClose={() => setOpen(null)} />, document.body)}
+      {open === 'voice' && createPortal(<VoiceRecorder onAdd={add} onClose={() => setOpen(null)} />, document.body)}
     </span>
   )
 }

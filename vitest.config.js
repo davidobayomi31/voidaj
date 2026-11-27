@@ -51,6 +51,10 @@ export default defineConfig({
             // switches the limits back on for itself.
             RATE_LIMITS: 'off',
             RESEND_API_KEY: '',
+            // A real Paystack key in .env would switch payments on everywhere;
+            // test/payments.test.js sets its own fake one.
+            PAYSTACK_SECRET_KEY: '',
+            ELEVENLABS_API_KEY: '',
             SUPABASE_URL: '',
             SUPABASE_SERVICE_ROLE_KEY: '',
           },

@@ -1,0 +1,21 @@
+# VOIDAJ: public pages are welcome in search. Account, admin and form pages
+# aren't useful there. Sample content asks not to be listed with a
+# "noindex" tag on its own page (src/seo.js).
+User-agent: *
+Disallow: /api/
+Disallow: /admin
+Disallow: /mod
+Disallow: /settings
+Disallow: /notifications
+Disallow: /chats
+Disallow: /saved
+Disallow: /welcome
+Disallow: /add
+Disallow: /communities/new
+Disallow: /business/new
+Disallow: /voices/new
+Disallow: /*/manage
+Disallow: /*/edit
+Disallow: /*/promote
+
+Sitemap: https://voidaj.com/sitemap.xml

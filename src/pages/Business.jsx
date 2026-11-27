@@ -16,6 +16,7 @@ import { RatingScale } from '../components/Rating.jsx'
 import { CoverPicker } from '../components/CoverPicker.jsx'
 import { BusinessLogo, ListingCard, LISTING_KIND, LISTING_STATUS, Verified, naira } from '../components/BusinessBits.jsx'
 import AdBusiness from './AdBusiness.jsx'
+import { countryName } from '../countries.js'
 
 const TABS = ['Posts', 'About', 'Reviews']
 

@@ -15,6 +15,7 @@ import { useParams, Link, Navigate, useSearchParams, useNavigate } from 'react-r
 import * as api from '../api.js'
 import { useApp } from '../state.jsx'
 import { COMMUNITIES } from '../data/seed.js'
+import { useSeo, isSampleId } from '../seo.js'
 import { useCommunities } from '../communities.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { Avatar, CommunityCard, TagPills, FavoriteButton } from '../components/bits.jsx'
@@ -448,6 +449,7 @@ export default function Profile() {
   const key = handle ? `@${handle}` : idParam
   const isMe = key === 'me' || (!!me && (key === me.id || key?.toLowerCase() === me.handle?.toLowerCase()))
   const [person, setPerson] = useState(null)
+  useSeo(person && !isMe ? { title: person.name, description: person.bio, noindex: isSampleId(person.id) || !!person.sample } : {})
   const [missing, setMissing] = useState(false)
   const [params, setParams] = useSearchParams()
   const visibleTabs = TABS.filter((t) => !t.mine || isMe)

@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EVENTS } from '../data/seed.js'
+import { useSeo, isSampleId } from '../seo.js'
 import { findCommunity } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
@@ -33,6 +34,7 @@ export default function EventDetail() {
   const [loaded, setLoaded] = useState(false)
 
   const event = made ?? demo
+  useSeo(event ? { title: event.title, description: event.description, noindex: !!demo || isSampleId(event.id) || !!event.sample } : {})
   useEffect(() => { window.scrollTo(0, 0) }, [id])
   const [tick, setTick] = useState(0)
   useEffect(() => {
