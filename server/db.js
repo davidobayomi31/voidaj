@@ -1193,7 +1193,11 @@ const POINTS = { referrals: 10, posts: 5, takes: 2, sparksGiven: 1, sparksGot: 1
   ...(VERIFICATION_IS_REAL ? { verified: 20 } : {}) }
 
 // Badges anyone can earn, and how.
+export const ORIGIN_LIMIT = 1000
 export const BADGES = [
+  // Nuel, Nov 28: "The Origin, Founding 1,000", for the first 1,000 people
+  // to join. Demo (seed) accounts never count towards the 1,000.
+  { id: 'origin', name: 'The Origin', style: 'origin', how: 'One of the first 1,000 members of VOIDAJ', test: (s) => s.memberNo > 0 && s.memberNo <= ORIGIN_LIMIT },
   { id: 'early-explorer', name: 'Early Explorer', style: 'green', how: 'Joined VOIDAJ in its first year', test: (s) => s.joinedYear <= 2026 },
   // Only a badge once it means something; a self-assigned one claiming
   // "Had your ID checked" would be a false statement on a profile.
@@ -1230,15 +1234,20 @@ export async function journey(row) {
     n('SELECT COUNT(*)::int AS n FROM users WHERE referred_by = ? AND deleted_at IS NULL', id),
     q.all('SELECT * FROM custom_badges WHERE owner_id = ? ORDER BY created_at DESC', id),
   ])
+  // Your place in the queue of real members, counting deleted accounts too,
+  // so a number is never handed out twice.
+  const memberNo = row.is_seed ? 0 : await n(
+    'SELECT COUNT(*)::int AS n FROM users u, (SELECT created_at, id FROM users WHERE id = ?) me WHERE COALESCE(u.is_seed, 0) = 0 AND (u.created_at < me.created_at OR (u.created_at = me.created_at AND u.id <= me.id))', id)
   const stats = { posts, takes, sparksGiven, sparksGot, looms, communities, communitiesBuilt, eventsHosted, jobsDone, jobsPosted, followers, referrals,
-    verified: !!row.id_verified, joinedYear: new Date(row.created_at || Date.now()).getFullYear() }
+    verified: !!row.id_verified, memberNo, joinedYear: new Date(row.created_at || Date.now()).getFullYear() }
   const points = Object.entries(POINTS).reduce((sum, [k, w]) => sum + (k === 'verified' ? (stats.verified ? w : 0) : (stats[k] || 0) * w), 0)
   const { level, next } = ladderFor(points)
   if ((row.citizen_level ?? 0) !== level.level) {
     await q.run('UPDATE users SET citizen_level = ? WHERE id = ?', level.level, id)
   }
   const hidden = new Set(json(row.hidden_badges))
-  const earned = BADGES.filter((b) => b.test(stats)).map(({ test, ...b }) => ({ ...b, earned: true, hidden: hidden.has(b.id) }))
+  const earned = BADGES.filter((b) => b.test(stats)).map(({ test, ...b }) => ({ ...b, earned: true, hidden: hidden.has(b.id),
+    ...(b.id === 'origin' ? { how: `Founding member #${memberNo} of the first ${ORIGIN_LIMIT.toLocaleString('en')}` } : {}) }))
   return {
     points, level: { ...level, title: levelTitle(level.level) }, next,
     toNext: Math.max(0, next.at - points),

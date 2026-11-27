@@ -358,3 +358,6 @@
   .home-ads-phone .ad2 img, .home-ads-phone .ad2 .ad2-photo { height: 120px; object-fit: cover; }
   .home-ads-phone .partners-list::-webkit-scrollbar { display: none; }
 }
+
+/* The Origin, Founding 1,000: Nuel's purple and gold crest. */
+.bd-origin { --b1: #FCD34D; --b2: #7C3AED; --glow: rgba(167, 139, 250, 0.65); }
