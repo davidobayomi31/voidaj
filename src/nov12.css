@@ -275,3 +275,10 @@
    light mode"). An older dark-mode rule for flat rows (reddit.css, glass.css)
    was more specific than design.css's card radius, so only dark lost it. ── */
 :root[data-mode] .feed-post { border-radius: var(--r-lg); }
+
+/* Takes and replies: a one-line textarea that looks like the old input. */
+.composer .take-box, .reply-box .take-box {
+  flex: 1; min-width: 0; resize: none; overflow: hidden; max-height: 160px; font: inherit; font-size: 14px; line-height: 1.4;
+  background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 16px; outline: none;
+}
+.composer .take-box:focus, .reply-box .take-box:focus { border-color: var(--accent); }
