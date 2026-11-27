@@ -37,7 +37,6 @@ import AddHub from './pages/AddHub.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
-import MyCity from './pages/MyCity.jsx'
 import Admin from './pages/Admin.jsx'
 import Services from './pages/Services.jsx'
 import Suggestions from './pages/Suggestions.jsx'
@@ -58,7 +57,6 @@ const PRIMARY = [
   { to: '/home', icon: 'home', tone: 'blue', label: 'Home' },
   { to: '/explore', icon: 'compass', tone: 'violet', label: 'Explore' },
   { to: '/suggestions', icon: 'sparkle', tone: 'pink', label: 'For you' },
-  { to: '/city', icon: 'map-pin', tone: 'teal', label: 'My City' },
   { to: '/events', icon: 'calendar', tone: 'pink', label: 'Events' },
   { to: '/jobs', icon: 'briefcase', tone: 'orange', label: 'Quick Jobs' },
   { to: '/communities', icon: 'users', tone: 'indigo', label: 'Communities' },
@@ -75,12 +73,13 @@ const VISITOR_MOBILE = [
   { to: '/communities', icon: 'users', short: 'Communities' },
 ]
 
-// The phone's bottom bar (Nuel, Nov 11): Home · My City · (+) · Chat ·
-// Profile, with Add Hub as the raised centre button. Explore, Events,
-// Quick Jobs and Communities are one tap away from Home.
+// The phone's bottom bar (Nuel, Nov 11): Home · Explore · (+) · Chat ·
+// Profile, with Add Hub as the raised centre button. Events, Quick Jobs
+// and Communities are one tap away from Home. My City was removed (David,
+// Nov 26); Explore took its place.
 const MOBILE = [
   { to: '/home', icon: 'home', short: 'Home' },
-  { to: '/city', icon: 'map-pin', short: 'My City' },
+  { to: '/explore', icon: 'compass', short: 'Explore' },
   { to: '/add', icon: 'plus', short: 'Hub', center: true },
   { to: '/chats', icon: 'message-circle', short: 'Chat', unread: true },
   { to: '/profile/me', icon: 'user', short: 'Profile' },
@@ -414,7 +413,7 @@ export default function App() {
               <Route path="/settings/:section" element={<Settings />} />
               <Route path="/saved" element={<Favorites />} />
               <Route path="/favorites" element={<Navigate to="/saved" replace />} />
-              <Route path="/city" element={<MyCity />} />
+              <Route path="/city" element={<Navigate to="/home" replace />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/communities/new" element={<NewCommunity />} />
               <Route path="/community/:id" element={<Community />} />

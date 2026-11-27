@@ -237,7 +237,7 @@ function NewMessage({ profile, onPick, onClose }) {
   )
 }
 
-const pendingLink = (p) => ({ job: `/jobs?job=${p.id}`, post: `/post/${p.id}`, event: `/event/${p.id}`, community: `/community/${p.id}`, profile: `/profile/${p.id}`, map: '/city' }[p.kind])
+const pendingLink = (p) => ({ job: `/jobs?job=${p.id}`, post: `/post/${p.id}`, event: `/event/${p.id}`, community: `/community/${p.id}`, profile: `/profile/${p.id}`, map: '/home' }[p.kind])
 
 // ── Inbox ──────────────────────────────────────────────────────────────
 export default function Chats() {

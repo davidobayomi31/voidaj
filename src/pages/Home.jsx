@@ -207,7 +207,7 @@ function Hero({ user, first, city: homeCity, counts, me }) {
         <div className="hero-x-actions">
           {user ? (
             <>
-              <Link to="/city" className="btn primary">Explore {city} <Icon name="arrow" size={15} /></Link>
+              <Link to="/explore" className="btn primary">Explore {city} <Icon name="arrow" size={15} /></Link>
               <Link to="/add" className="btn glass"><Icon name="plus" size={15} /> Create</Link>
             </>
           ) : (

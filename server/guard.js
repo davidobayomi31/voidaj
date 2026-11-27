@@ -94,6 +94,15 @@ export async function isDuplicate(table, authorCol, userId, body) {
 const CODE_MS = 30 * 60 * 1000
 const MAX_TRIES = 5
 const hashCode = (code) => crypto.createHash('sha256').update(String(code)).digest('hex')
+
+// Resend refuses a send for a reason (bad key, unverified sender domain,
+// test-mode recipient). Say so in the log instead of failing silently.
+async function resendOk(r, what) {
+  if (r?.ok) return true
+  const body = r ? await r.text().catch(() => '') : 'no response (network?)'
+  console.error(`[email] Resend did not send ${what}: ${r ? r.status : ''} ${body}`.trim())
+  return false
+}
 export const emailReady = () => !!(process.env.RESEND_API_KEY || '').trim()
 // Unconfirmed accounts can't post jobs, create events or communities, or
 // start conversations, once codes can actually be emailed (or when
@@ -117,7 +126,7 @@ export async function sendMail(to, subject, text, html) {
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY.trim()}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from: process.env.EMAIL_FROM || 'VOIDAJ <hello@voidaj.com>', to: list, subject, text, ...(html ? { html } : {}) }),
   }).catch(() => null)
-  return { sent: !!r?.ok }
+  return { sent: await resendOk(r, subject) }
 }
 
 export async function sendEmailCode(user) {
@@ -137,7 +146,7 @@ export async function sendEmailCode(user) {
       ...codeEmail({ name: user.name, code, minutes: CODE_MS / 60000 }),
     }),
   }).catch(() => null)
-  return { sent: !!r?.ok }
+  return { sent: await resendOk(r, 'the confirmation code') }
 }
 
 export async function checkEmailCode(user, code) {
@@ -191,7 +200,7 @@ async function sendSignupCode(email, name, code) {
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY.trim()}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from: process.env.EMAIL_FROM || 'VOIDAJ <hello@voidaj.com>', to: [email], ...codeEmail({ name, code, minutes: CODE_MS / 60000 }) }),
   }).catch(() => null)
-  return { sent: !!r?.ok }
+  return { sent: await resendOk(r, 'the sign-up code') }
 }
 export async function resendSignupCode(email) {
   const row = await q.get('SELECT * FROM pending_signups WHERE email = ?', email)

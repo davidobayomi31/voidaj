@@ -19,7 +19,7 @@ export default function AdBusiness() {
   const [tab, setTab] = useState('About')
   useEffect(() => { setAd(null); api.getAd(id).then(setAd).catch(() => setMissing(true)) }, [id])
 
-  if (missing) return <div className="page"><div className="card feed-empty"><strong>We couldn’t find that business.</strong><Link to="/city">Back to My City</Link></div></div>
+  if (missing) return <div className="page"><div className="card feed-empty"><strong>We couldn’t find that business.</strong><Link to="/businesses">Back to businesses</Link></div></div>
   if (!ad) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
 
   return (
