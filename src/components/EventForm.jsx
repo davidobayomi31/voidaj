@@ -34,6 +34,20 @@ const writeDraft = (community, form) => {
 }
 
 // `editing` is an existing event: the same form, filled in, saving changes.
+// "6:00 PM" <-> "18:00" for the time picker. Anything it can't read stays blank.
+function to24(t) {
+  const m = /^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m?\.?$/i.exec((t || '').trim())
+  if (!m) return /^\d{2}:\d{2}$/.test(t || '') ? t : ''
+  let h = Number(m[1]) % 12
+  if (m[3].toLowerCase() === 'p') h += 12
+  return `${String(h).padStart(2, '0')}:${m[2] || '00'}`
+}
+function to12(v) {
+  if (!/^\d{2}:\d{2}$/.test(v || '')) return ''
+  const [h, m] = v.split(':').map(Number)
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+}
+
 export function EventForm({ community, onCreated, onCancel, heading, editing }) {
   const { profile } = useApp()
   const [form, setForm] = useState(() => editing
@@ -51,6 +65,9 @@ export function EventForm({ community, onCreated, onCancel, heading, editing }) 
   const city = profile.city || 'your city'
   const mine = profile.communities.map(findCommunity).filter(Boolean)
   const ready = form.title.trim() && form.date && form.category && (editing || audience !== 'community' || communityId)
+  // Say what's missing instead of a button that silently does nothing (Nuel, Nov 28: "no progress").
+  const missing = [!form.title.trim() && 'a title', !form.date && 'a date', !form.category && 'a category',
+    !editing && audience === 'community' && !communityId && 'a community'].filter(Boolean)
 
   const submit = async (e) => {
     e.preventDefault()
@@ -100,7 +117,8 @@ export function EventForm({ community, onCreated, onCancel, heading, editing }) 
       <input className="composer-title" value={form.title} onChange={set('title')} placeholder="What’s happening?" maxLength={100} autoFocus aria-label="Event title" />
       <div className="job-form-row two">
         <input className="job-input" type="date" min={today} value={form.date} onChange={set('date')} aria-label="Date" required />
-        <input className="job-input" value={form.time} onChange={set('time')} placeholder="Time (e.g. 6:00 PM)" maxLength={20} aria-label="Time" />
+        {/* A real time picker (Nuel, Nov 28: "Is there an easier way to input it"); stored as "6:00 PM" like before. */}
+        <input className="job-input" type="time" step="900" value={to24(form.time)} onChange={(e) => setForm((f) => ({ ...f, time: to12(e.target.value) }))} aria-label="Time" />
       </div>
       <div className="job-form-row two">
         <CategorySelect value={form.category} onChange={(category) => setForm((f) => ({ ...f, category }))} />
@@ -134,6 +152,7 @@ export function EventForm({ community, onCreated, onCancel, heading, editing }) 
       {error && <p className="auth-error" role="alert">{error}</p>}
       <div className="composer-foot">
         {onCancel && <button type="button" className="btn ghost small" onClick={onCancel}>Cancel</button>}
+        {!ready && missing.length > 0 && <span className="meta-dim ef-missing">Add {missing.join(', ').replace(/, ([^,]*)$/, ' and $1')} to create it.</span>}
         <button className="btn primary small" disabled={!ready || busy || uploading}>{busy ? (editing ? 'Saving…' : 'Creating…') : editing ? 'Save changes' : 'Create event'}</button>
       </div>
     </form>

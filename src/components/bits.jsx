@@ -10,6 +10,7 @@ import { ReportButton } from './ReportButton.jsx'
 import { RatingSummary } from './Rating.jsx'
 import { MediaView } from './Media.jsx'
 import { useFavorites, isFavorite, toggleFavorite } from '../favorites.js'
+import { BadgeArt } from '../pages/Badges.jsx'
 
 // Local, dependency-free copy of the live badge markup — Live.jsx imports
 // Avatar from this file, so importing LiveBadge back from Live.jsx here
@@ -127,6 +128,31 @@ export function CommunityCard({ community, shared = [], source, because, compact
   )
 }
 
+// A person's earned badges on their card (Nuel, Nov 28: "if the person had
+// badges it will show there"). Each person is fetched once per visit.
+const badgeCache = new Map()
+function PersonBadges({ id }) {
+  const [list, setList] = useState(() => badgeCache.get(id) ?? null)
+  useEffect(() => {
+    if (badgeCache.has(id)) return
+    let live = true
+    api.journey(id).then((j) => {
+      const all = [...(j.badges || []), ...(j.custom || [])]
+      badgeCache.set(id, all)
+      if (live) setList(all)
+    }).catch(() => { badgeCache.set(id, []); if (live) setList([]) })
+    return () => { live = false }
+  }, [id])
+  if (!list?.length) return null
+  const shown = list.slice(0, 4)
+  return (
+    <Link to={`/profile/${id}?tab=badges`} className="pc-badges" aria-label={`${list.length} badge${list.length === 1 ? '' : 's'}: ${list.map((b) => b.name).join(', ')}`}>
+      {shown.map((b) => <span key={b.id} title={b.name}><BadgeArt badge={b} size={26} /></span>)}
+      {list.length > shown.length && <em>+{list.length - shown.length}</em>}
+    </Link>
+  )
+}
+
 export function PersonCard({ user: person, shared = [], source, because }) {
   return (
     <div className="card person-card card-link">
@@ -139,10 +165,10 @@ export function PersonCard({ user: person, shared = [], source, because }) {
       </div>
       <TagPills tags={person.interests} max={3} />
       <Trace shared={shared} source={source} because={because} />
-      {/* Just Profile and Badges here (Nuel, Nov 28: Connect and save "don't belong on that card"). */}
+      {/* Profile, and their badges if they have any (Nuel, Nov 28). */}
       <div className="card-actions">
         <Link to={`/profile/${person.id}`} className="btn primary small">Profile</Link>
-        <Link to={`/profile/${person.id}?tab=badges`} className="btn ghost small"><Icon name="award" size={14} /> Badges</Link>
+        <PersonBadges id={person.id} />
       </div>
     </div>
   )
