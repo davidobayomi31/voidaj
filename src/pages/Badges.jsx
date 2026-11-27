@@ -5,7 +5,8 @@
 //   Create    — make your own (name + style). Earn · Gift · Buy along the
 //               top: Gift and Buy wait for payments, so they say so.
 // Tapping a badge opens its details, where you can show or hide it.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { compressPhoto } from '../components/Media.jsx'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
@@ -17,8 +18,8 @@ const ICON = { origin: 'globe', 'early-explorer': 'compass', verified: 'badge-ch
 // The badge itself: a glossy shield in its colour.
 export function BadgeArt({ badge, size = 64, locked = false }) {
   return (
-    <span className={`bd-art bd-${badge.style || 'violet'} ${locked ? 'locked' : ''}`} style={{ '--s': `${size}px` }} aria-hidden="true">
-      <Icon name={badge.custom ? 'star' : ICON[badge.id] || 'award'} size={Math.round(size * 0.42)} />
+    <span className={`bd-art bd-${badge.style || 'violet'} ${locked ? 'locked' : ''} ${badge.image ? 'has-img' : ''}`} style={{ '--s': `${size}px` }} aria-hidden="true">
+      {badge.image ? <img src={badge.image} alt="" loading="lazy" /> : <Icon name={badge.custom ? 'star' : ICON[badge.id] || 'award'} size={Math.round(size * 0.42)} />}
     </span>
   )
 }
@@ -110,6 +111,17 @@ export default function Badges() {
   const [style, setStyle] = useState('violet')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [image, setImage] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const fileInput = useRef(null)
+  const pickImage = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true); setError('')
+    try { setImage(await api.uploadImage((await compressPhoto(file)).src, 'badge')) } catch (err) { setError(err.message) }
+    setUploading(false)
+  }
 
   useEffect(() => { if (user) api.journey('me').then(setJ).catch(() => {}) }, [user?.id])
   if (!user) {
@@ -124,7 +136,7 @@ export default function Badges() {
   const mine = j ? [...j.badges, ...j.custom] : []
   const create = async (e) => {
     e.preventDefault(); setBusy(true); setError('')
-    try { setJ(await api.createBadge(name, style)); setName(''); setTab('mine') } catch (err) { setError(err.message) }
+    try { setJ(await api.createBadge(name, style, image)); setName(''); setImage(''); setTab('mine') } catch (err) { setError(err.message) }
     setBusy(false)
   }
 
@@ -194,7 +206,17 @@ export default function Badges() {
           )}
           {mode === 'create' && (
             <form onSubmit={create} className="bd-form">
-              <BadgeArt badge={{ custom: true, style }} size={110} />
+              <BadgeArt badge={{ custom: true, style, image }} size={110} />
+              <div className="bd-field"><span>Picture (optional)</span>
+                <div className="bd-img-row">
+                  <button type="button" className="btn ghost small" onClick={() => fileInput.current?.click()} disabled={uploading}>
+                    <Icon name={uploading ? 'clock' : 'camera'} size={14} /> {uploading ? 'Uploading…' : image ? 'Change picture' : 'Upload your own picture'}
+                  </button>
+                  {image && <button type="button" className="link-btn" onClick={() => setImage('')}>Remove</button>}
+                </div>
+                <em className="meta-dim">A square picture works best. It sits inside the badge shield, coloured by the style you pick.</em>
+                <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" hidden onChange={pickImage} />
+              </div>
               <label className="bd-field"><span>Badge name</span>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Team Lead" maxLength={32} />
               </label>
@@ -206,7 +228,7 @@ export default function Badges() {
                 </div>
               </div>
               {error && <p className="auth-error">{error}</p>}
-              <button className="btn primary" disabled={busy || name.trim().length < 2}>{busy ? 'Creating…' : 'Create badge'}</button>
+              <button className="btn primary" disabled={busy || uploading || name.trim().length < 2}>{busy ? 'Creating…' : 'Create badge'}</button>
             </form>
           )}
         </section>

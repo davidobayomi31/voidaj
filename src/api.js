@@ -168,11 +168,12 @@ export const spark = (postId, kind) => req(`/posts/${postId}/spark`, { method: '
 export const loom = (postId, body) => req(`/posts/${postId}/loom`, { method: 'POST', body }).then((d) => d.post)
 export const tagPosts = (tag) => req(`/tags/${encodeURIComponent(tag)}`)
 export const userByHandle = (handle) => req(`/handles/${encodeURIComponent(handle.replace(/^@/, ''))}`).then((d) => d.user)
+export const searchPeople = (q = '') => req(`/people/search?q=${encodeURIComponent(q)}`).then((d) => d.people)
 export const searchHandles = (q) => req(`/handles?q=${encodeURIComponent(q)}`).then((d) => d.users)
 export const eventPeople = (id, params = {}) => req(`/events/${encodeURIComponent(id)}/people?${new URLSearchParams(params)}`)
 // Citizen level and badges.
 export const journey = (userId = 'me') => req(`/users/${encodeURIComponent(userId)}/journey`)
-export const createBadge = (name, style) => req('/badges', { method: 'POST', body: { name, style } })
+export const createBadge = (name, style, image = '') => req('/badges', { method: 'POST', body: { name, style, image } })
 export const setBadgeHidden = (id, hidden) => req(`/badges/${encodeURIComponent(id)}/visibility`, { method: 'POST', body: { hidden } })
 export const deleteBadge = (id) => req(`/badges/${encodeURIComponent(id)}`, { method: 'DELETE' })
 

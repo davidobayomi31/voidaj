@@ -5,7 +5,7 @@
 // price and when it's needed. Anyone can name their own price with Make
 // an offer (Nuel, Oct 27).
 // ID verification is a simulated demo badge (no real KYC provider wired up).
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ShareLinkButton } from '../components/ShareLinkButton.jsx'
 import { useApp } from '../state.jsx'
@@ -451,6 +451,13 @@ export default function Jobs() {
   const [jobs, setJobs] = useState([])
   const [matched, setMatched] = useState([])
   const [category, setCategory] = useState('')
+  // Nuel, Nov 28: "hard to know if this shows something below". Picking a
+  // category takes you straight down to its jobs.
+  const resultsRef = useRef(null)
+  const pickCategory = (id) => {
+    setCategory(id)
+    if (id) setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+  }
   const [filter, setFilter] = useState('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [allMatches, setAllMatches] = useState(false)
@@ -667,7 +674,7 @@ export default function Jobs() {
             </div>
           )}
 
-          {!term && filter === 'all' && <CategoryTiles category={category} onPick={setCategory} />}
+          {!term && filter === 'all' && <CategoryTiles category={category} onPick={pickCategory} />}
 
           {matched.length > 0 && !term && filter === 'all' && (
             <section className="section">
@@ -681,7 +688,7 @@ export default function Jobs() {
             </section>
           )}
 
-          <section className="section">
+          <section className="section job-results" ref={resultsRef}>
             <SectionHead icon="briefcase" title={listTitle} sub={`${rest.length} open`} />
             <div className="stack stagger" key={`${filter}-${category}-${kind}`}>
               {rest.length === 0 && (

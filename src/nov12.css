@@ -320,7 +320,9 @@
 .profile-menu.in-bar { display: flex; flex: 1; justify-content: center; }
 .profile-menu.in-bar .me-chip { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0; padding: 4px 0; color: inherit; font-size: 11px; }
 .profile-menu.in-bar .profile-menu-list { top: auto; bottom: calc(100% + 10px); right: 6px; left: auto; }
-@media (max-width: 680px) { .top-me { display: none; } }
+/* Nuel, Nov 28: one profile button only. The side panel (bottom left) keeps
+   it on bigger screens, and the bottom bar has it on phones. */
+.top-me { display: none; }
 .ef-missing { font-size: 12.5px; margin-right: auto; }
 .event-form .job-form-row.two > * { min-width: 0; width: 100%; }
 .event-form textarea { font: inherit; font-size: 14.5px; line-height: 1.5; }
@@ -361,3 +363,18 @@
 
 /* The Origin, Founding 1,000: Nuel's purple and gold crest. */
 .bd-origin { --b1: #FCD34D; --b2: #7C3AED; --glow: rgba(167, 139, 250, 0.65); }
+
+/* Chats (Nuel, Nov 28): a line between conversations, and the status row. */
+.dm-list .dm-item { position: relative; padding-top: 11px; padding-bottom: 11px; }
+.dm-list .dm-item + .dm-item::before { content: ''; position: absolute; top: 0; left: 92px; right: 20px; border-top: 1px solid var(--dm-line, var(--line)); }
+.dm-list .dm-item:hover::before, .dm-list .dm-item:hover + .dm-item::before,
+.dm-list .dm-item.active::before, .dm-list .dm-item.active + .dm-item::before { opacity: 0; }
+.dm-list-label { margin: 12px 24px 2px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--dm-muted, var(--muted)); }
+.dm-stories { padding: 2px 16px 6px; overflow: hidden; }
+.dm-stories > * { margin: 0 !important; }
+
+/* A badge someone made with their own picture. */
+.bd-art.has-img img { position: absolute; inset: 7%; width: 86%; height: 86%; object-fit: cover; clip-path: polygon(50% 0, 93% 18%, 93% 62%, 50% 100%, 7% 62%, 7% 18%); z-index: 0; }
+.bd-art.has-img::after { z-index: 1; }
+.bd-img-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.job-results { scroll-margin-top: 80px; }

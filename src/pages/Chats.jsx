@@ -13,6 +13,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import { USERS, EVENTS } from '../data/seed.js'
+import { StoriesRow } from '../components/Stories.jsx'
 import * as api from '../api.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { MediaButtons, MediaTray, MediaView } from '../components/Media.jsx'
@@ -47,11 +48,12 @@ const ORIGIN = {
   profile: { icon: 'user', tone: 'blue', label: 'Profile', re: 'Started from their profile' },
   map: { icon: 'map-pin', tone: 'green', label: 'My City', re: 'Started from My City' },
   business: { icon: 'store', tone: 'green', label: 'Business', re: 'An enquiry about this business' },
+  person: { icon: 'user', tone: 'blue', label: 'Shared profile', re: 'Shared profile · tap to view' },
 }
 
 // Only these say something useful; a chat started from someone's profile
 // doesn't need a card (Nuel, Nov 28: "reduced… or to only certain activities").
-const SHOWN = ['job', 'post', 'event', 'community', 'business']
+const SHOWN = ['job', 'post', 'event', 'community', 'business', 'person']
 
 // The "Re:" card: what this conversation is about, with a way back to it.
 function OriginCard({ context, compact = false }) {
@@ -61,7 +63,7 @@ function OriginCard({ context, compact = false }) {
     <Link to={context.link || '#'} className={`dm-origin ${compact ? 'compact' : ''}`}>
       {context.image ? <img src={context.image} alt="" /> : <IconTile name={o.icon} tone={o.tone} size={compact ? 26 : 40} />}
       <span>
-        <b>Re: {context.title}</b>
+        <b>{context.kind === 'person' ? context.title : `Re: ${context.title}`}</b>
         <em>{compact ? [o.label, context.sub].filter(Boolean).join(' · ') : o.re}</em>
       </span>
       <Icon name="chevron-right" size={18} />
@@ -205,14 +207,20 @@ function Composer({ onSend, placeholder = 'Type a message…', pending, onDropPe
 // ── New message picker ──────────────────────────────────────────────────
 function NewMessage({ profile, onPick, onClose }) {
   const [q, setQ] = useState('')
+  // Real members from the server (the demo list only if that fails).
+  const [found, setFound] = useState(null)
+  useEffect(() => {
+    const t = setTimeout(() => api.searchPeople(q.trim()).then(setFound).catch(() => setFound(null)), q ? 250 : 0)
+    return () => clearTimeout(t)
+  }, [q])
   // People you're connected to first, then everyone else in the city.
   const people = useMemo(() => {
     const conn = new Set(profile.connections)
-    return USERS.filter((u) => u.id !== profile.id)
+    return (found ?? USERS).filter((u) => u.id !== profile.id)
       .sort((a, b) => Number(conn.has(b.id)) - Number(conn.has(a.id)))
-      .filter((u) => u.name.toLowerCase().includes(q.toLowerCase()))
+      .filter((u) => found || u.name.toLowerCase().includes(q.toLowerCase()))
       .map((u) => ({ ...u, connected: conn.has(u.id) }))
-  }, [q, profile])
+  }, [q, found, profile])
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="dm-modal" role="dialog" aria-label="New message" onClick={(e) => e.stopPropagation()}>
@@ -257,7 +265,16 @@ export default function Chats() {
   const [dmUser, setDmUser] = useState(null)
   const [messages, setMessages] = useState([])
   const [search, setSearch] = useState('')
-  const [composing, setComposing] = useState(false)
+  // Typing a name also finds people you haven't messaged yet.
+  const [peopleHits, setPeopleHits] = useState([])
+  useEffect(() => {
+    const needle = search.trim().toLowerCase()
+    if (!needle) { setPeopleHits([]); return }
+    const t = setTimeout(() => api.searchPeople(needle).then(setPeopleHits).catch(() => setPeopleHits([])), 250)
+    return () => clearTimeout(t)
+  }, [search])
+  // Sending someone's profile: pick who gets it first.
+  const [composing, setComposing] = useState(() => !!params.get('share') && !params.get('dm'))
   const [newGroup, setNewGroup] = useState(false)
   const [groupName, setGroupName] = useState('')
   const [filter, setFilter] = useState('all')
@@ -269,6 +286,7 @@ export default function Chats() {
     if (params.get('event')) return { kind: 'event', id: params.get('event'), title: ev?.title || '', sub: ev ? `${ev.date} · ${ev.time}` : '', image: ev?.cover || '' }
     if (params.get('community')) return { kind: 'community', id: params.get('community'), title: '' }
     if (params.get('business')) return { kind: 'business', id: params.get('business'), listing: params.get('listing') || undefined, title: '' }
+    if (params.get('share')) return { kind: 'person', id: params.get('share'), title: '' }
     if (params.get('from') === 'profile') return { kind: 'profile', id: params.get('dm'), title: '' }
     return null
   })
@@ -321,6 +339,7 @@ export default function Chats() {
     if (pending.kind === 'post') api.getPost(pending.id).then((d) => name((d.post.title || d.post.body || 'a post').slice(0, 60))).catch(() => {})
     if (pending.kind === 'community') api.getCommunity(pending.id).then((c) => name(c.name)).catch(() => {})
     if (pending.kind === 'profile') name('their profile')
+    if (pending.kind === 'person') api.getUser(pending.id).then((u) => setPending((p) => (p ? { ...p, title: u.name, sub: [u.handle, u.title].filter(Boolean).join(' · '), image: u.photo || '' } : p))).catch(() => name('a profile'))
   }, [pending?.kind, pending?.id]) // eslint-disable-line
 
   // Open a group thread.
@@ -338,7 +357,7 @@ export default function Chats() {
     setTab(t); setMessages([]); setSearch('')
     setParams(t === 'groups' ? { tab: 'groups' } : {}, { replace: true })
   }
-  const openDm = (id) => { if (id !== activeDm) setPending(null); setTab('direct'); setActiveDm(id); setComposing(false); setParams({ dm: id }, { replace: true }) }
+  const openDm = (id) => { if (id !== activeDm && pending?.kind !== 'person') setPending(null); setTab('direct'); setActiveDm(id); setComposing(false); setParams({ dm: id }, { replace: true }) }
   const openGroup = async (chat) => {
     if (!chat.joined) {
       const updated = await api.joinChat(chat.id)
@@ -396,6 +415,9 @@ export default function Chats() {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" aria-label="Search conversations" />
           </label>
 
+          {/* Nuel, Nov 28: "status update should be somewhere here also". */}
+          <div className="dm-stories"><StoriesRow /></div>
+
           <div className="dm-chips" role="tablist" aria-label="Show">
             {[
               ['all', 'All', unreadTotal], ['direct', 'Direct'], ['groups', 'Groups'], ['jobs', 'Jobs'],
@@ -414,7 +436,7 @@ export default function Chats() {
           <div className="dm-list">
             {tab === 'direct' && (
               <>
-                {dmRows.length === 0 && (
+                {dmRows.length === 0 && !(needle && peopleHits.length) && (
                   <p className="dm-muted dm-list-empty">{needle ? 'No matches.' : filter === 'requests' ? 'No message requests.' : filter !== 'all' ? 'Nothing here yet.' : 'No messages yet.'}</p>
                 )}
                 {dmRows.map((c) => (
@@ -432,6 +454,24 @@ export default function Chats() {
                     {c.unread > 0 && <span className="dm-unread" aria-label={`${c.unread} unread`} />}
                   </button>
                 ))}
+                {needle && (() => {
+                  const have = new Set(dmRows.map((c) => c.other.id))
+                  const more = peopleHits.filter((u) => u.id !== profile.id && !have.has(u.id))
+                  return more.length > 0 && (
+                    <>
+                      <p className="dm-list-label">People</p>
+                      {more.map((u) => (
+                        <button key={u.id} className="dm-item" onClick={() => { setSearch(''); openDm(u.id) }}>
+                          <Face user={u} size={56} />
+                          <span className="dm-item-text">
+                            <span className="dm-item-name">{u.name}</span>
+                            <span className="dm-item-preview"><span className="dm-item-last">{u.handle || u.title || 'Send a message'}</span></span>
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )
+                })()}
               </>
             )}
 
