@@ -175,7 +175,7 @@ export default function Explore() {
       <header className="page-head">
         <h1>Explore</h1>
         <p className="meta-dim">People, places, events, jobs and more.</p>
-        <Link to="/businesses" className="btn ghost small xp-biz-link"><Icon name="store" size={14} /> Explore businesses</Link>
+        <Link to="/businesses" className="btn ghost small xp-biz-link xp-biz-phone"><Icon name="store" size={14} /> Explore businesses</Link>
       </header>
 
       <div className="explore-search">

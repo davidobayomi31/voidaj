@@ -282,3 +282,30 @@
   background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 16px; outline: none;
 }
 .composer .take-box:focus, .reply-box .take-box:focus { border-color: var(--accent); }
+
+/* ── Home hero over a street map (Nuel, Nov 27) ───────────────────── */
+.hero-x .hero-map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+.hero-x-see .hero-map { pointer-events: auto; }
+.hero-x-mapped .hero-x-shade {
+  background:
+    linear-gradient(0deg, rgba(5, 6, 10, 0.88) 0%, rgba(5, 6, 10, 0.66) 55%, rgba(5, 6, 10, 0.52) 100%);
+  transition: opacity .45s var(--ease-out);
+}
+.hero-x-mapped .hero-x-body, .hero-x-mapped .hero-x-side { transition: opacity .35s var(--ease-out), transform .45s var(--ease-out); }
+.hero-x-see .hero-x-shade { opacity: 0; pointer-events: none; }
+.hero-x-see .hero-x-body, .hero-x-see .hero-x-side { opacity: 0; transform: translateY(18px); pointer-events: none; }
+.hm-dot { width: 18px; height: 18px; border-radius: 50%; background: #2563EB; border: 3px solid #fff; box-shadow: 0 0 0 0 rgba(37, 99, 235, .5), 0 2px 8px rgba(0,0,0,.35); animation: hm-pulse 2.2s infinite; }
+@keyframes hm-pulse { 70% { box-shadow: 0 0 0 16px rgba(37, 99, 235, 0), 0 2px 8px rgba(0,0,0,.35); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0), 0 2px 8px rgba(0,0,0,.35); } }
+.hero-x-reveal {
+  position: absolute; z-index: 3; top: 14px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 14px 0 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28);
+  background: rgba(12, 14, 20, .55); color: #fff; font: 600 13px/1 inherit; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); cursor: pointer;
+}
+.hero-x-reveal svg { transition: transform .35s var(--ease-out); }
+.hero-x-see .hero-x-reveal svg { transform: rotate(180deg); }
+.hero-x-reveal:hover { background: rgba(12, 14, 20, .72); }
+.hero-x-mapped .maplibregl-ctrl-top-right { top: 56px; }
+@media (max-width: 767px) { .hero-x-mapped.hero-x { min-height: 520px; } }
+/* Businesses sits in the side panel now (Nuel, Nov 27); only phones, which have no side panel, keep the button. */
+@media (min-width: 681px) { .xp-biz-phone { display: none; } }
+.hero-x-mapped:not(.hero-x-see) .maplibregl-ctrl-top-right { display: none; }

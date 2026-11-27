@@ -60,6 +60,7 @@ const PRIMARY = [
   { to: '/events', icon: 'calendar', tone: 'pink', label: 'Events' },
   { to: '/jobs', icon: 'briefcase', tone: 'orange', label: 'Quick Jobs' },
   { to: '/communities', icon: 'users', tone: 'indigo', label: 'Communities' },
+  { to: '/businesses', icon: 'store', tone: 'blue', label: 'Businesses' },
   { to: '/chats', icon: 'message-circle', tone: 'green', label: 'Chat', unread: true },
 ]
 
