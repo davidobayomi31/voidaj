@@ -7,6 +7,7 @@
 // ID verification is a simulated demo badge (no real KYC provider wired up).
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ShareLinkButton } from '../components/ShareLinkButton.jsx'
 import { useApp } from '../state.jsx'
 import { JOB_CATEGORIES } from '../data/seed.js'
 import * as api from '../api.js'
@@ -334,6 +335,7 @@ function JobSheet({ job, onInterest, onOffer, onClose, onChange }) {
               {VERIFICATION_IS_REAL && job.verifiedOnly && <span className="scope-badge local"><Icon name="badge-check" size={11} /> Verified pros only</span>}
             </div>
           </div>
+          <ShareLinkButton path={`/jobs?job=${job.id}`} title={job.title} text={`${job.title} on VOIDAJ`} label="" className="icon-btn subtle" />
           <button className="icon-btn subtle" onClick={onClose} aria-label="Close"><Icon name="x" size={16} /></button>
         </div>
         <ul className="job-facts">

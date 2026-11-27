@@ -40,9 +40,11 @@ import Favorites from './pages/Favorites.jsx'
 import MyCity from './pages/MyCity.jsx'
 import Admin from './pages/Admin.jsx'
 import Services from './pages/Services.jsx'
+import Suggestions from './pages/Suggestions.jsx'
 import IdCard from './pages/IdCard.jsx'
 import Privacy from './pages/Privacy.jsx'
 import Terms from './pages/Terms.jsx'
+import LoadingScreen from './components/LoadingScreen.jsx'
 import * as api from './api.js'
 import { FEATURES } from './features.js'
 
@@ -55,6 +57,7 @@ const IMMERSIVE = ['/welcome', '/auth']
 const PRIMARY = [
   { to: '/home', icon: 'home', tone: 'blue', label: 'Home' },
   { to: '/explore', icon: 'compass', tone: 'violet', label: 'Explore' },
+  { to: '/suggestions', icon: 'sparkle', tone: 'pink', label: 'For you' },
   { to: '/city', icon: 'map-pin', tone: 'teal', label: 'My City' },
   { to: '/events', icon: 'calendar', tone: 'pink', label: 'Events' },
   { to: '/jobs', icon: 'briefcase', tone: 'orange', label: 'Quick Jobs' },
@@ -369,9 +372,15 @@ function Footer() {
   )
 }
 
+function StartScreen() {
+  const { loading } = useApp()
+  return <LoadingScreen ready={!loading} />
+}
+
 export default function App() {
   return (
     <AppProvider>
+      <StartScreen />
       <BrowserRouter>
         <div className="app-shell">
           <SideNav />
@@ -387,6 +396,7 @@ export default function App() {
               <Route path="/home" element={<Home />} />
               <Route path="/space" element={<Navigate to="/home" replace />} />
               <Route path="/explore" element={<Explore />} />
+              <Route path="/suggestions" element={<Suggestions />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/events" element={<Events />} />
               <Route path="/event/:id" element={<EventDetail />} />

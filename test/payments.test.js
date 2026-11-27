@@ -588,3 +588,63 @@ describe('card and bank safety', () => {
     expect((await request(app).get(`/api/users/${poster.user.id}/reviews`)).body.record.asPoster.chargebacks).toBe(1)
   })
 })
+
+// Funds for an event (Nuel, Nov 21): people give through Paystack, straight
+// to the host's bank account, with the processing fee added on top.
+describe('event funds', () => {
+  async function eventWithPayout() {
+    const host = await signUp('Fund Host')
+    const ev = (await host.agent.post('/api/events').send({ title: 'Fundraiser Night', date: '2099-02-02', category: 'music', audience: 'public' })).body.event
+    return { host, ev }
+  }
+
+  it('needs a bank account before collecting', async () => {
+    const { host, ev } = await eventWithPayout()
+    const res = await host.agent.put(`/api/events/${ev.id}/funds`).send({ open: true })
+    expect(res.status).toBe(400)
+    expect(res.body.needsPayout).toBe(true)
+  })
+
+  it('splits a gift to the host’s subaccount and counts it once Paystack confirms', async () => {
+    const { host, ev } = await eventWithPayout()
+    expect((await addPayout(host, '0123456781')).status).toBe(200)
+    const on = await host.agent.put(`/api/events/${ev.id}/funds`).send({ open: true, goal: '₦100,000', note: 'Sound and venue' })
+    expect(on.status).toBe(200)
+    expect(on.body).toMatchObject({ open: true, goal: 10000000, note: 'Sound and venue', raised: 0, isHost: true, hasPayout: true })
+
+    const guest = await signUp('Kind Guest')
+    expect((await guest.agent.post(`/api/events/${ev.id}/funds/checkout`).send({ amount: '35k' })).status).toBe(400)
+    const give = await guest.agent.post(`/api/events/${ev.id}/funds/checkout`).send({ amount: '₦5,000' })
+    expect(give.status).toBe(200)
+    const init = fake.initialized.at(-1)
+    const fee = feeFor(500000)
+    expect(init).toMatchObject({ amount: 500000 + fee, currency: 'NGN', transaction_charge: fee, bearer: 'account', metadata: { purpose: 'event_fund', eventId: ev.id } })
+    expect(init.subaccount).toMatch(/^ACCT_/)
+
+    // Paystack saying a different amount is not trusted.
+    fake.verified[init.reference] = { status: 'success', amount: 100, currency: 'NGN' }
+    expect((await guest.agent.post('/api/payments/verify').send({ reference: init.reference })).body.ok).toBe(false)
+    expect((await guest.agent.get(`/api/events/${ev.id}/funds`)).body.raised).toBe(0)
+
+    fake.verified[init.reference] = { status: 'success', amount: 500000 + fee, currency: 'NGN' }
+    const done = await guest.agent.post('/api/payments/verify').send({ reference: init.reference })
+    expect(done.body).toMatchObject({ ok: true, kind: 'event', eventId: ev.id })
+    // Verifying twice doesn't count the gift twice.
+    await guest.agent.post('/api/payments/verify').send({ reference: init.reference })
+    expect((await guest.agent.get(`/api/events/${ev.id}/funds`)).body).toMatchObject({ raised: 500000, count: 1, open: true })
+
+    // Someone else can't verify a gift that isn't theirs.
+    const other = await signUp('Nosy One')
+    expect((await other.agent.post('/api/payments/verify').send({ reference: init.reference })).status).toBe(404)
+
+    // Stopping closes it to new gifts.
+    await host.agent.put(`/api/events/${ev.id}/funds`).send({ open: false })
+    expect((await guest.agent.post(`/api/events/${ev.id}/funds/checkout`).send({ amount: '₦1,000' })).status).toBe(404)
+  })
+
+  it('only lets the person who made the event collect funds', async () => {
+    const { ev } = await eventWithPayout()
+    const stranger = await signUp('Not The Host')
+    expect((await stranger.agent.put(`/api/events/${ev.id}/funds`).send({ open: true })).status).toBe(403)
+  })
+})

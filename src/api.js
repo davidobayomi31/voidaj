@@ -15,7 +15,10 @@ async function req(path, opts = {}) {
 
 // Auth
 export const me = () => req('/auth/me').then((d) => d.user)
-export const register = (body) => req('/auth/register', { method: 'POST', body }).then((d) => d.user)
+// With email on, the first call returns { needsCode: true, email } and the
+// account is made when the call is repeated with the emailed `code`.
+export const register = (body) => req('/auth/register', { method: 'POST', body }).then((d) => (d.needsCode ? d : d.user))
+export const resendSignupCode = (email) => req('/auth/register/resend', { method: 'POST', body: { email } })
 export const setAge = (birthDate, ref, country) => req('/me/age', { method: 'PUT', body: { birthDate, ref, country } }).then((d) => d.user)
 export const myReferrals = () => req('/me/referrals')
 export const login = (body) => req('/auth/login', { method: 'POST', body }).then((d) => d.user)
@@ -77,6 +80,12 @@ export const listPosts = (params = {}) => {
   const q = new URLSearchParams(params).toString()
   return req('/posts' + (q ? `?${q}` : '')).then((d) => d.posts)
 }
+export const deletePost = (id) => req(`/posts/${encodeURIComponent(id)}`, { method: 'DELETE' })
+export const deleteComment = (id) => req(`/comments/${encodeURIComponent(id)}`, { method: 'DELETE' })
+export const hidePost = (id) => req(`/posts/${encodeURIComponent(id)}/hide`, { method: 'POST' })
+export const unhidePost = (id) => req(`/posts/${encodeURIComponent(id)}/hide`, { method: 'DELETE' })
+export const suggestions = () => req('/suggestions')
+export const peopleMatches = () => req('/people/matches').then((d) => d.people)
 export const createPost = (body) => req('/posts', { method: 'POST', body }).then((d) => d.post)
 export const feed = (tab = 'foryou') => req(`/feed?tab=${tab}`).then((d) => d.posts)
 export const listStatuses = () => req('/statuses').then((d) => d.groups)
@@ -223,6 +232,9 @@ export const confirmPayout = (code) => req('/payments/payout/confirm', { method:
 export const cancelPayout = () => req('/payments/payout/cancel', { method: 'POST' })
 export const startCardSetup = (jobId) => req('/payments/card', { method: 'POST', body: { jobId } }).then((d) => d.url)
 export const removeCard = () => req('/payments/card', { method: 'DELETE' })
+export const eventFunds = (id) => req(`/events/${encodeURIComponent(id)}/funds`)
+export const setEventFunds = (id, body) => req(`/events/${encodeURIComponent(id)}/funds`, { method: 'PUT', body })
+export const eventFundCheckout = (id, amount) => req(`/events/${encodeURIComponent(id)}/funds/checkout`, { method: 'POST', body: { amount } })
 export const verifyPayment = (reference) => req('/payments/verify', { method: 'POST', body: { reference } })
 export const chargeJob = (id, paymentId) => req(`/jobs/${id}/payment/charge`, { method: 'POST', body: { paymentId } })
 export const checkoutJob = (id, paymentId) => req(`/jobs/${id}/payment/checkout`, { method: 'POST', body: { paymentId } }).then((d) => d.url)

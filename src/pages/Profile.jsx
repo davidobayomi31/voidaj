@@ -33,6 +33,7 @@ import { OCCUPATIONS } from '../components/JobPeople.jsx'
 import { ReviewsPanel, ProfileMore } from '../components/Trust.jsx'
 import { showVerifiedTick, verifiedLabel, verifiedLongLabel } from '../verification.js'
 import { flagOf } from '../countries.js'
+import { GENDER_OPTIONS, isGenderCode, genderLabel } from '../gender.js'
 
 const PRIVACY_LEVELS = [
   { id: 'exact', label: 'Exact area' },
@@ -263,6 +264,7 @@ function EditSheet({ onClose }) {
     name: profile.name, title: profile.title || '', bio: profile.bio || '', area: profile.area || '', city: profile.city || '',
     interests: (profile.interests || []).join(', '), skills: (profile.skills || []).join(', '), goals: (profile.goals || []).join(', '),
     photo: profile.photo || '', cover: profile.cover || '',
+    gender: profile.gender || '', genderPublic: !!profile.genderPublic,
   })
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -296,6 +298,19 @@ function EditSheet({ onClose }) {
           <label className="field"><span>Area</span><input value={f.area} onChange={set('area')} placeholder="e.g. Yaba" /></label>
           <label className="field"><span>City</span><input value={f.city} onChange={set('city')} placeholder="Your city" /></label>
         </div>
+        <label className="field"><span>Gender <em>optional</em></span>
+          <select value={isGenderCode(f.gender) || !f.gender ? f.gender : 'self'} onChange={(e) => setF((x) => ({ ...x, gender: e.target.value === 'self' ? ' ' : e.target.value }))}>
+            <option value="">Not set</option>
+            {GENDER_OPTIONS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+            <option value="self">Describe in my own words</option>
+          </select>
+        </label>
+        {f.gender && !isGenderCode(f.gender) && (
+          <label className="field"><span>In your own words</span><input value={f.gender.trim() ? f.gender : ''} onChange={(e) => setF((x) => ({ ...x, gender: e.target.value || ' ' }))} maxLength={30} placeholder="e.g. Genderqueer" /></label>
+        )}
+        {f.gender && f.gender !== 'prefer-not' && (
+          <label className="check-row"><input type="checkbox" checked={f.genderPublic} onChange={(e) => setF((x) => ({ ...x, genderPublic: e.target.checked }))} /> Show on my profile</label>
+        )}
         <label className="field"><span>Interests <em>separate with commas</em></span><input value={f.interests} onChange={set('interests')} placeholder="music, art, tech" /></label>
         <label className="field"><span>Skills</span><input value={f.skills} onChange={set('skills')} placeholder="photography, web design" /></label>
         <label className="field"><span>Goals</span><input value={f.goals} onChange={set('goals')} placeholder="Meet people, find work" /></label>
@@ -524,6 +539,7 @@ export default function Profile() {
           {user.bio && !picked && <p className="pf2-bio">{user.bio}</p>}
           <div className="pf-meta">
             <span><Icon name="map-pin" size={13} /> {locationFor(user, isMe)}{user.country && (isMe ? user.privacy !== 'hidden' : true) && ` ${flagOf(user.country)}`}</span>
+            {genderLabel(user.gender) && <span><Icon name="user" size={13} /> {genderLabel(user.gender)}</span>}
             {joined(user.joinedAt) && <span><Icon name="calendar" size={13} /> Joined {joined(user.joinedAt)}</span>}
             {seen && <span className={`presence-text ${user.active ? 'on' : ''}`}>{user.active && <span className="presence-dot" aria-hidden="true" />}{seen}</span>}
           </div>

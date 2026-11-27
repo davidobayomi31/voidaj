@@ -388,6 +388,9 @@ ALTER TABLE jobs ADD COLUMN IF NOT EXISTS verified INTEGER DEFAULT 0;
 -- server/storage.js), or a bundled /images/ path. Empty means none.
 ALTER TABLE communities ADD COLUMN IF NOT EXISTS cover TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS cover TEXT DEFAULT '';
+-- How long a community or event stays up before it comes down (Nuel, Nov 21). NULL means no end.
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS expires_at BIGINT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS expires_at BIGINT;
 
 -- Social links on a profile: a JSON list of { kind, value }, where value
 -- is a handle (instagram, x, …) or a full https link (website, other).
@@ -798,6 +801,50 @@ UPDATE ads SET tagline = 'Spices, ground fresh' WHERE business_name = 'Kano Spic
 UPDATE businesses b SET country = COALESCE((SELECT u.country FROM users u WHERE u.id = b.owner_id), 'NG') WHERE b.country IS NULL;
 -- What kind of profile someone chose in onboarding (Nuel, Oct 14 + Nov 18).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_type TEXT DEFAULT 'individual';
+-- Collecting funds for an event (Nuel, Nov 21: "we can collect funds for events").
+-- The host turns it on; people pay through Paystack straight to the host's bank
+-- account (the same subaccount job payments use). VOIDAJ never holds the money.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS fund_open INTEGER DEFAULT 0;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS fund_goal BIGINT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS fund_note TEXT DEFAULT '';
+CREATE TABLE IF NOT EXISTS event_contributions (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL,
+  payer_id TEXT NOT NULL,
+  payee_id TEXT NOT NULL,
+  amount BIGINT NOT NULL,
+  fee BIGINT NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'NGN',
+  reference TEXT UNIQUE,
+  status TEXT DEFAULT 'pending',
+  created_at BIGINT,
+  paid_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS event_contributions_event ON event_contributions (event_id, status);
+-- A sign-up waiting for its emailed code. The account is only made once the
+-- code is confirmed (Nuel, Nov 21: "email confirmation before any account creation").
+CREATE TABLE IF NOT EXISTS pending_signups (
+  email TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  birth_date TEXT,
+  country TEXT,
+  ref TEXT,
+  code_hash TEXT,
+  code_expires BIGINT,
+  tries INTEGER DEFAULT 0,
+  created_at BIGINT
+);
+-- Posts a member has chosen not to see (Nuel, Nov 22: post actions like hide and delete).
+CREATE TABLE IF NOT EXISTS hidden_posts (
+  user_id TEXT NOT NULL,
+  post_id TEXT NOT NULL,
+  created_at BIGINT,
+  PRIMARY KEY (user_id, post_id)
+);
+-- Gender, optional, and whether it shows on the profile (Nuel, Nov 21).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender_public INTEGER DEFAULT 0;
 CREATE TABLE IF NOT EXISTS service_photos (
   id TEXT PRIMARY KEY,
   job_id TEXT NOT NULL,
@@ -1140,7 +1187,7 @@ export function ladderFor(points) {
 // What each kind of taking part is worth. `verified` is deliberately absent
 // while the badge is self-assigned — it was worth 20 points, which anyone
 // could help themselves to (see server/verification.js).
-const POINTS = { referrals: 15, posts: 5, takes: 2, sparksGiven: 1, sparksGot: 1, looms: 3, communities: 3, communitiesBuilt: 25, eventsHosted: 12, jobsDone: 10, jobsPosted: 4, followers: 1,
+const POINTS = { referrals: 10, posts: 5, takes: 2, sparksGiven: 1, sparksGot: 1, looms: 3, communities: 3, communitiesBuilt: 25, eventsHosted: 12, jobsDone: 10, jobsPosted: 4, followers: 1,
   ...(VERIFICATION_IS_REAL ? { verified: 20 } : {}) }
 
 // Badges anyone can earn, and how.
@@ -1214,6 +1261,8 @@ export function publicUser(row) {
     portfolio: json(row.portfolio),
     socials: json(row.socials),
     photo: row.photo || '', cover: row.cover || '',
+    // Only shown when the owner chose to show it.
+    gender: row.gender_public ? (row.gender || '') : '',
     idVerified: !!row.id_verified,
     // Country follows the same "hidden" location setting as city.
     country: row.privacy === 'hidden' ? null : (row.country || 'NG'),
@@ -1265,6 +1314,7 @@ export async function selfUser(row) {
     email: row.email, phone: row.phone || '',
     settings: readSettings(row),
     createdAt: row.created_at, profileType: row.profile_type || 'individual',
+    gender: row.gender || '', genderPublic: !!row.gender_public,
     isAdmin: !!row.is_admin,
     hasPassword: !!row.password_hash,
     linked: { google: !!row.google_sub, apple: !!row.apple_sub },
@@ -1380,6 +1430,7 @@ export async function serializeCommunity(row, viewerId) {
       : Promise.resolve(null),
   ])
   return {
+    expiresAt: row.expires_at == null ? null : Number(row.expires_at), ended: row.expires_at != null && Number(row.expires_at) <= Date.now(),
     id: row.id, name: row.name, tagline: row.tagline, description: row.description,
     scope: row.scope, city: row.city, accent: row.accent, icon: row.icon, cover: row.cover || '',
     tags: json(row.tags), rules: json(row.rules), modRules: json(row.mod_rules), memberCount: row.member_count,
@@ -1475,6 +1526,7 @@ export function serializeEvent(row) {
     category: row.category || null, format: row.format || 'in-person', capacity: row.capacity ?? null,
     country: row.country || 'NG', timezone: row.timezone || 'Africa/Lagos', inviteOnly: !!row.invite_only,
     updatedAt: row.updated_at || null,
+    expiresAt: row.expires_at == null ? null : Number(row.expires_at), ended: row.expires_at != null && Number(row.expires_at) <= Date.now(),
   }
 }
 
@@ -1504,3 +1556,14 @@ export async function serializeLive(row) {
 
 export const parseJson = json
 export default q
+
+// ── How long something stays up ──────────────────────────────────────
+// Nuel, Nov 21: "People can choose how long they want a community or event
+// before it goes down." Communities run from the day they start; an event
+// stays up for the chosen time after its date. No choice means no end.
+const DAY = 24 * 60 * 60 * 1000
+export const KEEP_UP = { '1w': 7, '1m': 30, '3m': 90, '6m': 180, '1y': 365 }
+export function expiryFor(choice, fromMs = Date.now()) {
+  const days = KEEP_UP[choice]
+  return days ? fromMs + days * DAY : null
+}

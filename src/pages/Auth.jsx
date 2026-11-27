@@ -67,6 +67,9 @@ export default function Auth() {
   // 'email' has the form. The date of birth is asked first because everything
   // else waits on it.
   const [step, setStep] = useState('choose')
+  // 'code' step: the sign-up is waiting for the 6-digit code that was emailed.
+  const [code, setCode] = useState('')
+  const [codeNote, setCodeNote] = useState('')
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -80,13 +83,28 @@ export default function Auth() {
     setError(''); setBusy(true)
     try {
       const user = mode === 'register'
-        ? await register({ ...form, ref: savedRef() })
+        ? await register({ ...form, ref: savedRef(), ...(step === 'code' ? { code } : {}) })
         : await login({ email: form.email, password: form.password })
+      if (user?.needsCode) {
+        // Nothing is made yet: the account waits for the emailed code.
+        setCodeNote(user.devCode ? `Email isn’t set up here, so your code is ${user.devCode}.` : '')
+        setCode(''); setStep('code'); setBusy(false)
+        return
+      }
       clearSignUpCarryOver() // the date of birth and referrer have done their job
       navigate(user.onboarded ? '/home' : '/welcome')
     } catch (err) {
       setError(err.message)
     }
+    setBusy(false)
+  }
+
+  const resendCode = async () => {
+    setError(''); setBusy(true)
+    try {
+      const r = await api.resendSignupCode(form.email)
+      setCodeNote(r.devCode ? `Email isn’t set up here, so your code is ${r.devCode}.` : 'We sent you a new code.')
+    } catch (err) { setError(err.message) }
     setBusy(false)
   }
 
@@ -127,7 +145,22 @@ export default function Auth() {
             <em id="age-note" className={tooYoung ? 'auth-age-no' : ''}>{tooYoung ? `Sorry — you need to be at least ${MIN_AGE} to join VOIDAJ.` : `You need to be ${MIN_AGE} or older. Only you can see this.`}</em>
           </label>
         )}
-        {step === 'choose' ? (
+        {step === 'code' ? (
+          <form onSubmit={submit} className="auth-form">
+            <button type="button" className="auth-back link-btn" onClick={() => { setError(''); setStep('email') }}>
+              <Icon name="back" size={14} /> Change email
+            </button>
+            <p className="auth-note"><Icon name="mail" size={14} /> We sent a 6-digit code to <b>{form.email}</b>. Your account is made when you enter it.</p>
+            <label className="field">
+              <span><Icon name="lock" size={14} /> Confirmation code</span>
+              <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="123456" autoFocus />
+            </label>
+            {codeNote && <p className="auth-note">{codeNote}</p>}
+            {error && <div className="auth-error"><Icon name="shield" size={14} /> {error}</div>}
+            <button className="btn primary large full" disabled={busy || code.length !== 6}>{busy ? 'One moment…' : 'Confirm and create account'}<Icon name="arrow" size={16} /></button>
+            <button type="button" className="link-btn" onClick={resendCode} disabled={busy}>Send a new code</button>
+          </form>
+        ) : step === 'choose' ? (
           <>
             <SocialSignIn locked={locked} onGo={() => { if (mode === 'register') { saveBirthDate(form.birthDate); try { localStorage.setItem('voidaj_country', form.country) } catch { /* private mode */ } } }} />
             <div className="auth-or"><span>or</span></div>

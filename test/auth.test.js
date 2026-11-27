@@ -71,7 +71,7 @@ describe('auth', () => {
     const mine = (await inviter.get('/api/me/referrals')).body
     expect(mine.count).toBe(1)
     const after = (await inviter.get(`/api/users/${user.id}/journey`)).body
-    expect(after.points - before.points).toBe(15)
+    expect(after.points - before.points).toBe(10)
     expect(after.badges.map((b) => b.id)).toContain('recruiter')
   })
 

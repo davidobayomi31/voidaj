@@ -9,9 +9,10 @@ import { Icon } from '../components/Icons.jsx'
 import { Avatar } from '../components/bits.jsx'
 import { EngageBar, RichText } from '../components/Engage.jsx'
 import { ReportButton } from '../components/ReportButton.jsx'
+import { PostActions } from '../components/PostActions.jsx'
 import { MediaView } from '../components/Media.jsx'
 
-function CommentNode({ comment, depth, onReplied }) {
+function CommentNode({ comment, depth, onReplied, onRefresh }) {
   const { user } = useApp()
   const navigate = useNavigate()
   const [replying, setReplying] = useState(false)
@@ -34,7 +35,7 @@ function CommentNode({ comment, depth, onReplied }) {
       <div className="comment-row">
         <div className="comment-body">
           {comment.hidden ? (
-            <p className="comment-removed"><Icon name="shield" size={13} /> Removed by a moderator</p>
+            <p className="comment-removed"><Icon name="shield" size={13} /> This take was removed</p>
           ) : (
             <>
               <div className="comment-head">
@@ -48,6 +49,11 @@ function CommentNode({ comment, depth, onReplied }) {
                   <Icon name="reply" size={13} /> Reply
                 </button>
                 <ReportButton targetType="comment" targetId={comment.id} />
+                {user && comment.author?.id === user.id && (
+                  <button className="link-btn" onClick={() => { if (window.confirm('Delete this take?')) api.deleteComment(comment.id).then(() => onRefresh?.()).catch(() => {}) }}>
+                    <Icon name="trash" size={13} /> Delete
+                  </button>
+                )}
               </div>
               {replying && (
                 <form className="reply-box" onSubmit={submit}>
@@ -59,7 +65,7 @@ function CommentNode({ comment, depth, onReplied }) {
           )}
           {comment.replies?.length > 0 && (
             <div className="comment-children">
-              {comment.replies.map((c) => <CommentNode key={c.id} comment={c} depth={depth + 1} onReplied={onReplied} />)}
+              {comment.replies.map((c) => <CommentNode key={c.id} comment={c} depth={depth + 1} onReplied={onReplied} onRefresh={onRefresh} />)}
             </div>
           )}
         </div>
@@ -130,6 +136,7 @@ export default function Thread() {
             <EngageBar post={post} stashItem={{ kind: 'post', id: post.id, title: post.title || post.body?.slice(0, 60) || 'Post', subtitle: community ? `in ${community.name}` : '', href: `/post/${post.id}` }} />
             <div className="post-stats">
               <ReportButton targetType="post" targetId={post.id} />
+              <PostActions post={post} onDeleted={() => navigate('/home')} onHidden={() => navigate('/home')} />
             </div>
           </div>
         </div>
@@ -154,7 +161,7 @@ export default function Thread() {
         )}
 
         {comments.length === 0 && <p className="meta-dim empty-note">No takes yet — be the first to share yours.</p>}
-        {comments.map((c) => <CommentNode key={c.id} comment={c} depth={0} onReplied={setData} />)}
+        {comments.map((c) => <CommentNode key={c.id} comment={c} depth={0} onReplied={setData} onRefresh={() => api.getPost(id).then(setData).catch(() => {})} />)}
       </section>
       </div>
 

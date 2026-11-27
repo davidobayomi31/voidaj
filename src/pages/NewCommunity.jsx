@@ -18,7 +18,7 @@ export default function NewCommunity() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     name: '', tagline: '', description: '', scope: 'local', city: '',
-    tags: '', rules: ['', ''], icon: 'community', accent: ACCENTS[0], cover: '', category: '',
+    tags: '', rules: ['', ''], icon: 'community', accent: ACCENTS[0], cover: '', category: '', keepFor: '',
   })
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -80,6 +80,17 @@ export default function NewCommunity() {
         <label className="field" htmlFor="community-category">
           <span>Category</span>
           <CategorySelect id="community-category" value={form.category} onChange={(v) => pick('category', v)} />
+        </label>
+
+        <label className="field">
+          <span>How long should it stay up? <em>It comes down when the time is up</em></span>
+          <select value={form.keepFor} onChange={(e) => pick('keepFor', e.target.value)}>
+            <option value="">No end. Keep it open</option>
+            <option value="1m">1 month</option>
+            <option value="3m">3 months</option>
+            <option value="6m">6 months</option>
+            <option value="1y">1 year</option>
+          </select>
         </label>
 
         <label className="field">

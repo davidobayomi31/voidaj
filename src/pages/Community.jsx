@@ -83,6 +83,7 @@ export default function Community() {
           <div className="community-glyph large"><Icon name={community.icon} size={30} /></div>
           <div className="community-banner-text">
             <h1>{community.name}</h1>
+            {community.ended && <p className="ended-note"><Icon name="clock" size={13} /> This community has ended. It no longer shows in lists.</p>}
             <p className="community-tagline">{community.tagline}</p>
             <div className="meta-row">
               <CategoryTag id={categoryOf(meta?.category ? meta : community)} short={false} />

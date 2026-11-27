@@ -98,6 +98,9 @@ export const emailReady = () => !!(process.env.RESEND_API_KEY || '').trim()
 // Unconfirmed accounts can't post jobs, create events or communities, or
 // start conversations, once codes can actually be emailed (or when
 // REQUIRE_EMAIL_CONFIRM=1, which the tests use).
+// A new account waits for its emailed code before it exists. Needs a real
+// email service (or SIGNUP_CODE_FIRST=1, which the tests use).
+export const signupCodeFirst = () => emailReady() || process.env.SIGNUP_CODE_FIRST === '1'
 export const confirmRequired = () => emailReady() || process.env.REQUIRE_EMAIL_CONFIRM === '1'
 
 // Any plain email, sent with Resend when it's set up. Without a key it is
@@ -165,3 +168,48 @@ export async function blockedIds(userId) {
 export async function eitherBlocked(a, b) {
   return !!(await q.get('SELECT 1 FROM user_blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?) LIMIT 1', a, b, b, a))
 }
+
+// ── Sign-up codes: sent before the account exists ────────────────────
+// The sign-up is kept in pending_signups (password already hashed) and the
+// account is only made when the right code comes back.
+export async function stageSignup({ email, name, passwordHash, birthDate, country, ref }) {
+  const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0')
+  await q.run(`INSERT INTO pending_signups (email, name, password_hash, birth_date, country, ref, code_hash, code_expires, tries, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+    ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, password_hash = EXCLUDED.password_hash, birth_date = EXCLUDED.birth_date,
+      country = EXCLUDED.country, ref = EXCLUDED.ref, code_hash = EXCLUDED.code_hash, code_expires = EXCLUDED.code_expires, tries = 0`,
+  email, name, passwordHash, birthDate, country, ref || null, hashCode(code), now() + CODE_MS, now())
+  return sendSignupCode(email, name, code)
+}
+async function sendSignupCode(email, name, code) {
+  if (!emailReady()) {
+    if (process.env.NODE_ENV !== 'test') console.log(`[email] sign-up code for ${email}: ${code}`)
+    return { sent: false, code }
+  }
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY.trim()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'VOIDAJ <hello@voidaj.com>', to: [email], ...codeEmail({ name, code, minutes: CODE_MS / 60000 }) }),
+  }).catch(() => null)
+  return { sent: !!r?.ok }
+}
+export async function resendSignupCode(email) {
+  const row = await q.get('SELECT * FROM pending_signups WHERE email = ?', email)
+  if (!row) return { error: 'Start again: we have no sign-up waiting for that email.' }
+  const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0')
+  await q.run('UPDATE pending_signups SET code_hash = ?, code_expires = ?, tries = 0 WHERE email = ?', hashCode(code), now() + CODE_MS, email)
+  return sendSignupCode(email, row.name, code)
+}
+// Returns the waiting sign-up if the code is right; otherwise an error.
+export async function checkSignupCode(email, code) {
+  const row = await q.get('SELECT * FROM pending_signups WHERE email = ?', email)
+  if (!row) return { error: 'Start again: we have no sign-up waiting for that email.' }
+  if (!row.code_expires || Number(row.code_expires) < now()) return { error: 'That code has expired. Send a new one.' }
+  if ((row.tries || 0) >= MAX_TRIES) return { error: 'Too many wrong codes. Send a new one.' }
+  if (hashCode(String(code || '').replace(/\D/g, '')) !== row.code_hash) {
+    await q.run('UPDATE pending_signups SET tries = COALESCE(tries, 0) + 1 WHERE email = ?', email)
+    return { error: 'That code isn’t right. Check the email and try again.' }
+  }
+  return { ok: true, pending: row }
+}
+export const clearSignup = (email) => q.run('DELETE FROM pending_signups WHERE email = ?', email)

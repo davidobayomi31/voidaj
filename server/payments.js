@@ -390,6 +390,12 @@ async function settle(reference, data) {
     if (done.changes) paystack('/refund', { method: 'POST', body: { transaction: reference } }).catch(() => {})
     return { kind: 'card', userId: setup.user_id, ok: saved, jobId: setup.job_id }
   }
+  const gift = await q.get('SELECT * FROM event_contributions WHERE reference = ?', reference)
+  if (gift) {
+    const ok = data?.status === 'success' && Number(data.amount) === Number(gift.amount) + Number(gift.fee) && String(data.currency || gift.currency).toUpperCase() === gift.currency
+    if (ok) await q.run("UPDATE event_contributions SET status = 'paid', paid_at = ? WHERE id = ? AND status <> 'paid'", now(), gift.id)
+    return { kind: 'event', userId: gift.payer_id, ok, eventId: gift.event_id }
+  }
   const p = await q.get('SELECT * FROM job_payments WHERE reference = ?', reference)
   if (p) {
     const ok = data?.status === 'success' && Number(data.amount) === Number(p.amount) + Number(p.fee) && String(data.currency || p.currency).toUpperCase() === p.currency
@@ -551,7 +557,7 @@ export function paymentRoutes(app) {
   app.post('/api/payments/verify', requireAuth, on, async (req, res) => {
     const reference = String(req.body?.reference || '').slice(0, 80)
     const setup = await q.get('SELECT user_id FROM payment_setups WHERE reference = ?', reference)
-    const pay = setup ? null : await q.get('SELECT payer_id FROM job_payments WHERE reference = ?', reference)
+    const pay = setup ? null : ((await q.get('SELECT payer_id FROM job_payments WHERE reference = ?', reference)) || (await q.get('SELECT payer_id FROM event_contributions WHERE reference = ?', reference)))
     if ((setup?.user_id || pay?.payer_id) !== req.userId) return err(res, 404, 'Payment not found.')
     let data
     try { data = await paystack(`/transaction/verify/${encodeURIComponent(reference)}`) } catch (e) { return err(res, 502, e.message) }
@@ -580,6 +586,70 @@ export function paymentRoutes(app) {
     if (p.payer_id !== req.userId) return err(res, 403, 'Only the person who hired can pay.')
     if (!['awaiting', 'due'].includes(p.status)) return err(res, 400, p.status === 'paid' ? 'This job is already paid.' : 'A payment is already going through.')
     try { res.json({ url: await checkoutFor(req, p) }) } catch (e) { err(res, e.status === 400 ? 400 : 502, e.message) }
+  })
+
+  // ── Funds for an event ─────────────────────────────────────────────
+  // The host switches collecting on (with an optional goal and a note on what
+  // it's for); anyone signed in can give. Needs payments switched on and the
+  // host to have a payout bank account, since the money goes straight to it.
+  const fundView = async (ev, viewerId) => {
+    const [tot, host] = await Promise.all([
+      q.get("SELECT COALESCE(SUM(amount), 0)::bigint AS raised, COUNT(*)::int AS n FROM event_contributions WHERE event_id = ? AND status = 'paid'", ev.id),
+      ev.creator_id === viewerId ? payoutOf(ev.creator_id) : null,
+    ])
+    return {
+      open: !!ev.fund_open, goal: ev.fund_goal == null ? null : Number(ev.fund_goal), note: ev.fund_note || '',
+      raised: Number(tot.raised), count: tot.n, currency: 'NGN', paymentsOn: paymentsReady(),
+      ...(ev.creator_id === viewerId ? { isHost: true, hasPayout: !!host } : {}),
+    }
+  }
+  app.get('/api/events/:id/funds', async (req, res) => {
+    const ev = await q.get('SELECT * FROM events WHERE id = ?', req.params.id)
+    if (!ev) return err(res, 404, 'Event not found.')
+    res.json(await fundView(ev, req.userId))
+  })
+  app.put('/api/events/:id/funds', requireAuth, on, async (req, res) => {
+    const ev = await q.get('SELECT * FROM events WHERE id = ?', req.params.id)
+    if (!ev) return err(res, 404, 'Event not found.')
+    if (ev.creator_id !== req.userId) return err(res, 403, 'Only the person who made the event can collect funds for it.')
+    const open = !!req.body?.open
+    if (open && !(await payoutOf(req.userId))) return err(res, 400, 'Add the bank account you want paid into first (Settings → Payments).', { needsPayout: true })
+    const goalText = String(req.body?.goal ?? '').trim()
+    const goal = goalText ? parseAmount(goalText) : null
+    if (goalText && goal === null) return err(res, 400, 'Enter the goal as an amount, like ₦200,000. It must be between ₦100 and ₦10,000,000.')
+    await q.run('UPDATE events SET fund_open = ?, fund_goal = ?, fund_note = ? WHERE id = ?', open ? 1 : 0, goal, String(req.body?.note || '').trim().slice(0, 240), ev.id)
+    res.json(await fundView(await q.get('SELECT * FROM events WHERE id = ?', ev.id), req.userId))
+  })
+  // Give: a hosted Paystack checkout, split straight to the host's bank. The
+  // Paystack fee is added on top, so the host gets exactly what was given.
+  app.post('/api/events/:id/funds/checkout', requireAuth, on, async (req, res) => {
+    const ev = await q.get('SELECT * FROM events WHERE id = ?', req.params.id)
+    if (!ev || !ev.fund_open) return err(res, 404, 'This event isn’t collecting funds.')
+    if (ev.expires_at != null && Number(ev.expires_at) <= now()) return err(res, 400, 'This event has ended.')
+    const amount = parseAmount(req.body?.amount)
+    if (amount === null) return err(res, 400, 'Enter an amount like ₦5,000. The most is ₦10,000,000 and the least is ₦100.')
+    if (!req.userRow.email) return err(res, 400, 'Add an email address to your account first.')
+    if (await guard.over(`fund:${req.userId}`, { max: 20, windowMs: HOUR })) return err(res, 429, 'That’s a lot of attempts. Try again in a while.')
+    await guard.record(`fund:${req.userId}`)
+    const payout = await payoutOf(ev.creator_id)
+    if (!payout) return err(res, 400, 'The host hasn’t finished setting up where the money goes yet.')
+    const fee = feeFor(amount)
+    const id = uid('evc')
+    const reference = uid('vjf')
+    await q.run(`INSERT INTO event_contributions (id, event_id, payer_id, payee_id, amount, fee, currency, reference, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'NGN', ?, 'pending', ?)`, id, ev.id, req.userId, ev.creator_id, amount, fee, reference, now())
+    try {
+      const d = await paystack('/transaction/initialize', {
+        method: 'POST',
+        body: {
+          email: req.userRow.email, amount: amount + fee, currency: 'NGN', reference,
+          subaccount: payout.subaccount_code, transaction_charge: fee, bearer: 'account',
+          callback_url: `${baseUrl(req)}/event/${encodeURIComponent(ev.id)}?paystack=fund`,
+          metadata: { purpose: 'event_fund', eventId: ev.id, contributionId: id },
+        },
+      })
+      res.json({ url: d.authorization_url, total: amount + fee, fee })
+    } catch (e) { err(res, 502, e.message) }
   })
 
   // Paystack's webhook. Signed with the secret key; the same event can
