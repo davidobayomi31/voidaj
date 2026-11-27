@@ -811,6 +811,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_type TEXT DEFAULT 'individual
 ALTER TABLE events ADD COLUMN IF NOT EXISTS fund_open INTEGER DEFAULT 0;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS fund_goal BIGINT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS fund_note TEXT DEFAULT '';
+-- Where the venue is, looked up once (server/geocode.js), for the map.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS lon DOUBLE PRECISION;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS geo_q TEXT;
 CREATE TABLE IF NOT EXISTS event_contributions (
   id TEXT PRIMARY KEY,
   event_id TEXT NOT NULL,
@@ -1541,6 +1545,7 @@ export function serializeEvent(row) {
     category: row.category || null, format: row.format || 'in-person', capacity: row.capacity ?? null,
     country: row.country || 'NG', timezone: row.timezone || 'Africa/Lagos', inviteOnly: !!row.invite_only,
     updatedAt: row.updated_at || null,
+    lat: row.lat ?? null, lon: row.lon ?? null,
     expiresAt: row.expires_at == null ? null : Number(row.expires_at), ended: row.expires_at != null && Number(row.expires_at) <= Date.now(),
   }
 }

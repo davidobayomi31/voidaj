@@ -18,6 +18,7 @@ import { cleanCategory } from './categories.js'
 import { cleanCountry, cleanCurrency, currencyOf, normalisePhone, isTimeZone, findCountry, DEFAULT_COUNTRY, featureOn } from './countries.js'
 import * as guard from './guard.js'
 import { eventRoutes, eventRole, joinEventCircle } from './events-extra.js'
+import { geocodeEvent } from './geocode.js'
 import { jobFlowRoutes } from './jobs-flow.js'
 import { paymentRoutes } from './payments.js'
 import { idCheckRoutes, deleteChecksFor } from './id-checks.js'
@@ -815,6 +816,18 @@ app.get('/api/events', async (req, res) => {
   res.json({ events: rows.map(serializeEvent) })
 })
 
+// Upcoming events with a place on the map, near a point. Each call also
+// looks up a couple of events that haven't been placed yet, so older ones
+// fill in over time.
+app.get('/api/events/map', async (req, res) => {
+  const todo = await q.all("SELECT id FROM events WHERE geo_q IS NULL AND COALESCE(format, 'in-person') <> 'online' AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC LIMIT 2", now())
+  for (const t of todo) await geocodeEvent(t.id)
+  const today = new Date().toISOString().slice(0, 10)
+  const rows = await q.all(`SELECT * FROM events WHERE lat IS NOT NULL AND date >= ? AND COALESCE(invite_only, 0) = 0
+    AND (expires_at IS NULL OR expires_at > ?) ORDER BY date LIMIT 200`, today, now())
+  res.json({ events: rows.map(serializeEvent) })
+})
+
 // Events can be for everyone ('public'), the creator's city ('city'), or
 // one community they belong to ('community'), the same as posts.
 const EVENT_FORMATS = ['in-person', 'online', 'hybrid']
@@ -865,6 +878,7 @@ async function createEvent(req, res, audience, communityId) {
   // Up for the chosen time after the event's own date (the day itself counts).
   await q.run('UPDATE events SET expires_at = ? WHERE id = ?', expiryFor(b.keepFor, Date.parse(date) + 24 * 60 * 60 * 1000), id)
   await createEventCircle(id, title, req.userId)
+  await geocodeEvent(id)
   res.json({ event: serializeEvent(await q.get('SELECT * FROM events WHERE id = ?', id)) })
 }
 

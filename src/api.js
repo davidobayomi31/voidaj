@@ -168,6 +168,7 @@ export const spark = (postId, kind) => req(`/posts/${postId}/spark`, { method: '
 export const loom = (postId, body) => req(`/posts/${postId}/loom`, { method: 'POST', body }).then((d) => d.post)
 export const tagPosts = (tag) => req(`/tags/${encodeURIComponent(tag)}`)
 export const userByHandle = (handle) => req(`/handles/${encodeURIComponent(handle.replace(/^@/, ''))}`).then((d) => d.user)
+export const eventsMap = () => req('/events/map').then((d) => d.events)
 export const searchPeople = (q = '') => req(`/people/search?q=${encodeURIComponent(q)}`).then((d) => d.people)
 export const searchHandles = (q) => req(`/handles?q=${encodeURIComponent(q)}`).then((d) => d.users)
 export const eventPeople = (id, params = {}) => req(`/events/${encodeURIComponent(id)}/people?${new URLSearchParams(params)}`)

@@ -8,6 +8,7 @@
 // ('moderator': can post announcements, approve requests and remove people).
 import crypto from 'crypto'
 import q, { publicUser, getUserById, serializeEvent } from './db.js'
+import { geocodeEvent } from './geocode.js'
 import { requireAuth } from './auth.js'
 import { cleanCategory } from './categories.js'
 import { cleanCover } from './storage.js'
@@ -126,6 +127,7 @@ export function eventRoutes(app) {
       invite_only = ?, timezone = ?, cover = ?, updated_at = ? WHERE id = ?`,
       next.title, next.date, next.time, next.venue, next.description, next.category, next.format, next.capacity,
       next.invite_only || 0, next.timezone, next.cover || '', now(), event.id)
+    await geocodeEvent(event.id)
     // More places: people waiting move up.
     if (next.capacity == null || next.capacity > (event.capacity || 0)) {
       const { n } = await q.get("SELECT COUNT(*)::int AS n FROM event_rsvps WHERE event_id = ? AND status = 'going'", event.id)
