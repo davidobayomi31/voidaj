@@ -263,6 +263,13 @@ function Appearance() {
 function Terms() {
   return (
     <>
+      <Block title="Terms and Conditions of Use" sub="The full terms you agreed to when you joined">
+        <p className="meta-dim">All 18 sections: acceptance, eligibility, acceptable use, your content, privacy, verification, jobs, events, advertising, moderation and more.</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link to="/terms" className="btn ghost small">Read the Terms</Link>
+          <Link to="/privacy" className="btn ghost small">Privacy Policy</Link>
+        </div>
+      </Block>
       <Block title="Who can use VOIDAJ" sub="Minimum age">
         <p className="meta-dim">You must be at least <strong>16 years old</strong> to create a VOIDAJ account or use VOIDAJ. By creating an account you confirm that you are 16 or older. If we learn that someone under 16 has an account, we may close it.</p>
       </Block>

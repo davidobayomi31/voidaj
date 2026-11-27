@@ -204,9 +204,17 @@ export default function Auth() {
             {error && <div className="auth-error"><Icon name="shield" size={14} /> {error}</div>}
 
             <button className="btn primary large full" disabled={busy || locked}>
-              {busy ? 'One moment…' : mode === 'register' ? 'Create account' : 'Sign in'}
+              {busy ? 'One moment…' : mode === 'register' ? 'I Agree and Create Account' : 'Sign in'}
               <Icon name="arrow" size={16} />
             </button>
+            {/* Nuel's Terms, "User Acceptance" (Nov 28). */}
+            {mode === 'register' && (
+              <p className="auth-accept">
+                By selecting “I Agree and Create Account,” you confirm you have read and agree to the VOIDAJ{' '}
+                <Link to="/terms">Terms and Conditions</Link> and <Link to="/terms#charter">Community Guidelines</Link>, and have been given access to the{' '}
+                <Link to="/privacy">Privacy Policy</Link>. Separate consent may be asked for optional features.
+              </p>
+            )}
           </form>
         )}
 

@@ -95,7 +95,7 @@ function AdCard({ ad, active }) {
   const body = (
     <>
       <span className="ad2-cover" style={cover ? { '--img': `url(${cover})` } : undefined}>
-        <span className="ad2-tag">Sponsored</span>
+        <span className="ad2-tag">Advert</span>
       </span>
       <span className="ad2-body">
         <AdMark ad={ad} size={40} />
@@ -107,7 +107,7 @@ function AdCard({ ad, active }) {
   )
   const cls = `ad2${active ? ' enlarged' : ''}${ADS_CLICKABLE ? ' clickable' : ''}`
   const style = { '--accent': ad.accent }
-  if (!ADS_CLICKABLE) return <div className={cls} style={style} aria-label={`Sponsored: ${ad.businessName}`}>{body}</div>
+  if (!ADS_CLICKABLE) return <div className={cls} style={style} aria-label={`Advert: ${ad.businessName}`}>{body}</div>
   const to = adTarget(ad)
   return /^https?:/.test(to)
     ? <a className={cls} style={style} href={to} target="_blank" rel="noopener noreferrer sponsored">{body}</a>
@@ -251,17 +251,17 @@ export function AdsRail() {
   if (hidden) return null
   if (closed) {
     return (
-      <button className="ads-reopen" onClick={() => setAdsClosed(false)} aria-label="Show sponsored">
-        <Icon name="tag" size={13} /> Sponsored
+      <button className="ads-reopen" onClick={() => setAdsClosed(false)} aria-label="Show adverts">
+        <Icon name="tag" size={13} /> Adverts
       </button>
     )
   }
 
   return (
-    <aside className="ads-rail ads-float" aria-label="Sponsored">
+    <aside className="ads-rail ads-float" aria-label="Adverts">
       <div className="ads-rail-head">
-        <div className="ads-rail-label"><Icon name="tag" size={12} /> Sponsored</div>
-        <button className="ads-close" onClick={() => setAdsClosed(true)} aria-label="Close sponsored" title="Close"><Icon name="x" size={16} /></button>
+        <div className="ads-rail-label"><Icon name="tag" size={12} /> Adverts</div>
+        <button className="ads-close" onClick={() => setAdsClosed(true)} aria-label="Close adverts" title="Close"><Icon name="x" size={16} /></button>
       </div>
       <div className="ads-stack">
         {windowOf(ads, active, RAIL_SHOWN).map((ad, i) => <AdCard key={ad.id} ad={ad} active={i === 0} />)}
@@ -291,8 +291,8 @@ export function HomeAds({ max = 4 }) {
     return () => clearInterval(t)
   }, [all.length, max])
   return (
-    <div className="partners-panel" aria-label="Sponsored">
-      <div className="hx-label"><Icon name="tag" size={12} /> Sponsored</div>
+    <div className="partners-panel" aria-label="Adverts">
+      <div className="hx-label"><Icon name="tag" size={12} /> Adverts</div>
       <div className="partners-list">
         {windowOf(all, i, max).map((ad, n) => <AdCard key={ad.id} ad={ad} active={n === 0} />)}
       </div>
@@ -335,7 +335,7 @@ export function SearchAd({ ad }) {
         <strong>{ad.businessName}</strong>
         <span>{ad.tagline}</span>
       </div>
-      <span className="search-ad-tag">Sponsored</span>
+      <span className="search-ad-tag">Advert</span>
     </div>
   )
 }
