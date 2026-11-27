@@ -144,9 +144,15 @@ export default function Explore() {
   }
 
   const q = query.trim().toLowerCase()
+  // People come from the server, so real members show up, not just the demo ones.
+  const [people, setPeople] = useState(null)
+  useEffect(() => {
+    const t = setTimeout(() => api.searchPeople(q).then(setPeople).catch(() => setPeople(null)), q ? 250 : 0)
+    return () => clearTimeout(t)
+  }, [q])
   const today = new Date().toISOString().slice(0, 10)
   const results = useMemo(() => ({
-    people: USERS.filter((u) => matches(q, u.name, u.handle, u.title, u.area, u.interests, u.skills, u.bio)),
+    people: people ?? USERS.filter((u) => matches(q, u.name, u.handle, u.title, u.area, u.interests, u.skills, u.bio)),
     communities: communities.filter((c) => matches(q, c.name, c.tagline, c.description, c.tags, c.city)),
     events: [...madeEvents, ...EVENTS]
       .filter((e) => e.date >= today && matches(q, e.title, e.description, e.venue, e.tags))
@@ -154,7 +160,7 @@ export default function Explore() {
     jobs: jobs.filter((j) => matches(q, j.title, j.description, j.area, j.city, j.category)),
     posts: posts.filter((p) => matches(q, p.title, p.body, p.author?.name)),
     places: CITIES.filter((c) => matches(q, c.name)),
-  }), [q, communities, madeEvents, jobs, posts, today])
+  }), [q, people, communities, madeEvents, jobs, posts, today])
 
   const render = {
     people: (u) => <PersonCard key={u.id} user={u} />,

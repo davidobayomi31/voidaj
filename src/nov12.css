@@ -361,3 +361,17 @@
 
 /* The Origin, Founding 1,000: Nuel's purple and gold crest. */
 .bd-origin { --b1: #FCD34D; --b2: #7C3AED; --glow: rgba(167, 139, 250, 0.65); }
+
+/* Chats (Nuel, Nov 28): a line between conversations, and the status row. */
+.dm-list .dm-item { position: relative; padding-top: 11px; padding-bottom: 11px; }
+.dm-list .dm-item + .dm-item::before { content: ''; position: absolute; top: 0; left: 92px; right: 20px; border-top: 1px solid var(--dm-line, var(--line)); }
+.dm-list .dm-item:hover::before, .dm-list .dm-item:hover + .dm-item::before,
+.dm-list .dm-item.active::before, .dm-list .dm-item.active + .dm-item::before { opacity: 0; }
+.dm-list-label { margin: 12px 24px 2px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--dm-muted, var(--muted)); }
+.dm-stories { padding: 2px 16px 6px; overflow: hidden; }
+.dm-stories > * { margin: 0 !important; }
+
+/* A badge someone made with their own picture. */
+.bd-art.has-img img { position: absolute; inset: 7%; width: 86%; height: 86%; object-fit: cover; clip-path: polygon(50% 0, 93% 18%, 93% 62%, 50% 100%, 7% 62%, 7% 18%); z-index: 0; }
+.bd-art.has-img::after { z-index: 1; }
+.bd-img-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

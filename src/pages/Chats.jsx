@@ -13,6 +13,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import { USERS, EVENTS } from '../data/seed.js'
+import { StoriesRow } from '../components/Stories.jsx'
 import * as api from '../api.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { MediaButtons, MediaTray, MediaView } from '../components/Media.jsx'
@@ -205,14 +206,20 @@ function Composer({ onSend, placeholder = 'Type a message…', pending, onDropPe
 // ── New message picker ──────────────────────────────────────────────────
 function NewMessage({ profile, onPick, onClose }) {
   const [q, setQ] = useState('')
+  // Real members from the server (the demo list only if that fails).
+  const [found, setFound] = useState(null)
+  useEffect(() => {
+    const t = setTimeout(() => api.searchPeople(q.trim()).then(setFound).catch(() => setFound(null)), q ? 250 : 0)
+    return () => clearTimeout(t)
+  }, [q])
   // People you're connected to first, then everyone else in the city.
   const people = useMemo(() => {
     const conn = new Set(profile.connections)
-    return USERS.filter((u) => u.id !== profile.id)
+    return (found ?? USERS).filter((u) => u.id !== profile.id)
       .sort((a, b) => Number(conn.has(b.id)) - Number(conn.has(a.id)))
-      .filter((u) => u.name.toLowerCase().includes(q.toLowerCase()))
+      .filter((u) => found || u.name.toLowerCase().includes(q.toLowerCase()))
       .map((u) => ({ ...u, connected: conn.has(u.id) }))
-  }, [q, profile])
+  }, [q, found, profile])
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="dm-modal" role="dialog" aria-label="New message" onClick={(e) => e.stopPropagation()}>
@@ -257,6 +264,14 @@ export default function Chats() {
   const [dmUser, setDmUser] = useState(null)
   const [messages, setMessages] = useState([])
   const [search, setSearch] = useState('')
+  // Typing a name also finds people you haven't messaged yet.
+  const [peopleHits, setPeopleHits] = useState([])
+  useEffect(() => {
+    const needle = search.trim().toLowerCase()
+    if (!needle) { setPeopleHits([]); return }
+    const t = setTimeout(() => api.searchPeople(needle).then(setPeopleHits).catch(() => setPeopleHits([])), 250)
+    return () => clearTimeout(t)
+  }, [search])
   const [composing, setComposing] = useState(false)
   const [newGroup, setNewGroup] = useState(false)
   const [groupName, setGroupName] = useState('')
@@ -396,6 +411,9 @@ export default function Chats() {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" aria-label="Search conversations" />
           </label>
 
+          {/* Nuel, Nov 28: "status update should be somewhere here also". */}
+          <div className="dm-stories"><StoriesRow /></div>
+
           <div className="dm-chips" role="tablist" aria-label="Show">
             {[
               ['all', 'All', unreadTotal], ['direct', 'Direct'], ['groups', 'Groups'], ['jobs', 'Jobs'],
@@ -414,7 +432,7 @@ export default function Chats() {
           <div className="dm-list">
             {tab === 'direct' && (
               <>
-                {dmRows.length === 0 && (
+                {dmRows.length === 0 && !(needle && peopleHits.length) && (
                   <p className="dm-muted dm-list-empty">{needle ? 'No matches.' : filter === 'requests' ? 'No message requests.' : filter !== 'all' ? 'Nothing here yet.' : 'No messages yet.'}</p>
                 )}
                 {dmRows.map((c) => (
@@ -432,6 +450,24 @@ export default function Chats() {
                     {c.unread > 0 && <span className="dm-unread" aria-label={`${c.unread} unread`} />}
                   </button>
                 ))}
+                {needle && (() => {
+                  const have = new Set(dmRows.map((c) => c.other.id))
+                  const more = peopleHits.filter((u) => u.id !== profile.id && !have.has(u.id))
+                  return more.length > 0 && (
+                    <>
+                      <p className="dm-list-label">People</p>
+                      {more.map((u) => (
+                        <button key={u.id} className="dm-item" onClick={() => { setSearch(''); openDm(u.id) }}>
+                          <Face user={u} size={56} />
+                          <span className="dm-item-text">
+                            <span className="dm-item-name">{u.name}</span>
+                            <span className="dm-item-preview"><span className="dm-item-last">{u.handle || u.title || 'Send a message'}</span></span>
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )
+                })()}
               </>
             )}
 

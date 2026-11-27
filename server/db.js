@@ -538,6 +538,8 @@ CREATE TABLE IF NOT EXISTS custom_badges (
   hidden INTEGER DEFAULT 0,
   created_at BIGINT
 );
+-- Nuel, Nov 28: people can upload their own picture for a badge they make.
+ALTER TABLE custom_badges ADD COLUMN IF NOT EXISTS image TEXT DEFAULT '';
 
 -- Citizen level (New Citizen → Resident → … → City Icon), kept on the
 -- user so names in lists can show it without recounting. Badges a member
@@ -1254,7 +1256,7 @@ export async function journey(row) {
     progress: Math.min(100, Math.round(((points - level.at) / (next.at - level.at)) * 100)),
     levels: LEVELS, stats,
     badges: earned,
-    custom: custom.map((c) => ({ id: c.id, name: c.name, style: c.style, hidden: !!c.hidden, custom: true, how: 'Made by you' })),
+    custom: custom.map((c) => ({ id: c.id, name: c.name, style: c.style, image: c.image || '', hidden: !!c.hidden, custom: true, how: 'Made by you' })),
     catalog: BADGES.map(({ test, ...b }) => ({ ...b, earned: earned.some((e) => e.id === b.id) })),
   }
 }

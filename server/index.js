@@ -793,7 +793,7 @@ app.put('/api/communities/:id/cover', requireAuth, async (req, res) => {
 // Takes a photo the browser has already shrunk (a data URL) and returns a
 // link to store as a cover. With Supabase Storage set up the photo goes to
 // the bucket; locally without it, the data URL comes straight back.
-const UPLOAD_FOLDERS = { community: 'communities', event: 'events', avatar: 'avatars', 'profile-cover': 'profile-covers', 'business-logo': 'business-logos', 'business-cover': 'business-covers', listing: 'listings' }
+const UPLOAD_FOLDERS = { badge: 'badges', community: 'communities', event: 'events', avatar: 'avatars', 'profile-cover': 'profile-covers', 'business-logo': 'business-logos', 'business-cover': 'business-covers', listing: 'listings' }
 app.post('/api/uploads', requireAuth, async (req, res) => {
   const folder = UPLOAD_FOLDERS[req.body?.kind]
   if (!folder) return err(res, 400, 'Unknown upload type.')
@@ -1414,6 +1414,19 @@ app.get('/api/handles', async (req, res) => {
   res.json({ users: rows.map(publicUser).filter(Boolean) })
 })
 
+// Find people by name, username, title, area or bio. Real members come
+// before the demo ones, and an empty search lists the newest members.
+app.get('/api/people/search', async (req, res) => {
+  const text = String(req.query.q || '').trim().replace(/^@/, '').toLowerCase().slice(0, 60)
+  const like = `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+  const rows = text
+    ? await q.all(`SELECT * FROM users WHERE deleted_at IS NULL AND (LOWER(name) LIKE ? OR LOWER(handle) LIKE ? OR LOWER(COALESCE(title, '')) LIKE ? OR LOWER(COALESCE(area, '')) LIKE ? OR LOWER(COALESCE(city, '')) LIKE ? OR LOWER(COALESCE(bio, '')) LIKE ? OR LOWER(COALESCE(skills, '')) LIKE ? OR LOWER(COALESCE(interests, '')) LIKE ?)
+        ORDER BY COALESCE(is_seed, 0), (LOWER(name) LIKE ? OR LOWER(handle) LIKE ?) DESC, name LIMIT 40`,
+      like, like, like, like, like, like, like, like, `${text}%`, `@${text}%`)
+    : await q.all('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY COALESCE(is_seed, 0), created_at DESC LIMIT 40')
+  res.json({ people: rows.map(publicUser).filter(Boolean) })
+})
+
 // ── Citizen level and badges (Badging) ──────────────────────────────
 app.get('/api/users/:id/journey', async (req, res) => {
   const key = req.params.id === 'me' ? req.userId : req.params.id
@@ -1436,7 +1449,9 @@ app.post('/api/badges', requireAuth, async (req, res) => {
   const style = BADGE_STYLES.includes(req.body?.style) ? req.body.style : 'violet'
   const count = (await q.get('SELECT COUNT(*)::int AS n FROM custom_badges WHERE owner_id = ?', req.userId)).n
   if (count >= 12) return err(res, 400, 'You can make up to 12 badges.')
-  await q.run('INSERT INTO custom_badges (id, owner_id, name, style, created_at) VALUES (?, ?, ?, ?, ?)', uid('bd'), req.userId, name, style, now())
+  const image = cleanCover(req.body?.image)
+  if (image === null) return err(res, 400, 'That picture isn’t one we stored.')
+  await q.run('INSERT INTO custom_badges (id, owner_id, name, style, image, created_at) VALUES (?, ?, ?, ?, ?, ?)', uid('bd'), req.userId, name, style, image, now())
   res.json(await journey(await getUserById(req.userId)))
 })
 
