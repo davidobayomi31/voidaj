@@ -117,32 +117,99 @@ function BackBar() {
 }
 
 // Unread direct messages — the number on Chat.
-function useUnreadMessages() {
+// The inbox, checked every 20 seconds while the page is open (and on every
+// page change and when you come back to the tab), shared by the badges and the
+// new-message pop-up. Before, it only refreshed when you moved page, so
+// messages seemed to arrive only when you did something yourself (Nuel, Nov 28).
+const inbox = { list: [], subs: new Set(), timer: null, userId: null }
+const pushInbox = (list) => { inbox.list = list; inbox.subs.forEach((f) => f(list)) }
+function refreshInbox() {
+  if (!inbox.userId) return
+  api.listConversations().then(pushInbox).catch(() => {})
+}
+function useInbox() {
   const { user } = useApp()
   const location = useLocation()
-  const [count, setCount] = useState(0)
+  const [list, setList] = useState(inbox.list)
   useEffect(() => {
-    if (!user) { setCount(0); return }
-    api.listConversations().then((cs) => setCount(cs.reduce((n, c) => n + (c.unread || 0), 0))).catch(() => setCount(0))
-  }, [user, location.pathname])
-  return count
+    inbox.subs.add(setList)
+    return () => inbox.subs.delete(setList)
+  }, [])
+  useEffect(() => {
+    inbox.userId = user?.id || null
+    if (!user) { pushInbox([]); return }
+    refreshInbox()
+    // One timer for the whole page, started once; it does nothing while signed out.
+    if (inbox.timer) return
+    inbox.timer = setInterval(() => { if (!document.hidden) refreshInbox() }, 20000)
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshInbox() })
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (user) refreshInbox() }, [location.pathname, location.search]) // eslint-disable-line react-hooks/exhaustive-deps
+  return list
+}
+
+function useUnreadMessages() {
+  const list = useInbox()
+  return list.reduce((n, c) => n + (c.unread || 0), 0)
+}
+
+// A small pop-up when a new message arrives while you're elsewhere on the
+// site, and a phone/computer notification if you've turned those on and the
+// tab is in the background.
+function MessageAlert() {
+  const { user } = useApp()
+  const list = useInbox()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const seen = useRef(null)
+  const [alert, setAlert] = useState(null)
+  useEffect(() => {
+    const now = Object.fromEntries(list.map((c) => [c.other.id, c.unread || 0]))
+    const before = seen.current
+    seen.current = now
+    if (!before || !user) return
+    const fresh = list.find((c) => (c.unread || 0) > (before[c.other.id] || 0))
+    if (!fresh) return
+    const open = location.pathname === '/chats' && new URLSearchParams(location.search).get('dm') === fresh.other.id
+    if (open) return
+    setAlert(fresh)
+    const notify = user.settings?.notify ?? {}
+    if (document.hidden && notify.push && notify.messages !== false && 'Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(`New message from ${fresh.other.name}`, { body: fresh.lastMessage || '', tag: `dm-${fresh.other.id}` }) } catch { /* some phones only allow these from a service worker */ }
+    }
+  }, [list]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!alert) return
+    const t = setTimeout(() => setAlert(null), 6000)
+    return () => clearTimeout(t)
+  }, [alert])
+  if (!alert) return null
+  return (
+    <div className="msg-alert" role="status">
+      <button type="button" className="msg-alert-body" onClick={() => { setAlert(null); navigate(`/chats?dm=${alert.other.id}`) }}>
+        <Avatar user={alert.other} size={34} />
+        <span><b>{alert.other.name}</b><em>{alert.lastMessage || 'Sent you a message'}</em></span>
+      </button>
+      <button type="button" className="msg-alert-x" aria-label="Dismiss" onClick={() => setAlert(null)}><Icon name="x" size={16} /></button>
+    </div>
+  )
 }
 
 // Unread messages plus open reports for moderators — the bell's number.
 function useAttentionCount() {
   const { user } = useApp()
   const location = useLocation()
+  const unread = useUnreadMessages()
   const [count, setCount] = useState(0)
   useEffect(() => {
     if (!user) { setCount(0); return }
     const mod = user.moderatorOf?.length > 0
     const notify = user.settings?.notify ?? {}
-    Promise.all([
-      notify.messages !== false ? api.listConversations().then((cs) => cs.reduce((n, c) => n + (c.unread || 0), 0)).catch(() => 0) : 0,
-      mod && notify.community !== false ? api.modReports().then((d) => d.reports.filter((r) => r.status === 'open').length).catch(() => 0) : 0,
-    ]).then(([dms, reports]) => setCount(dms + reports))
+    ;(mod && notify.community !== false ? api.modReports().then((d) => d.reports.filter((r) => r.status === 'open').length).catch(() => 0) : Promise.resolve(0))
+      .then(setCount)
   }, [user, location.pathname])
-  return count
+  const notify = user?.settings?.notify ?? {}
+  return count + (notify.messages !== false ? unread : 0)
 }
 
 // `inSide` is the side nav version: the avatar sits beside the member's
@@ -446,6 +513,7 @@ export default function App() {
           <AdsForMembers />
           {FEATURES.companion && <Assistant />}
           <MobileNav />
+          <MessageAlert />
           <AgeGate />
         </div>
       </BrowserRouter>
