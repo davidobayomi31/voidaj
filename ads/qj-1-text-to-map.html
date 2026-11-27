@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick Jobs — text to map (9:16)</title>
+<link rel="stylesheet" href="ad.css">
+<style>
+  /* ── scene 1: messages ── */
+  .s1 { background: #000; color: #fff; }
+  .s1 .head { position: absolute; top: 150px; left: 0; right: 0; text-align: center; }
+  .s1 .av { width: 120px; height: 120px; margin: 0 auto 14px; border-radius: 50%; background: linear-gradient(#8a8d99, #5b5e6b); display: grid; place-items: center; font-size: 54px; font-weight: 700; }
+  .s1 .nm { font-size: 34px; color: #d0d1d8; }
+  .s1 .stamp { position: absolute; top: 420px; width: 100%; text-align: center; font-size: 30px; color: #8d8e96; }
+  .msgs { position: absolute; top: 500px; left: 60px; right: 60px; display: flex; flex-direction: column; gap: 26px; }
+  .b { max-width: 800px; padding: 30px 42px; font-size: 54px; line-height: 1.2; border-radius: 52px; font-weight: 500; }
+  .b.l { align-self: flex-start; background: #26262a; border-bottom-left-radius: 12px; transform-origin: left bottom; }
+  .b.rt { align-self: flex-end; background: #0a84ff; border-bottom-right-radius: 12px; transform-origin: right bottom; }
+  .wipe { position: absolute; left: 700px; top: 920px; width: 160px; height: 160px; margin: -80px; border-radius: 50%; background: #fff; opacity: 0; z-index: 30; }
+  .wipe.in { animation: wipe 1.1s var(--ease) forwards; }
+  @keyframes wipe { 0% { transform: scale(1); opacity: 1; } 75% { transform: scale(26); opacity: 1; } 100% { transform: scale(26); opacity: 0; } }
+
+  /* ── scene 2: post a job ── */
+  .s2 { background: #fff; padding: 0 64px; }
+  .s2 .time { position: absolute; top: 44px; left: 64px; font-size: 38px; font-weight: 700; }
+  .s2 h1 { position: absolute; top: 170px; left: 64px; font-size: 96px; font-weight: 800; letter-spacing: -3px; }
+  .s2 .sub { position: absolute; top: 300px; left: 64px; font-size: 40px; color: var(--dim); }
+  .lbl { position: absolute; left: 64px; font-size: 36px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 2px; }
+  .chips { position: absolute; top: 460px; left: 64px; display: flex; gap: 20px; }
+  .chip { padding: 26px 40px; border-radius: 999px; background: var(--grey); font-size: 42px; font-weight: 600; transition: all .3s var(--ease); }
+  .chip.sel { background: var(--ink); color: #fff; }
+  .chip.sel.in { }
+  .field { position: absolute; left: 64px; right: 64px; height: 124px; border-radius: 28px; border: 3px solid rgba(10,10,12,.12); padding: 0 40px; display: flex; align-items: center; font-size: 56px; font-weight: 600; }
+  .caret::after { content: ''; width: 4px; height: 60px; background: var(--blue); margin-left: 6px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .words { position: absolute; left: 64px; top: 1070px; font-size: 42px; color: var(--blue); font-weight: 600; }
+  .safe { position: absolute; left: 64px; top: 1190px; display: flex; gap: 22px; align-items: center; font-size: 42px; color: #3a3a42; }
+  .safe i { width: 58px; height: 58px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: grid; place-items: center; font-style: normal; font-weight: 800; }
+  .post { position: absolute; left: 64px; right: 64px; top: 1500px; height: 140px; border-radius: 36px; background: var(--ink); color: #fff; font-size: 56px; font-weight: 700; display: grid; place-items: center; transition: background .3s; }
+  .post span { grid-area: 1/1; transition: opacity .25s, transform .3s var(--ease); }
+  .post .ok { opacity: 0; transform: translateY(20px); }
+  .post.in { background: var(--green); }
+  .post.in .go { opacity: 0; transform: translateY(-20px); }
+  .post.in .ok { opacity: 1; transform: none; }
+
+  /* ── scene 3: map ── */
+  .s3 svg.map { position: absolute; inset: 0; }
+  .glass { background: rgba(255,255,255,.82); backdrop-filter: blur(22px) saturate(160%); box-shadow: 0 1px 0 #fff inset, 0 24px 60px -24px rgba(10,10,12,.4); }
+  .top-chip { position: absolute; top: 130px; left: 64px; right: 64px; border-radius: 40px; padding: 34px 44px; font-size: 48px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+  .top-chip small { font-size: 36px; font-weight: 600; color: var(--dim); }
+  .pin { position: absolute; width: 96px; height: 96px; margin: -48px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 44px; font-weight: 800; box-shadow: 0 14px 30px -8px rgba(0,0,0,.45), 0 0 0 6px #fff; }
+  .pin.me { background: var(--blue); width: 60px; height: 60px; margin: -30px; }
+  .pin.me::before, .pin.me::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 4px solid var(--blue); animation: pulse 2s ease-out infinite; }
+  .pin.me::after { animation-delay: 1s; }
+  @keyframes pulse { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(4.2); opacity: 0; } }
+  .pin.star { background: var(--grad); }
+  .route { fill: none; stroke: var(--blue); stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 700; stroke-dashoffset: 700; transition: stroke-dashoffset 1.6s var(--ease); }
+  .route.in { stroke-dashoffset: 0; }
+  .runner { position: absolute; left: 0; top: 0; width: 44px; height: 44px; margin: -22px; border-radius: 50%; background: #fff; border: 10px solid var(--ink); offset-path: path('M420 1000 L420 880 L540 880 L540 790'); offset-distance: 0%; transition: offset-distance 1.8s var(--ease) .15s; z-index: 5; opacity: 0; }
+  .runner.in { offset-distance: 100%; opacity: 1; }
+  .card { position: absolute; left: 44px; right: 44px; bottom: 90px; border-radius: 56px; padding: 56px; }
+  .card .who { display: flex; gap: 36px; align-items: center; }
+  .card .av { width: 160px; height: 160px; border-radius: 50%; background: var(--grad); color: #fff; font-size: 80px; font-weight: 800; display: grid; place-items: center; }
+  .card h3 { font-size: 66px; letter-spacing: -2px; }
+  .card .tag { font-size: 40px; color: var(--dim); margin-top: 6px; display: flex; gap: 14px; align-items: center; }
+  .ver { background: #dcfce7; color: #15803d; padding: 6px 20px; border-radius: 999px; font-weight: 700; font-size: 36px; }
+  .card .stats { display: flex; gap: 20px; margin: 44px 0; }
+  .card .stats b { flex: 1; text-align: center; background: var(--grey); border-radius: 28px; padding: 28px 0; font-size: 44px; }
+  .card .stats em { display: block; font-style: normal; font-weight: 500; color: var(--dim); font-size: 30px; margin-top: 4px; }
+  .acc { height: 130px; border-radius: 36px; background: var(--ink); color: #fff; font-size: 52px; font-weight: 700; display: grid; place-items: center; }
+  .card.b { background: rgba(255,255,255,.9); }
+  .eta { display: flex; align-items: center; gap: 24px; margin-top: 40px; padding: 30px 40px; border-radius: 32px; background: #eef2ff; font-size: 50px; font-weight: 700; color: #3447c9; }
+  .eta i { width: 24px; height: 24px; border-radius: 50%; background: var(--blue); animation: pulse2 1.2s ease-in-out infinite; }
+  @keyframes pulse2 { 50% { transform: scale(1.5); opacity: .5; } }
+
+  /* ── scene 4: end card ── */
+  .s4 { background: radial-gradient(900px 700px at 50% 38%, #1d2f6b 0%, #0b1f3b 45%, #050a14 100%); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .s4 .logo-tile { width: 220px; height: 220px; margin-bottom: 64px; box-shadow: inset 0 0 0 5px #4f6bf5, 0 0 120px rgba(79,107,245,.6); }
+  .s4 h2 { font-size: 150px; font-weight: 800; letter-spacing: -6px; line-height: .95; }
+  .s4 p { font-size: 84px; margin-top: 40px; color: #c9d6ff; line-height: 1.1; }
+  .s4 .pill { margin-top: 90px; background: rgba(255,255,255,.12); font-size: 46px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+  .s4 .url { margin-top: 36px; font-size: 52px; font-weight: 700; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="frame" data-w="1080" data-h="1920" data-dur="20">
+
+  <!-- 1. the text -->
+  <section class="scene s1" data-s="0" data-e="5.2">
+    <div class="head"><div class="av">A</div><div class="nm">Ade</div></div>
+    <div class="stamp">Today 5:46 PM</div>
+    <div class="msgs">
+      <div class="b l r-pop" data-t="0.4">bro my pipe just burst 😭😭</div>
+      <div class="b l r-pop" data-t="1.5">water everywhere. who do I even call??</div>
+      <div class="b rt r-pop" data-t="2.8">Voidaj. Quick Jobs. Two minutes.</div>
+      <div class="b l r-pop" data-t="3.9">say less</div>
+    </div>
+  </section>
+  <div class="wipe" data-t="4.2" data-until="5.6"></div>
+
+  <!-- 2. post it -->
+  <section class="scene s2" data-s="4.7" data-e="9.7">
+    <div class="time">9:41</div>
+    <h1 class="r-up" data-t="4.9">Post a quick job</h1>
+    <div class="sub r-up" data-t="5.0" style="--d:.1s">Tell people nearby what you need.</div>
+    <div class="lbl" style="top:410px">Category</div>
+    <div class="chips r-up" data-t="5.1" style="--d:.15s">
+      <div class="chip sel-t" id="c1">Plumbing</div><div class="chip">Electrical</div><div class="chip">Cleaning</div><div class="chip">Moving</div>
+    </div>
+    <div class="lbl" style="top:600px">What do you need?</div>
+    <div class="field caret" style="top:660px"><span data-type data-t="6.1" data-cps="16">Burst pipe in my kitchen</span></div>
+    <div class="lbl" style="top:840px">Budget</div>
+    <div class="field caret" style="top:900px"><span data-type data-t="7.7" data-cps="9">₦15,000</span></div>
+    <div class="words r-up" data-t="8.5">That’s fifteen thousand naira.</div>
+    <div class="safe r-up" data-t="8.1"><i>✓</i> Your card is charged when the job is done</div>
+    <div class="post" data-t="9.0"><span class="go">Post quick job</span><span class="ok">Posted ✓  Finding people…</span></div>
+  </section>
+
+  <!-- 3. the map -->
+  <section class="scene s3" data-s="9.5" data-e="14.9">
+    <svg class="map" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice">
+      <rect width="1080" height="1920" fill="#eef1f6"/>
+      <path d="M0 1460 C200 1380 420 1540 650 1450 S960 1380 1080 1430 V1920 H0Z" fill="#cfe0ff"/>
+      <g fill="#e2e8f0">
+        <rect x="30" y="330" width="130" height="290" rx="16"/><rect x="200" y="330" width="200" height="290" rx="16"/>
+        <rect x="440" y="330" width="80" height="290" rx="16"/><rect x="560" y="330" width="180" height="290" rx="16"/>
+        <rect x="780" y="330" width="160" height="290" rx="16"/><rect x="980" y="330" width="80" height="290" rx="16"/>
+        <rect x="30" y="670" width="130" height="190" rx="16"/><rect x="200" y="670" width="200" height="190" rx="16"/>
+        <rect x="560" y="670" width="180" height="190" rx="16"/><rect x="780" y="670" width="160" height="190" rx="16"/>
+        <rect x="30" y="910" width="130" height="190" rx="16"/><rect x="200" y="910" width="200" height="190" rx="16"/>
+        <rect x="440" y="910" width="80" height="190" rx="16"/><rect x="560" y="910" width="180" height="190" rx="16"/>
+        <rect x="780" y="910" width="160" height="190" rx="16"/><rect x="30" y="1150" width="130" height="190" rx="16"/>
+        <rect x="200" y="1150" width="200" height="190" rx="16"/><rect x="560" y="1150" width="180" height="190" rx="16"/>
+        <rect x="780" y="1150" width="160" height="190" rx="16"/>
+      </g>
+      <rect x="440" y="670" width="80" height="190" rx="16" fill="#d5ecd9"/>
+      <g stroke="#fff" stroke-width="28" stroke-linecap="round">
+        <path d="M0 300H1080M0 640H1080M0 880H1080M0 1120H1080M0 1360H1080"/>
+        <path d="M180 0V1400M420 0V1400M540 0V1400M760 0V1400M960 0V1400"/>
+      </g>
+      <path class="route r-route" id="route" d="M420 1000 L420 880 L540 880 L540 790" data-t="12.6"/>
+    </svg>
+    <div class="pin me" style="left:540px;top:760px"></div>
+    <div class="pin r-pop" style="left:300px;top:520px;--d:.0s" data-t="10.3">T</div>
+    <div class="pin r-pop" style="left:760px;top:560px" data-t="10.5">K</div>
+    <div class="pin star r-pop" style="left:420px;top:1000px" data-t="10.7">E</div>
+    <div class="runner" data-t="12.8"></div>
+    <div class="glass top-chip r-down" data-t="9.8"><span>Plumbers near you</span><small>3 nearby</small></div>
+
+    <div class="glass card r-up" data-t="11.0" data-until="12.5" id="cardA">
+      <div class="who"><div class="av">E</div><div><h3>Emeka O.</h3><div class="tag">Plumber <span class="ver">✓ Verified</span></div></div></div>
+      <div class="stats"><b>4.9 ★<em>rating</em></b><b>0.8 km<em>away</em></b><b>₦15,000<em>your price</em></b></div>
+      <div class="acc">Accept Emeka</div>
+    </div>
+    <div class="glass card r-up" data-t="12.5" id="cardB" style="z-index:2">
+      <div class="who"><div class="av">E</div><div><h3>Emeka accepted ✓</h3><div class="tag">Plumber <span class="ver">✓ Verified</span></div></div></div>
+      <div class="eta"><i></i> Arrives in 12 min</div>
+    </div>
+  </section>
+
+  <!-- 4. end card -->
+  <section class="scene s4" data-s="14.6" data-e="20.1">
+    <div class="logo-tile r-pop" data-t="14.9"><img src="../public/voidaj-logo.svg" alt=""></div>
+    <h2 class="r-up" data-t="15.2">Quick Jobs</h2>
+    <p class="serif r-up" data-t="15.7">Hire someone nearby. <br>Today.</p>
+    <div class="pill r-up" data-t="16.6">✓ Pay when the job’s done</div>
+    <div class="url r r-up" data-t="17.2">voidaj.com</div>
+  </section>
+
+  <div class="ptr finger" id="ptr"><svg viewBox="0 0 24 24"></svg></div>
+  <div class="ptr finger" id="ptr2"><svg viewBox="0 0 24 24"></svg></div>
+</div>
+<script src="ad.js"></script>
+<script>
+  // finger 1: pick the category, then tap "Post quick job"
+  Ad.cursor(document.getElementById('ptr'), [
+    { t: 4.9, x: 900, y: 1150 }, { t: 5.6, x: 190, y: 515, click: true },
+    { t: 8.5, x: 760, y: 1320 }, { t: 9.1, x: 540, y: 1580, click: true },
+    { t: 9.4, x: 540, y: 1580 },
+  ])
+  // finger 2: tap "Accept Emeka" on the map
+  Ad.cursor(document.getElementById('ptr2'), [
+    { t: 11.3, x: 900, y: 1500 }, { t: 12.3, x: 540, y: 1665, click: true }, { t: 12.5, x: 540, y: 1665 },
+  ])
+  const c1 = document.getElementById('c1')
+  Ad.hook((t) => c1.classList.toggle('sel', t >= 5.65))
+</script>
+</body>
+</html>

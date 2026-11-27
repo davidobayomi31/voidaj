@@ -1,0 +1,213 @@
+{
+  "ad": "tm-1-narrated",
+  "dur": 28.5,
+  "clips": [
+    {
+      "t": 0.2,
+      "file": "0-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "This is Tunde.",
+      "len": 1.2,
+      "vol": 1
+    },
+    {
+      "t": 1.4,
+      "file": "1-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "His tap has been leaking for three weeks.",
+      "len": 2.35,
+      "vol": 1
+    },
+    {
+      "t": 3.9,
+      "file": "2-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Bro! I know a plumber. He's coming tomorrow!",
+      "len": 2.48,
+      "vol": 1
+    },
+    {
+      "t": 6.85,
+      "file": "3-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Tomorrow.",
+      "len": 0.86,
+      "vol": 1
+    },
+    {
+      "t": 7.95,
+      "file": "4-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Tomorrow!",
+      "len": 0.86,
+      "vol": 1
+    },
+    {
+      "t": 9.05,
+      "file": "5-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Tomorrow, I promise.",
+      "len": 1.46,
+      "vol": 1
+    },
+    {
+      "t": 10.55,
+      "file": "6-tunde.mp3",
+      "kind": "voice",
+      "who": "tunde",
+      "text": "...tomorrow.",
+      "len": 0.86,
+      "vol": 1
+    },
+    {
+      "t": 11.9,
+      "file": "7-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "So he tried Voidaj. Quick Jobs.",
+      "len": 2.29,
+      "vol": 1
+    },
+    {
+      "t": 15,
+      "file": "8-chidi.mp3",
+      "kind": "voice",
+      "who": "chidi",
+      "text": "I'm ten minutes away.",
+      "len": 1.33,
+      "vol": 1
+    },
+    {
+      "t": 16.9,
+      "file": "9-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "Chidi. Verified.",
+      "len": 1.22,
+      "vol": 1
+    },
+    {
+      "t": 19.2,
+      "file": "10-tunde.mp3",
+      "kind": "voice",
+      "who": "tunde",
+      "text": "Ah! Same day?!",
+      "len": 1.28,
+      "vol": 1
+    },
+    {
+      "t": 20.7,
+      "file": "11-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Bro, he's coming tomorrow o!",
+      "len": 1.33,
+      "vol": 1
+    },
+    {
+      "t": 22.6,
+      "file": "12-tunde.mp3",
+      "kind": "voice",
+      "who": "tunde",
+      "text": "Tell him to rest.",
+      "len": 1.15,
+      "vol": 1
+    },
+    {
+      "t": 24.2,
+      "file": "13-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "Tomorrow never comes.",
+      "len": 1.38,
+      "vol": 1
+    },
+    {
+      "t": 25.6,
+      "file": "14-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Quick Jobs does. On Voidaj.",
+      "len": 2.27,
+      "vol": 1
+    },
+    {
+      "t": 0,
+      "file": "sfx-drip.mp3",
+      "kind": "sfx",
+      "name": "drip",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 3.8,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 11.8,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 14.2,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 14.9,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 16.5,
+      "file": "sfx-knock.mp3",
+      "kind": "sfx",
+      "name": "knock",
+      "len": 1.17,
+      "vol": 0.6
+    },
+    {
+      "t": 19.1,
+      "file": "sfx-chime.mp3",
+      "kind": "sfx",
+      "name": "chime",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 20.6,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 24,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.4
+    }
+  ]
+}

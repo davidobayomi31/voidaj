@@ -1,0 +1,143 @@
+{
+  "ad": "tm-3-15s",
+  "dur": 15,
+  "clips": [
+    {
+      "t": 0.1,
+      "file": "0-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "He's coming tomorrow!",
+      "len": 1.51,
+      "vol": 1
+    },
+    {
+      "t": 1.55,
+      "file": "1-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Tomorrow.",
+      "len": 0.86,
+      "vol": 1
+    },
+    {
+      "t": 2.45,
+      "file": "2-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Tomorrow!",
+      "len": 0.86,
+      "vol": 1
+    },
+    {
+      "t": 3.35,
+      "file": "3-tunde.mp3",
+      "kind": "voice",
+      "who": "tunde",
+      "text": "...tomorrow.",
+      "len": 0.86,
+      "vol": 1
+    },
+    {
+      "t": 4.5,
+      "file": "4-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Or, post it on Voidaj.",
+      "len": 2.06,
+      "vol": 1
+    },
+    {
+      "t": 6.5,
+      "file": "5-chidi.mp3",
+      "kind": "voice",
+      "who": "chidi",
+      "text": "Ten minutes away.",
+      "len": 1.43,
+      "vol": 1
+    },
+    {
+      "t": 8,
+      "file": "6-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Verified plumber. Same day.",
+      "len": 2.27,
+      "vol": 1
+    },
+    {
+      "t": 10.4,
+      "file": "7-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Tomorrow never comes.",
+      "len": 1.56,
+      "vol": 1
+    },
+    {
+      "t": 11.9,
+      "file": "8-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Quick Jobs does.",
+      "len": 1.33,
+      "vol": 1
+    },
+    {
+      "t": 0,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 4.4,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 6,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 6.4,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 7.7,
+      "file": "sfx-knock.mp3",
+      "kind": "sfx",
+      "name": "knock",
+      "len": 1.17,
+      "vol": 0.6
+    },
+    {
+      "t": 9,
+      "file": "sfx-chime.mp3",
+      "kind": "sfx",
+      "name": "chime",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 10.2,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.4
+    }
+  ]
+}

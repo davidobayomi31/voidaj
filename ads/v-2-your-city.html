@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voidaj — your city (9:16)</title>
+<link rel="stylesheet" href="ad.css">
+<style>
+  /* scenic backdrop: the Lagos photo from the app, slow push-in, tinted */
+  .scenic { position: absolute; inset: -80px; background: url(../public/images/city/lagos.jpg) center/cover; will-change: transform; }
+  .tint { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,14,40,.72) 0%, rgba(30,40,110,.25) 40%, rgba(8,14,40,.78) 100%), radial-gradient(900px 700px at 80% 20%, rgba(118,86,240,.35), transparent 70%); }
+  .g { background: rgba(255,255,255,.16); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%); border: 2px solid rgba(255,255,255,.38); box-shadow: 0 2px 0 rgba(255,255,255,.35) inset, 0 40px 80px -30px rgba(0,0,0,.6); color: #fff; }
+
+  /* 1. rhythm words */
+  .words { position: absolute; left: 70px; top: 360px; }
+  .w { display: block; font-size: 190px; line-height: 1.02; font-weight: 900; letter-spacing: -8px; color: #fff; text-shadow: 0 10px 50px rgba(0,0,0,.35); opacity: 0; transform: translateX(-160px) skewX(-8deg); transition: opacity .25s, transform .45s var(--spring); }
+  .w.in { opacity: 1; transform: none; }
+  .w:nth-child(even) { color: #b9ccff; margin-left: 24px; }
+  .words.gone { }
+  .tail { position: absolute; left: 70px; right: 70px; top: 1450px; font-size: 90px; line-height: 1.05; color: #fff; }
+  .tail em { color: #b9ccff; }
+
+  /* 2. widget cards */
+  .cards { position: absolute; inset: 0; }
+  .card { position: absolute; border-radius: 56px; padding: 34px; display: flex; gap: 28px; align-items: center; }
+  .card img.ph { width: 190px; height: 190px; border-radius: 34px; object-fit: cover; flex: none; }
+  .card b { display: block; font-size: 52px; letter-spacing: -1.5px; line-height: 1.08; }
+  .card span { display: block; margin-top: 8px; font-size: 36px; opacity: .85; font-weight: 600; }
+  .card .badge { display: inline-block; margin-top: 14px; padding: 8px 24px; border-radius: 99px; background: rgba(255,255,255,.9); color: var(--ink); font-size: 32px; font-weight: 800; }
+  .card .ic { width: 120px; height: 120px; border-radius: 34px; display: grid; place-items: center; font-size: 64px; flex: none; background: var(--grad); }
+  .float { animation: fl 3.4s ease-in-out infinite; } .float.b { animation-delay: -1.2s; } .float.c { animation-delay: -2.2s; }
+  @keyframes fl { 50% { translate: 0 -16px; } }
+  .head { position: absolute; left: 70px; right: 70px; top: 190px; font-size: 118px; line-height: 1; letter-spacing: -3px; color: #fff; }
+
+  /* 3. collage */
+  .collage { position: absolute; inset: 0; }
+  .tile { position: absolute; border-radius: 44px; background-size: cover; background-position: center; box-shadow: 0 40px 80px -30px rgba(0,0,0,.7); overflow: hidden; }
+  .tile .lab { position: absolute; left: 22px; bottom: 22px; padding: 14px 30px; border-radius: 99px; font-size: 36px; font-weight: 800; }
+  .flash { position: absolute; left: 0; right: 0; top: 780px; text-align: center; font-size: 300px; font-weight: 900; letter-spacing: -14px; color: #fff; text-shadow: 0 20px 80px rgba(0,0,0,.6); z-index: 10; }
+  .flash.r-zoom { transform: scale(1.5); } .flash.in { transform: none; }
+  .cap2 { position: absolute; left: 70px; right: 70px; bottom: 150px; z-index: 11; text-align: center; font-size: 110px; line-height: 1.02; color: #fff; text-shadow: 0 8px 50px rgba(0,0,0,.6); }
+
+  /* 4. end */
+  .endcard { position: absolute; left: 90px; right: 90px; top: 520px; padding: 90px 60px; border-radius: 90px; text-align: center; }
+  .endcard .logo-tile { width: 220px; height: 220px; margin: 0 auto 50px; box-shadow: inset 0 0 0 5px #4f6bf5, 0 0 100px rgba(79,107,245,.7); }
+  .endcard h2 { font-size: 150px; font-weight: 900; letter-spacing: -7px; line-height: 1; }
+  .endcard p { margin-top: 34px; font-size: 80px; line-height: 1.08; color: #dbe5ff; }
+  .endcard .url { margin-top: 56px; font-size: 52px; font-weight: 800; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+<div class="frame" data-w="1080" data-h="1920" data-dur="18.5">
+  <div class="scenic" id="scenic"></div>
+  <div class="tint"></div>
+
+  <!-- 1: rhythm words (one per beat at 120 bpm) -->
+  <section class="scene" data-s="0" data-e="3.6">
+    <div class="words">
+      <span class="w" data-t="0.3">PEOPLE.</span>
+      <span class="w" data-t="0.8" style="font-size:136px;letter-spacing:-5px">COMMUNITIES.</span>
+      <span class="w" data-t="1.3">EVENTS.</span>
+      <span class="w" data-t="1.8">JOBS.</span>
+      <span class="w" data-t="2.3">HUBS.</span>
+    </div>
+    <div class="tail serif r-up" data-t="2.9">All in <em>one place.</em></div>
+  </section>
+
+  <!-- 2: widget cards -->
+  <section class="scene" data-s="3.4" data-e="8.6">
+    <div class="head serif r-up" data-t="3.6">Everything your city is up to.</div>
+    <div class="cards">
+      <div class="card g r-pop float" data-t="4.1" style="left:70px;top:520px;width:800px;transform-origin:left center">
+        <img class="ph" src="../public/images/events/ev-market-popup.jpg" alt="">
+        <div><b>Weekend Makers Pop-Up Market</b><span>Saturday · Lagos</span><i class="badge">Events</i></div>
+      </div>
+      <div class="card g r-pop float b" data-t="4.7" style="right:70px;top:850px;width:820px;transform-origin:right center">
+        <div class="ic">🔧</div>
+        <div><b>Plumber needed</b><span>₦15,000 · 0.8 km away</span><i class="badge">Quick Jobs</i></div>
+      </div>
+      <div class="card g r-pop float c" data-t="5.3" style="left:70px;top:1180px;width:830px">
+        <img class="ph" src="../public/images/communities/lagos-entrepreneurs.jpg" alt="">
+        <div><b>Lagos Entrepreneurs</b><span>Join the conversation</span><i class="badge">Communities</i></div>
+      </div>
+      <div class="card g r-pop float" data-t="5.9" style="right:70px;top:1500px;width:740px;transform-origin:right center">
+        <div class="ic" style="background:var(--navy)">💬</div>
+        <div><b>Emeka</b><span>“I’m outside 👋”</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: collage + flash words -->
+  <section class="scene" data-s="8.4" data-e="14.2">
+    <div class="collage">
+      <div class="tile r-pop" data-t="8.6" style="left:50px;top:210px;width:480px;height:620px;background-image:url(../public/images/events/ev-pitch-night.jpg)"><span class="lab g">Pitch night</span></div>
+      <div class="tile r-pop" data-t="8.9" style="left:560px;top:150px;width:470px;height:360px;background-image:url(../public/images/events/ev-photo-walk.jpg)"><span class="lab g">Photo walk</span></div>
+      <div class="tile r-pop" data-t="9.2" style="left:560px;top:540px;width:470px;height:480px;background-image:url(../public/images/communities/naija-devs.jpg)"><span class="lab g">Naija Devs</span></div>
+      <div class="tile r-pop" data-t="9.5" style="left:50px;top:860px;width:480px;height:480px;background-image:url(../public/images/events/ev-solar-workshop.jpg)"><span class="lab g">Solar workshop</span></div>
+      <div class="tile r-pop" data-t="9.8" style="left:560px;top:1050px;width:470px;height:560px;background-image:url(../public/images/communities/lagos-lens-collective.jpg)"><span class="lab g">Lens Collective</span></div>
+      <div class="tile r-pop" data-t="10.1" style="left:50px;top:1370px;width:480px;height:420px;background-image:url(../public/images/events/ev-farm-tour.jpg)"><span class="lab g">Farm tour</span></div>
+    </div>
+    <div class="flash r-zoom" data-t="10.6" data-until="11.1">MEET.</div>
+    <div class="flash r-zoom" data-t="11.1" data-until="11.6">JOIN.</div>
+    <div class="flash r-zoom" data-t="11.6" data-until="12.1">BUILD.</div>
+    <div class="flash r-zoom" data-t="12.1" data-until="12.7">HIRE.</div>
+    <div class="cap2 serif r-up" data-t="12.7">One app. <br>Your whole city.</div>
+  </section>
+
+  <!-- 4: end -->
+  <section class="scene" data-s="14.0" data-e="18.6">
+    <div class="endcard g r-up" data-t="14.3">
+      <div class="logo-tile"><img src="../public/voidaj-logo.svg" alt=""></div>
+      <h2>VOIDAJ</h2>
+      <p class="serif">Starting in Lagos.<br>Built to grow.</p>
+      <div class="url">voidaj.com</div>
+    </div>
+  </section>
+</div>
+<script src="ad.js"></script>
+<script>
+  const sc = document.getElementById('scenic')
+  Ad.hook((t) => { sc.style.transform = `scale(${1.04 + t * 0.012}) translate(${-t * 3}px, ${-t * 2}px)` })
+</script>
+</body>
+</html>

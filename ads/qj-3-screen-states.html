@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick Jobs — screen states (16:9)</title>
+<link rel="stylesheet" href="ad.css">
+<style>
+  .bg { background: radial-gradient(1400px 900px at 50% 40%, #ffffff 0%, #f1f2f5 70%, #e6e8ee 100%); }
+  .scene { transform: scale(.95); filter: blur(14px); transition: opacity .5s ease, transform .6s var(--ease), filter .5s ease, visibility 0s .6s; }
+  .scene.on { transform: none; filter: none; transition: opacity .5s ease, transform .6s var(--ease), filter .5s ease; }
+  .center { display: grid; place-items: center; }
+
+  .card { position: relative; width: 1180px; padding: 80px 90px; border-radius: 64px; background: #fff; box-shadow: 0 2px 0 #fff inset, 0 0 0 2px rgba(10,10,12,.05), 0 80px 140px -60px rgba(10,10,12,.35); transform: perspective(2400px) rotateX(8deg) rotateY(-10deg) rotate(-1.5deg); animation: float 5s ease-in-out infinite; }
+  @keyframes float { 50% { transform: perspective(2400px) rotateX(6deg) rotateY(-7deg) rotate(-1deg) translateY(-14px); } }
+  h1 { font-size: 112px; font-weight: 800; letter-spacing: -4px; line-height: 1; }
+  .sub { margin-top: 28px; font-size: 56px; color: var(--dim); font-weight: 500; }
+  .bar { margin-top: 70px; height: 22px; border-radius: 99px; background: #e8eaf0; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--blue); transition: width 2.8s cubic-bezier(.5,0,.2,1); }
+  .bar.in i { width: 100%; }
+  .bar.go i { background: var(--green); }
+
+  .row { display: flex; align-items: center; gap: 56px; }
+  .av { width: 200px; height: 200px; border-radius: 50%; background: var(--grad); color: #fff; font-size: 100px; font-weight: 800; display: grid; place-items: center; flex: none; box-shadow: 0 30px 60px -20px rgba(79,107,245,.7); }
+  .tags { display: flex; gap: 20px; margin-top: 34px; font-size: 44px; font-weight: 700; }
+  .tags span { padding: 12px 30px; border-radius: 99px; background: var(--grey); }
+  .tags .v { background: #dcfce7; color: #15803d; }
+  .eta { margin-top: 60px; display: inline-flex; gap: 22px; align-items: center; padding: 26px 48px; border-radius: 99px; background: #eef2ff; color: #3447c9; font-size: 56px; font-weight: 800; }
+  .eta i { width: 24px; height: 24px; border-radius: 50%; background: var(--blue); animation: pu 1.2s ease-in-out infinite; }
+  @keyframes pu { 50% { transform: scale(1.5); opacity: .5; } }
+
+  /* stepper */
+  .steps { position: absolute; left: 190px; right: 190px; top: 560px; display: flex; justify-content: space-between; }
+  .steps::before { content: ''; position: absolute; left: 40px; right: 40px; top: 39px; height: 10px; background: #e1e4ec; border-radius: 9px; }
+  .steps .prog { position: absolute; left: 40px; top: 39px; height: 10px; width: 0; background: var(--ink); border-radius: 9px; transition: width .7s var(--ease); }
+  .steps .prog.p1 { width: 0; } .steps .prog.p2.in { width: 33.3%; } .steps .prog.p3.in { width: 66.6%; } .steps .prog.p4.in { width: 100%; }
+  .st { position: relative; width: 300px; text-align: center; font-size: 46px; font-weight: 700; color: #a1a3ad; transition: color .4s; }
+  .st b { display: block; width: 88px; height: 88px; margin: 0 auto 28px; border-radius: 50%; background: #fff; border: 10px solid #e1e4ec; transition: all .4s var(--spring); position: relative; z-index: 1; }
+  .st.in { color: var(--ink); }
+  .st.in b { background: var(--ink); border-color: var(--ink); transform: scale(1.15); }
+  .st.last.in b { background: var(--green); border-color: var(--green); }
+  .headline { position: absolute; left: 0; right: 0; top: 270px; text-align: center; font-size: 150px; font-weight: 800; letter-spacing: -6px; }
+
+  /* pay */
+  .pay { width: 980px; padding: 80px; text-align: center; transform: none; animation: none; }
+  .pay .small { font-size: 46px; color: var(--dim); font-weight: 600; }
+  .pay .amt { font-size: 200px; font-weight: 800; letter-spacing: -8px; line-height: 1.1; margin-top: 10px; }
+  .pay .words { font-size: 46px; color: var(--blue); font-weight: 600; margin-top: 4px; }
+  .pay .btn { margin: 70px auto 0; width: 100%; height: 150px; border-radius: 44px; background: var(--ink); color: #fff; font-size: 64px; font-weight: 700; display: grid; place-items: center; }
+  .paid { position: absolute; inset: 0; background: #fff; border-radius: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; opacity: 0; transition: opacity .35s; }
+  .paid.in { opacity: 1; }
+  .paid svg { width: 220px; height: 220px; }
+  .paid circle { fill: var(--green); }
+  .paid path { fill: none; stroke: #fff; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 120; stroke-dashoffset: 120; transition: stroke-dashoffset .6s var(--ease) .2s; }
+  .paid.in path { stroke-dashoffset: 0; }
+  .paid h2 { font-size: 130px; font-weight: 800; letter-spacing: -5px; }
+  .paid p { font-size: 52px; color: var(--dim); font-weight: 600; }
+
+  .ptr svg { fill: #111; }
+
+  /* end */
+  .end { background: radial-gradient(1100px 700px at 50% 40%, #1d2f6b 0%, #0b1f3b 45%, #050a14 100%); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .end .logo-tile { width: 190px; height: 190px; margin-bottom: 44px; box-shadow: inset 0 0 0 5px #4f6bf5, 0 0 120px rgba(79,107,245,.6); }
+  .end h2 { font-size: 170px; font-weight: 800; letter-spacing: -7px; line-height: 1; }
+  .end p { font-size: 100px; margin-top: 20px; color: #c9d6ff; }
+  .end .url { margin-top: 50px; font-size: 48px; font-weight: 700; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="frame" data-w="1920" data-h="1080" data-dur="17.5">
+  <div class="fill bg"></div>
+
+  <!-- A: requesting -->
+  <section class="scene center" data-s="0" data-e="3.7">
+    <div class="card r-up" data-t="0.2">
+      <h1>Requesting a plumber</h1>
+      <div class="sub">Finding workers nearby</div>
+      <div class="bar" data-t="0.7"><i></i></div>
+    </div>
+  </section>
+
+  <!-- B: matched -->
+  <section class="scene center" data-s="3.5" data-e="7.3">
+    <div class="card">
+      <div class="row">
+        <div class="av r-pop" data-t="3.8">E</div>
+        <div>
+          <h1 class="r-up" data-t="3.9">Emeka is on the way</h1>
+          <div class="tags r-up" data-t="4.3"><span class="v">✓ Verified</span><span>4.9 ★</span><span>0.8 km</span></div>
+        </div>
+      </div>
+      <div class="eta r-up" data-t="4.9"><i></i> Arrives in 12 min</div>
+    </div>
+  </section>
+
+  <!-- C: stages -->
+  <section class="scene" data-s="7.1" data-e="11.4">
+    <div class="headline r-up" data-t="7.3" data-until="8.1">Job posted.</div>
+    <div class="headline r-up" data-t="8.1" data-until="9.0">Worker selected.</div>
+    <div class="headline r-up" data-t="9.0" data-until="10.1">In progress.</div>
+    <div class="headline r-up" data-t="10.1" data-until="11.4">Completed.</div>
+    <div class="steps">
+      <div class="prog p2" data-t="8.1"></div><div class="prog p3" data-t="9.0"></div><div class="prog p4" data-t="10.1"></div>
+      <div class="st" data-t="7.4"><b></b>Open</div>
+      <div class="st" data-t="8.1"><b></b>Worker selected</div>
+      <div class="st" data-t="9.0"><b></b>In progress</div>
+      <div class="st last" data-t="10.1"><b></b>Completed</div>
+    </div>
+  </section>
+
+  <!-- D: pay -->
+  <section class="scene center" data-s="11.2" data-e="14.9">
+    <div class="card pay r-up" data-t="11.4">
+      <div class="small">Emeka marked this job done</div>
+      <div class="amt">₦15,000</div>
+      <div class="words">That’s fifteen thousand naira.</div>
+      <div class="btn">Confirm and pay</div>
+      <div class="paid" data-t="12.9">
+        <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46"/><path d="M28 52l16 16 30-34"/></svg>
+        <h2>Paid.</h2>
+        <p>Emeka got the full ₦15,000.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- E: end -->
+  <section class="scene end" data-s="14.7" data-e="17.6">
+    <div class="logo-tile r-pop" data-t="14.9"><img src="../public/voidaj-logo.svg" alt=""></div>
+    <h2 class="r-up" data-t="15.2">Quick Jobs</h2>
+    <p class="serif r-up" data-t="15.7">Pay when it’s done.</p>
+    <div class="url r-up" data-t="16.3">voidaj.com</div>
+  </section>
+
+  <div class="ptr" id="ptr"><svg viewBox="0 0 24 24"><path d="M3 2l17 8-7 2-3 7z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+</div>
+<script src="ad.js"></script>
+<script>
+  Ad.cursor(document.getElementById('ptr'), [
+    { t: 11.8, x: 1500, y: 300 }, { t: 12.8, x: 960, y: 760, click: true }, { t: 13.3, x: 1010, y: 800 },
+  ])
+</script>
+</body>
+</html>

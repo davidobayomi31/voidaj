@@ -1,0 +1,22 @@
+{
+  "_help": "Who speaks in the ads. Swap any id for a voice from your ElevenLabs library (run: node tools/voice.mjs --list). Nigerian-accent voices from the Voice Library work best for Tunde, Femi and Chidi.",
+  "model": "eleven_multilingual_v2",
+  "voices": {
+    "narrator": { "id": "JBFqnCBsd6RMkjVDRZzb", "note": "George: warm, calm storyteller", "settings": { "stability": 0.45, "similarity_boost": 0.8, "style": 0.35 } },
+    "hype":     { "id": "TX3LPaxmHKxFdv7VOQHJ", "note": "Liam: energetic social-media ad read", "settings": { "stability": 0.35, "similarity_boost": 0.8, "style": 0.55 } },
+    "tunde":    { "id": "IKne3meq5aSn9XLyUdCD", "note": "Charlie: tired, fed-up homeowner", "settings": { "stability": 0.4, "similarity_boost": 0.75, "style": 0.6 } },
+    "femi":     { "id": "bIHbv24MWmeRgasZH58o", "note": "Will: easy-going cousin full of excuses", "settings": { "stability": 0.3, "similarity_boost": 0.75, "style": 0.7 } },
+    "chidi":    { "id": "pNInz6obpgDQGcFmaJgB", "note": "Adam: calm, confident plumber", "settings": { "stability": 0.55, "similarity_boost": 0.8, "style": 0.3 } },
+    "ada":      { "id": "EXAVITQu4vr4xnSDxMaL", "note": "Sarah: friendly small-business owner", "settings": { "stability": 0.5, "similarity_boost": 0.8, "style": 0.4 } }
+  },
+  "sfx": {
+    "drip":   "single water drop falling into a puddle, close, clean",
+    "ping":   "short bright phone notification ping, modern app",
+    "whoosh": "quick soft airy whoosh transition",
+    "pop":    "small soft UI pop, bubbly",
+    "tick":   "short clock tick-tock, two ticks",
+    "chime":  "positive success chime, two notes, warm",
+    "record": "short voice note recording beep",
+    "knock":  "two firm knocks on a wooden door"
+  }
+}

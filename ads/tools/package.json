@@ -1,0 +1,10 @@
+{
+  "name": "voidaj-ads-export",
+  "private": true,
+  "type": "module",
+  "description": "Renders the ads in ../*.html to MP4, frame by frame. Run: npm install && node export.mjs",
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "puppeteer-core": "^23.0.0"
+  }
+}

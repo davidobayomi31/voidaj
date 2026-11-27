@@ -1,0 +1,210 @@
+{
+  "ad": "tm-2-voice-notes",
+  "dur": 30.5,
+  "clips": [
+    {
+      "t": 1.8,
+      "file": "0-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Guy, relax. My plumber is coming tomorrow, no wahala.",
+      "len": 3.24,
+      "vol": 1
+    },
+    {
+      "t": 5.5,
+      "file": "1-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Ehn, his mum is sick. Tomorrow, sharp sharp.",
+      "len": 2.95,
+      "vol": 1
+    },
+    {
+      "t": 8.9,
+      "file": "2-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Network was bad. Tomorrow, I swear.",
+      "len": 2.29,
+      "vol": 1
+    },
+    {
+      "t": 11.7,
+      "file": "3-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Bro... he travelled. But tomorrow!",
+      "len": 2.45,
+      "vol": 1
+    },
+    {
+      "t": 14.4,
+      "file": "4-tunde.mp3",
+      "kind": "voice",
+      "who": "tunde",
+      "text": "I'm done waiting.",
+      "len": 1.09,
+      "vol": 1
+    },
+    {
+      "t": 16,
+      "file": "5-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "So Tunde posted it on Voidaj Quick Jobs.",
+      "len": 2.71,
+      "vol": 1
+    },
+    {
+      "t": 18.7,
+      "file": "6-chidi.mp3",
+      "kind": "voice",
+      "who": "chidi",
+      "text": "On my way. Ten minutes.",
+      "len": 2.03,
+      "vol": 1
+    },
+    {
+      "t": 21,
+      "file": "7-tunde.mp3",
+      "kind": "voice",
+      "who": "tunde",
+      "text": "Finally!",
+      "len": 0.62,
+      "vol": 1
+    },
+    {
+      "t": 22.8,
+      "file": "8-femi.mp3",
+      "kind": "voice",
+      "who": "femi",
+      "text": "Bro, the plumber is coming tomorrow!",
+      "len": 2.27,
+      "vol": 1
+    },
+    {
+      "t": 25.2,
+      "file": "9-tunde.mp3",
+      "kind": "voice",
+      "who": "tunde",
+      "text": "Tell him to rest.",
+      "len": 1.15,
+      "vol": 1
+    },
+    {
+      "t": 26.4,
+      "file": "10-narrator.mp3",
+      "kind": "voice",
+      "who": "narrator",
+      "text": "Stop waiting for tomorrow.",
+      "len": 1.62,
+      "vol": 1
+    },
+    {
+      "t": 28.1,
+      "file": "11-hype.mp3",
+      "kind": "voice",
+      "who": "hype",
+      "text": "Get it done today. On Voidaj.",
+      "len": 2.27,
+      "vol": 1
+    },
+    {
+      "t": 0,
+      "file": "sfx-drip.mp3",
+      "kind": "sfx",
+      "name": "drip",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 1.6,
+      "file": "sfx-record.mp3",
+      "kind": "sfx",
+      "name": "record",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 5.4,
+      "file": "sfx-record.mp3",
+      "kind": "sfx",
+      "name": "record",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 8.8,
+      "file": "sfx-record.mp3",
+      "kind": "sfx",
+      "name": "record",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 11.6,
+      "file": "sfx-record.mp3",
+      "kind": "sfx",
+      "name": "record",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 15.9,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 18.1,
+      "file": "sfx-pop.mp3",
+      "kind": "sfx",
+      "name": "pop",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 18.6,
+      "file": "sfx-ping.mp3",
+      "kind": "sfx",
+      "name": "ping",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 20.2,
+      "file": "sfx-knock.mp3",
+      "kind": "sfx",
+      "name": "knock",
+      "len": 1.17,
+      "vol": 0.6
+    },
+    {
+      "t": 20.6,
+      "file": "sfx-chime.mp3",
+      "kind": "sfx",
+      "name": "chime",
+      "len": 1.17,
+      "vol": 0.5
+    },
+    {
+      "t": 22.7,
+      "file": "sfx-record.mp3",
+      "kind": "sfx",
+      "name": "record",
+      "len": 1.17,
+      "vol": 0.4
+    },
+    {
+      "t": 26.2,
+      "file": "sfx-whoosh.mp3",
+      "kind": "sfx",
+      "name": "whoosh",
+      "len": 1.17,
+      "vol": 0.4
+    }
+  ]
+}
