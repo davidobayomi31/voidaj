@@ -4,6 +4,7 @@ import { useParams, Link, Navigate, useSearchParams } from 'react-router-dom'
 import { ModerationPanel } from './Moderation.jsx'
 import { useEffect, useState } from 'react'
 import { USERS, EVENTS, CHARTER } from '../data/seed.js'
+import { useSeo, isSampleId } from '../seo.js'
 import { useCommunities, findCommunity, setCommunityCover } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
@@ -39,6 +40,7 @@ export default function Community() {
   const { loaded } = useCommunities()
   const community = findCommunity(id)
   const known = !!community
+  useSeo(community ? { title: community.name, description: community.tagline || community.description, noindex: isSampleId(community.id) || !!creator?.sample } : {})
 
   useEffect(() => { if (known) api.listPosts({ community: id }).then(setPosts).catch(() => setPosts([])) }, [id, known])
   useEffect(() => { if (known) api.getCommunityLive(id).then(setLive).catch(() => {}) }, [id, known])

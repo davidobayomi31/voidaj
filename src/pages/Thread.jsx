@@ -5,6 +5,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { findCommunity } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
+import { useSeo, isSampleId } from '../seo.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar } from '../components/bits.jsx'
 import { EngageBar, RichText } from '../components/Engage.jsx'
@@ -87,6 +88,8 @@ export default function Thread() {
     setData(null); setError(null)
     api.getPost(id).then(setData).catch((e) => setError(e.message))
   }, [id])
+  const seoPost = data?.post
+  useSeo(seoPost ? { title: seoPost.title || String(seoPost.body || '').slice(0, 60), description: seoPost.body, noindex: isSampleId(seoPost.id) || !!seoPost.author?.sample || !!error } : {})
 
   if (error) return <div className="page thread-page"><p className="meta-dim">{error}</p><Link to="/" className="btn ghost small">Back to the city</Link></div>
   if (!data) return <div className="page thread-page"><p className="meta-dim">Loading…</p></div>

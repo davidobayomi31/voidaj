@@ -1254,6 +1254,8 @@ export function publicUser(row) {
   return {
     active: isActive(row), lastSeenAt: row.last_seen_at ?? null,
     id: row.id, name: row.name, handle: row.handle,
+    // Built-in sample accounts, so their pages can ask search engines not to list them.
+    ...(row.is_seed ? { sample: true } : {}),
     title: row.title === DEFAULT_TITLE && row.citizen_level ? levelTitle(row.citizen_level) : row.title,
     citizenLevel: row.citizen_level ?? 0,
     ...visibleLocation(row), color: row.color, bio: row.bio,

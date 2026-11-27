@@ -256,3 +256,22 @@
 .job-form .fc-audience button.on em, .job-form .job-timing button.on em { color: rgba(255,255,255,.85); }
 .job-form .fc-audience button:not(.on) .icon, .job-form .job-timing button:not(.on) svg { color: #7c4dff; }
 .job-form .composer-title:focus, .job-form .job-input:focus { border-color: #7c4dff; box-shadow: 0 0 0 3px rgba(124,77,255,.18); }
+
+/* ── Camera: big enough to frame a shot (Nuel, Nov 26: "Should this not be a
+   bit bigger?"). Laptops get a wide window that always fits the screen;
+   phones get the whole screen, like the camera app. ── */
+.camera-backdrop .camera-card { max-width: min(860px, 94vw); max-height: calc(100dvh - 40px); overflow-y: auto; display: flex; flex-direction: column; }
+.camera-backdrop .camera-view { max-height: min(62vh, 640px); min-height: 240px; }
+@media (max-width: 640px) {
+  .camera-backdrop { padding: 0; }
+  .camera-backdrop .camera-card { max-width: none; width: 100%; height: 100dvh; max-height: none; border-radius: 0; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); }
+  .camera-backdrop .camera-live { flex: 1; min-height: 0; display: flex; }
+  .camera-backdrop .camera-live .camera-view, .camera-backdrop .camera-card > .camera-view { flex: 1; height: 100%; max-height: none; min-height: 0; object-fit: cover; }
+  .camera-backdrop .camera-card > img.camera-view, .camera-backdrop .camera-card > video.camera-view { object-fit: contain; }
+}
+
+/* ── Post cards: the same rounded corners in dark mode as in light (Nuel,
+   Nov 27: "In dark mode the edges are still straight… it's different from
+   light mode"). An older dark-mode rule for flat rows (reddit.css, glass.css)
+   was more specific than design.css's card radius, so only dark lost it. ── */
+:root[data-mode] .feed-post { border-radius: var(--r-lg); }
