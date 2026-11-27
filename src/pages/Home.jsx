@@ -2,10 +2,10 @@
 // city" card he liked, status rings, quick icons, then For You /
 // Following / Nearby and a feed of posts with events, people to follow
 // and jobs woven in between.
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { EVENTS, USERS, PURPOSE } from '../data/seed.js'
-import { placeLabel } from '../places.js'
+import { placeLabel, findCity } from '../places.js'
 import { heroPhotos, worldHeroPhotos } from '../heroPhotos.js'
 import { Avatar, FavoriteButton } from '../components/bits.jsx'
 import { useCommunities, findCommunity } from '../communities.js'
@@ -175,6 +175,19 @@ function HeroSlides({ photos, every = 6000 }) {
   )
 }
 
+// The map library is big, so it loads only on Home, after the page is up.
+const HeroMap = lazy(() => import('../components/HeroMap.jsx'))
+const useMode = () => {
+  const read = () => (document.documentElement.dataset.mode === 'dark' ? 'dark' : 'light')
+  const [mode, setMode] = useState(read)
+  useEffect(() => {
+    const o = new MutationObserver(() => setMode(read()))
+    o.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode'] })
+    return () => o.disconnect()
+  }, [])
+  return mode
+}
+
 // What each tile promises a visitor, instead of a count that only means
 // something to members.
 const VISITOR_TILES = [
@@ -190,12 +203,25 @@ const VISITOR_TILES = [
 function Hero({ user, first, city: homeCity, counts, me }) {
   const city = homeCity || 'your city'
   const photos = user ? heroPhotos(homeCity, user.country) : worldHeroPhotos()
+  // Members get their city's street map behind the hero; the arrow clears the
+  // panel away so the map can be seen (and moved) properly.
+  const place = user && homeCity ? findCity(homeCity, user.country) : null
+  const [clear, setClear] = useState(false)
+  const mode = useMode()
   const hour = new Date().getHours()
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   return (
-    <section className="hero-x hero-x-clear">
-      <HeroSlides key={photos.map((p) => p.src).join()} photos={photos} />
+    <section className={`hero-x hero-x-clear${place ? ' hero-x-mapped' : ''}${place && clear ? ' hero-x-see' : ''}`}>
+      {place
+        ? <Suspense fallback={<HeroSlides photos={photos} />}><HeroMap lon={place.lon} lat={place.lat} mode={mode} label={`Map of ${city}`} /></Suspense>
+        : <HeroSlides key={photos.map((p) => p.src).join()} photos={photos} />}
       <div className="hero-x-shade" aria-hidden="true" />
+      {place && (
+        <button type="button" className="hero-x-reveal" aria-pressed={clear} onClick={() => setClear((c) => !c)}
+          aria-label={clear ? 'Bring the panel back' : 'See the map clearly'}>
+          <Icon name="chevron-down" size={18} /><span>{clear ? 'Back' : 'See map'}</span>
+        </button>
+      )}
       <div className="hero-x-body">
         <span className="hero-x-eyebrow">
           {user ? <><Icon name="map-pin" size={13} /> {placeLabel(homeCity, user.country) || 'Welcome'}</> : <>Connect. Discover. Participate.</>}
