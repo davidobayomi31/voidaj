@@ -12,7 +12,7 @@ import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 
 export const BADGE_STYLES = ['violet', 'blue', 'teal', 'gold', 'red', 'green', 'orange', 'silver']
-const ICON = { 'early-explorer': 'compass', verified: 'badge-check', 'first-post': 'edit', 'top-contributor': 'star', thinker: 'chat', supporter: 'heart', connector: 'community', 'community-builder': 'users', 'event-host': 'calendar', weaver: 'shuffle', 'trusted-hand': 'wrench', 'well-known': 'award', recruiter: 'user-plus', ambassador: 'megaphone' }
+const ICON = { origin: 'globe', 'early-explorer': 'compass', verified: 'badge-check', 'first-post': 'edit', 'top-contributor': 'star', thinker: 'chat', supporter: 'heart', connector: 'community', 'community-builder': 'users', 'event-host': 'calendar', weaver: 'shuffle', 'trusted-hand': 'wrench', 'well-known': 'award', recruiter: 'user-plus', ambassador: 'megaphone' }
 
 // The badge itself: a glossy shield in its colour.
 export function BadgeArt({ badge, size = 64, locked = false }) {
